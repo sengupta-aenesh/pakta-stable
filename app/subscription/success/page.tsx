@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui';
 import { CheckCircle } from 'lucide-react';
 
-export default function SubscriptionSuccessPage() {
+function SubscriptionSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [countdown, setCountdown] = useState(5);
@@ -51,5 +51,19 @@ export default function SubscriptionSuccessPage() {
         </button>
       </Card>
     </div>
+  );
+}
+
+export default function SubscriptionSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <Card className="max-w-md w-full p-8 text-center">
+          <div className="text-center">Loading...</div>
+        </Card>
+      </div>
+    }>
+      <SubscriptionSuccessContent />
+    </Suspense>
   );
 }

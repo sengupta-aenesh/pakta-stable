@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui'
 import { Check, CreditCard, Calendar } from 'lucide-react'
 import styles from '../onboarding.module.css'
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [trialInfo, setTrialInfo] = useState<{
@@ -185,5 +185,24 @@ export default function PaymentSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className={styles.onboardingContainer}>
+        <div className={styles.stepContent}>
+          <div className={styles.stepContainer}>
+            <div className={styles.loading}>
+              <div className={styles.spinner}></div>
+              <h3>Loading...</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   )
 }
