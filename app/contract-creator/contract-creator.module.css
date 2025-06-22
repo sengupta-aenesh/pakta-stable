@@ -1,0 +1,550 @@
+/* Contract Creator Layout */
+.creatorLayout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: 1fr;
+  height: calc(100vh - 64px); /* Subtract top nav height */
+  background-color: var(--color-white);
+  margin-top: 64px; /* Push content below fixed nav */
+}
+
+/* Old top nav styles - removed, now using unified TopNavigation component */
+
+/* Left Sidebar - Same as folders page */
+.folderSidebar {
+  background-color: #F5F5F5;
+  padding: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: calc(100vh - 64px);
+  position: relative;
+}
+
+/* Main Content - Chat Interface */
+.mainContent {
+  background-color: var(--color-white);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 var(--spacing-xl);
+}
+
+/* Chat Header */
+.chatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-xl) 0 var(--spacing-lg);
+  border-bottom: 1px solid #F3F4F6;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  flex: 1;
+}
+
+.headerRight {
+  flex-shrink: 0;
+}
+
+.pageTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.pageSubtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+/* Messages Container */
+.messagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.messagesContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messagesContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Message Styling */
+.messageWrapper {
+  display: flex;
+  width: 100%;
+}
+
+.userMessage {
+  justify-content: flex-end;
+}
+
+.aiMessage {
+  justify-content: flex-start;
+}
+
+.messageContent {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+}
+
+.userMessage .messageContent {
+  align-items: flex-end;
+}
+
+.aiMessage .messageContent {
+  align-items: flex-start;
+}
+
+.messageText {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.userMessage .messageText {
+  background-color: #111827;
+  color: white;
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.aiMessage .messageText {
+  background-color: #F3F4F6;
+  color: #1F2937;
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+/* Typing Indicator */
+.typingIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #9CA3AF;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Input Area */
+.inputContainer {
+  flex-shrink: 0;
+  padding: var(--spacing-lg) 0 var(--spacing-xl);
+  border-top: 1px solid #F3F4F6;
+}
+
+.inputWrapper {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-end;
+}
+
+.messageInput {
+  flex: 1;
+  min-height: 44px;
+  max-height: 120px;
+  resize: none;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background-color: var(--color-white);
+  transition: all var(--transition-fast);
+}
+
+.messageInput:focus {
+  outline: none;
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.messageInput::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.sendButton {
+  flex-shrink: 0;
+  height: 48px;
+  padding: 0 var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  background-color: #111827;
+  color: var(--color-white);
+  border: 1px solid #111827;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sendButton:hover:not(:disabled) {
+  background-color: #000000;
+  border-color: #000000;
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inputHint {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* Inline Contract Actions */
+.contractActions {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.contractActionButton {
+  background-color: #111827;
+  color: var(--color-white);
+  border: 1px solid #111827;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.contractActionButton:hover {
+  background-color: #000000;
+  border-color: #000000;
+  color: var(--color-white);
+  text-decoration: none;
+}
+
+.contractActionSecondary {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.contractActionSecondary:hover {
+  background-color: var(--color-hover);
+  color: var(--color-text-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .creatorLayout {
+    grid-template-columns: 280px 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .creatorLayout {
+    grid-template-columns: 1fr;
+  }
+  
+  .topNav {
+    left: 0;
+    right: 0;
+  }
+  
+  .folderSidebar {
+    display: none;
+  }
+  
+  .chatContainer {
+    padding: 0 var(--spacing-md);
+  }
+  
+  .chatHeader {
+    padding: var(--spacing-md) 0;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    align-items: stretch;
+  }
+  
+  .pageTitle {
+    font-size: var(--font-size-lg);
+  }
+  
+  .inputWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .messageInput {
+    min-height: 80px;
+  }
+  
+  .topNavContent {
+    gap: var(--spacing-md);
+  }
+  
+  .navLink {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 600px) {
+  .chatContainer {
+    padding: 0 var(--spacing-sm);
+  }
+  
+  .messageContent {
+    max-width: 90%;
+  }
+  
+  .messageText {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}
+
+/* Suggested Terms Panel */
+.suggestedTermsPanel {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  width: 380px;
+  max-height: calc(100vh - 80px);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.suggestedTermsHeader {
+  padding: var(--spacing-lg);
+  background-color: #F8F9FA;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: between;
+}
+
+.suggestedTermsTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  flex-grow: 1;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  transition: color 0.2s ease;
+}
+
+.closeButton:hover {
+  color: var(--color-text);
+  background-color: #E5E7EB;
+}
+
+.suggestedTermsContent {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+}
+
+.termCard {
+  background-color: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.termCard:last-of-type {
+  margin-bottom: var(--spacing-lg);
+}
+
+.termName {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.termDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-sm) 0;
+  line-height: 1.5;
+}
+
+.termImportance {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--spacing-sm) 0;
+  line-height: 1.5;
+}
+
+.termExample {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.suggestedTermsActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.suggestedTermsActions button {
+  flex: 1;
+}
+
+.helpText {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--spacing-sm);
+  background-color: #FEF3C7;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+/* Fallback Terms Specific Styles */
+.fallbackExplanation {
+  background-color: #FEF3C7;
+  border: 1px solid #F59E0B;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  color: #92400E;
+  line-height: 1.5;
+}
+
+.fallbackTermCard {
+  background-color: #F0F9FF;
+  border: 1px solid #0EA5E9;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.fallbackTermCard:last-of-type {
+  margin-bottom: var(--spacing-lg);
+}
+
+.suggestedClause {
+  background-color: #E0F2FE;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin: var(--spacing-sm) 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.termReasoning {
+  font-size: var(--font-size-sm);
+  color: #0369A1;
+  margin: var(--spacing-sm) 0;
+  line-height: 1.5;
+}
+
+.userBenefit {
+  font-size: var(--font-size-sm);
+  color: #047857;
+  margin: var(--spacing-sm) 0;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+
+@media (max-width: 1200px) {
+  .suggestedTermsPanel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 400px;
+    max-height: 80vh;
+  }
+}

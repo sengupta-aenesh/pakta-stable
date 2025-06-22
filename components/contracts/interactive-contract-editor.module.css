@@ -1,0 +1,477 @@
+/* Interactive Contract Editor Styles */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 8px 8px 0 0;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modeToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modeToggle:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.modeToggle.editing {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.modeToggle.viewing {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #047857;
+}
+
+/* Download Button Styles */
+.downloadContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.downloadButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.downloadButton:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.downloadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.downloadButton .chevron {
+  transition: transform 0.2s ease;
+}
+
+.downloadDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 50;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.downloadOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
+}
+
+.downloadOption:hover {
+  background: #f3f4f6;
+}
+
+.downloadOption:first-child {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.downloadOption svg {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.riskInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.riskCount {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.selectionHint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.toolbarStatus {
+  font-size: 11px;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #d1fae5;
+}
+
+.content {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+}
+
+.editor {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  background: white;
+}
+
+.editor:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.viewer {
+  min-height: 500px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.editableViewer {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 16px;
+  outline: none;
+  background: white;
+  min-height: 500px;
+}
+
+.editableViewer:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Ensure text is selectable and editable in edit mode */
+.editableViewer .highlightedContent {
+  min-height: 100%;
+}
+
+.editableViewer .riskHighlight {
+  /* Make risk highlights less prominent in edit mode to avoid confusion */
+  opacity: 0.7;
+  cursor: text; /* Show text cursor instead of pointer in edit mode */
+}
+
+.editableViewer .riskHighlight:hover {
+  /* Reduce hover effects in edit mode */
+  transform: none;
+  box-shadow: none;
+}
+
+.highlightedContent {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  text-align: justify;
+  max-width: 100%;
+}
+
+/* Beautiful document typography */
+.highlightedContent h1 {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 32px 0;
+  color: #111827;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 16px;
+}
+
+.highlightedContent h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 32px 0 16px 0;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.highlightedContent h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 24px 0 12px 0;
+  color: #111827;
+}
+
+/* Paragraph spacing and indentation */
+.highlightedContent p {
+  margin-bottom: 16px;
+  text-indent: 0;
+}
+
+/* Legal sections and numbered lists */
+.highlightedContent ol {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+
+.highlightedContent ol li {
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+/* WHEREAS clauses styling */
+.highlightedContent [data-legal-section="whereas"] {
+  margin: 16px 0;
+  padding-left: 24px;
+  border-left: 3px solid #e5e7eb;
+  font-style: italic;
+}
+
+/* Signature section styling */
+.highlightedContent [data-legal-section="signature"] {
+  margin-top: 48px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 24px;
+  text-align: center;
+}
+
+/* Custom text selection styling */
+.highlightedContent::selection {
+  background: rgba(59, 130, 246, 0.2);
+  color: inherit;
+}
+
+.highlightedContent::-moz-selection {
+  background: rgba(59, 130, 246, 0.2);
+  color: inherit;
+}
+
+/* Risk Highlight Styles */
+.riskHighlight {
+  position: relative;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  margin: 0 1px;
+  /* Allow text selection on risk highlights too */
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.riskHighlight:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Risk Level Colors */
+.riskHighlight.high {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.riskHighlight.high:hover {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.riskHighlight.medium {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.riskHighlight.medium:hover {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.riskHighlight.low {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.riskHighlight.low:hover {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1));
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+/* Emphasis animation for scroll-to-view */
+.emphasized {
+  animation: emphasize 2s ease-in-out;
+}
+
+@keyframes emphasize {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  25% { 
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  }
+  50% { 
+    transform: scale(1.01);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+  }
+  75% { 
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Empty states */
+.noContract {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 8px 12px;
+  }
+  
+  .modeToggle {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  
+  .content {
+    padding: 12px;
+  }
+  
+  .editor {
+    min-height: 400px;
+    font-size: 13px;
+  }
+  
+  .highlightedContent {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  
+  .riskHighlight {
+    padding: 1px 2px;
+  }
+}
+
+/* Focus states for accessibility */
+.riskHighlight:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .toolbar {
+    display: none;
+  }
+  
+  .riskHighlight {
+    border: 1px solid #000;
+    background: none !important;
+  }
+  
+  .riskHighlight.high {
+    border-color: #ef4444;
+  }
+  
+  .riskHighlight.medium {
+    border-color: #f59e0b;
+  }
+  
+  .riskHighlight.low {
+    border-color: #22c55e;
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(rg:*)",
+      "Bash(cp:*)",
+      "Bash(python3:*)",
+      "Bash(rm:*)",
+      "Bash(ls:*)",
+      "Bash(npm run build:*)",
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(timeout:*)",
+      "Bash(node:*)",
+      "Bash(npx next build:*)",
+      "Bash(mkdir:*)",
+      "Bash(curl:*)",
+      "Bash(npm run lint)"
+    ],
+    "deny": []
+  }
+}

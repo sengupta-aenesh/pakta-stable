@@ -1,0 +1,218 @@
+.trialStatusContainer {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sidebar {
+  background-color: #F5F5F5;
+  border-right: 1px solid #e5e7eb;
+  width: 280px;
+  height: 100%;
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure FolderSidebar fills the container properly */
+.sidebar > * {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Compact sidebar - no user footer */
+
+.analysisPanel {
+  background-color: #F5F5F5;
+  border-left: 1px solid #e5e7eb;
+  width: 400px;
+  height: 100%;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.editorPanel {
+  background-color: #ffffff;
+  flex: 1;
+  height: 100%;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.contractEditor {
+  height: 100%;
+  width: 100%;
+}
+
+.dashboardContainer {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px); /* Subtract top nav height */
+  overflow: hidden;
+  margin-top: 64px; /* Push content below fixed nav */
+}
+
+/* Old contract nav bar styles - removed, now using unified TopNavigation component */
+
+.documentTitleInput {
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  padding: var(--spacing-xs, 6px) var(--spacing-sm, 8px);
+  border-radius: var(--radius-sm, 6px);
+  width: 100%;
+  text-align: center;
+  color: #111827;
+}
+
+.documentTitleInput:hover {
+  background-color: #f9fafb;
+}
+
+.documentTitleInput:focus {
+  background-color: #ffffff;
+  outline: 2px solid #111827;
+  outline-offset: -2px;
+}
+
+.mainContainer {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebarHeader {
+  flex-shrink: 0;
+}
+
+.sidebarContent {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarFooter {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid #E5E7EB;
+}
+
+/* Mobile Styles */
+.mobileTopBar {
+  display: none;
+}
+
+.mobileLogo {
+  height: 32px;
+  width: auto;
+}
+
+.mobileSignOut {
+  padding: 8px;
+}
+
+/* Default desktop behavior - these classes do nothing on desktop */
+.mobileVisible {
+  /* No styles on desktop */
+}
+
+.mobileHidden {
+  /* No styles on desktop */
+}
+
+.mobileEditButton {
+  display: none;
+}
+
+.mobileToggleButtons {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .dashboardContainer {
+    flex-direction: column;
+  }
+
+  .mobileTopBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: 56px;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: calc(100vh - 56px);
+    margin-top: 56px;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .mainContent {
+    flex-direction: column;
+    margin-top: 56px;
+  }
+
+  .editorPanel {
+    width: 100%;
+    height: calc(100vh - 56px);
+    border: none;
+  }
+
+  .analysisPanel {
+    width: 100%;
+    height: calc(100vh - 56px);
+    border-left: none;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .mobileEditButton {
+    display: inline-flex;
+    margin-left: 8px;
+  }
+
+  .mobileToggleButtons {
+    display: flex;
+    gap: 8px;
+    margin-left: 8px;
+  }
+
+  .sidebarFooter {
+    display: none;
+  }
+
+  /* Mobile visibility controls */
+  .mobileVisible {
+    display: flex !important;
+  }
+
+  .mobileHidden {
+    display: none !important;
+  }
+}

@@ -1,0 +1,238 @@
+/* iOS-Style Top Navigation */
+.topNav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #F5F5F5;
+  border-bottom: 1px solid #E5E7EB;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topNavContent {
+  width: 100%;
+  max-width: none;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.navLeft {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.navCenter {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.navRight {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 8px;
+}
+
+/* Logo */
+.logo {
+  height: 32px;
+  width: auto;
+}
+
+/* Contract Title Input */
+.contractTitleInput {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1D1D1F;
+  padding: 8px 0;
+  outline: none;
+  min-width: 300px;
+  max-width: 600px;
+  width: 100%;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.contractTitleInput:focus {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 8px 12px;
+  box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.15);
+  text-align: center;
+}
+
+.contractTitleInput::placeholder {
+  color: #8E8E93;
+  text-align: center;
+}
+
+/* Navigation Items */
+.navItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  min-width: auto;
+  height: 40px;
+  gap: 8px;
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: #6B7280;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  flex-shrink: 0;
+}
+
+.navLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6B7280;
+  opacity: 1;
+  transform: none;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Individual Item Hover States */
+.navItem:hover .navIcon {
+  color: #111827;
+}
+
+.navItem:hover .navLabel {
+  color: #111827;
+}
+
+.navItem:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
+
+/* Active State */
+.navItem.active {
+  background: #111827;
+}
+
+.navItem.active .navIcon {
+  color: #FFFFFF;
+}
+
+.navItem.active .navLabel {
+  color: #FFFFFF;
+}
+
+.navItem.active:hover {
+  background: #1F2937;
+}
+
+.navItem.active:hover .navIcon {
+  color: #FFFFFF;
+}
+
+.navItem.active:hover .navLabel {
+  color: #FFFFFF;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 24px;
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .topNav {
+    height: 56px;
+  }
+  
+  .topNavContent {
+    padding: 0 16px;
+  }
+  
+  .navItem {
+    height: 36px;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+  
+  .navIcon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .navLabel {
+    font-size: 12px;
+  }
+  
+  .contractTitleInput {
+    font-size: 14px;
+    min-width: 200px;
+    max-width: 350px;
+  }
+  
+  .navCenter {
+    max-width: 350px;
+    padding: 0 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topNavContent {
+    padding: 0 12px;
+  }
+  
+  .navRight {
+    gap: 6px;
+  }
+  
+  .navItem {
+    padding: 6px 10px;
+    gap: 4px;
+  }
+  
+  .navLabel {
+    font-size: 11px;
+  }
+  
+  .contractTitleInput {
+    min-width: 150px;
+    max-width: 220px;
+  }
+  
+  .navCenter {
+    max-width: 220px;
+    padding: 0 10px;
+  }
+}
