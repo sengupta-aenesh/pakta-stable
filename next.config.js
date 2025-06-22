@@ -38,6 +38,7 @@ const sentryWebpackPluginOptions = {
   // Additional config options for the Sentry Webpack plugin
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
   
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
@@ -60,9 +61,14 @@ const sentryWebpackPluginOptions = {
   
   // Enables automatic instrumentation of Vercel Cron Monitors
   automaticVercelMonitors: true,
+  
+  // Skip source map upload if auth token is missing
+  skipSourceMapsUpload: !process.env.SENTRY_AUTH_TOKEN,
 }
 
-// Conditionally wrap with Sentry only if DSN is provided
-module.exports = process.env.NEXT_PUBLIC_SENTRY_DSN
+// Conditionally wrap with Sentry only if DSN and auth token are provided
+const shouldEnableSentry = process.env.NEXT_PUBLIC_SENTRY_DSN && process.env.SENTRY_AUTH_TOKEN
+
+module.exports = shouldEnableSentry
   ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
   : nextConfig;
