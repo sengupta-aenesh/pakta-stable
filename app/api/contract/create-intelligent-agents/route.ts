@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+
+// Vercel serverless function configuration
+export const maxDuration = 300; // 5 minutes - maximum allowed on Pro plan
+export const dynamic = 'force-dynamic';
 import { createExpertContractCreatorGraph } from "@/lib/agents/expert-contract-creator/graph";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { createClient } from "@/lib/supabase/server";
@@ -58,6 +62,10 @@ export async function POST(request: NextRequest) {
   try {
     console.log("🚀 Intelligent Agents API called");
     
+    // Track request start time for timeout handling
+    const requestStartTime = Date.now();
+    const MAX_PROCESSING_TIME = 280000; // 4 minutes 40 seconds (leaving buffer before 5min limit)
+    
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -101,8 +109,24 @@ export async function POST(request: NextRequest) {
               data: { message: 'Initializing legal AI team...' }
             })}\n\n`));
 
-            // Create graph and run with streaming updates
-            const graph = createExpertContractCreatorGraph();
+            // Check if we should use expert graph or fallback to simple
+            const timeElapsed = Date.now() - requestStartTime;
+            const shouldUseSimpleGraph = timeElapsed > 30000; // If already 30 seconds elapsed, use simple
+            
+            let graph;
+            if (shouldUseSimpleGraph) {
+              console.log("⚡ Using simple graph due to time constraints...");
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'status',
+                data: { message: 'Optimizing for speed - using streamlined AI workflow...' }
+              })}\n\n`));
+              
+              const { createSimpleContractCreatorGraph } = await import("@/lib/agents/contract-creator/simple-graph");
+              graph = createSimpleContractCreatorGraph();
+            } else {
+              console.log("🏗️ Using expert multi-agent graph...");
+              graph = createExpertContractCreatorGraph();
+            }
             
             // Prepare conversation history (simplified for now)
             let conversationHistory: Array<{ role: string; content: string }> = [];
@@ -129,8 +153,31 @@ export async function POST(request: NextRequest) {
             // Create a streaming wrapper that provides status updates
             const streamingGraph = createStreamingWrapper(graph, controller, encoder);
             
-            // Run the graph with streaming updates
-            const result = await streamingGraph.invoke(input);
+            // Run the graph with timeout protection
+            const graphPromise = streamingGraph.invoke(input);
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => {
+                reject(new Error('Graph execution timeout - switching to fallback mode'));
+              }, MAX_PROCESSING_TIME - (Date.now() - requestStartTime));
+            });
+            
+            let result;
+            try {
+              result = await Promise.race([graphPromise, timeoutPromise]);
+            } catch (timeoutError) {
+              console.warn("⚠️ Graph timeout, attempting fallback...");
+              
+              // Send timeout notification
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'status',
+                data: { message: 'Processing is taking longer than expected, generating basic contract...' }
+              })}\n\n`));
+              
+              // Fallback to simple graph
+              const { createSimpleContractCreatorGraph } = await import("@/lib/agents/contract-creator/simple-graph");
+              const fallbackGraph = createSimpleContractCreatorGraph();
+              result = await fallbackGraph.invoke(input);
+            }
             
             console.log("🎯 Sophisticated legal team completed analysis");
 

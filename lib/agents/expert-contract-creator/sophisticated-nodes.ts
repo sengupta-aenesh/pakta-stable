@@ -10,11 +10,13 @@ import {
   jurisdictionAnalysisTool 
 } from "./tools";
 
-// Initialize OpenAI model with sophisticated parameters
+// Initialize OpenAI model with optimized parameters for speed
 const model = new ChatOpenAI({
-  modelName: "gpt-4o",
-  temperature: 0.2,
+  modelName: "gpt-4o-mini", // Faster model for production
+  temperature: 0.1,
   openAIApiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000, // 30 second timeout per API call
+  maxRetries: 1, // Reduce retries to avoid delays
 });
 
 // Agent 1: Legal Intake Agent - Senior Partner specializing in client consultation

@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+
+// Vercel serverless function configuration
+export const maxDuration = 60; // 1 minute for simple contract creation
+export const dynamic = 'force-dynamic';
 import { createSimpleContractCreatorGraph } from "@/lib/agents/contract-creator/simple-graph";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { createClient } from "@/lib/supabase/server";
