@@ -862,6 +862,49 @@ export default function InteractiveContractEditor({
     )
   }
 
+  // Check if analysis is still in progress
+  const isAnalysisInProgress = contract.analysis_status === 'in_progress' || contract.analysis_status === 'pending'
+  const analysisProgress = contract.analysis_progress || 0
+
+  if (isAnalysisInProgress) {
+    return (
+      <div className={styles.analysisInProgress}>
+        <div className={styles.analysisMessage}>
+          <h3>🤖 AI Analysis in Progress</h3>
+          <p>Your contract is being analyzed automatically...</p>
+          
+          <div className={styles.progressContainer}>
+            <div className={styles.progressBar}>
+              <div 
+                className={styles.progressFill}
+                style={{ width: `${analysisProgress}%` }}
+              />
+            </div>
+            <span className={styles.progressText}>
+              {analysisProgress}% Complete
+            </span>
+          </div>
+          
+          <div className={styles.analysisSteps}>
+            <div className={`${styles.step} ${analysisProgress >= 33 ? styles.completed : styles.pending}`}>
+              ✓ Summary Analysis
+            </div>
+            <div className={`${styles.step} ${analysisProgress >= 66 ? styles.completed : styles.pending}`}>
+              ✓ Risk Analysis  
+            </div>
+            <div className={`${styles.step} ${analysisProgress >= 100 ? styles.completed : styles.pending}`}>
+              ✓ Completeness Check
+            </div>
+          </div>
+          
+          <p className={styles.waitMessage}>
+            The contract will be available for editing once analysis is complete.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   console.log('InteractiveContractEditor render:', { 
     isEditing, 
     showToolbar, 

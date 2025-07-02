@@ -258,6 +258,33 @@ function DashboardContent() {
     }
   }, [user])
 
+  // Function to refresh current contract data (for analysis completion)
+  const refreshCurrentContract = useCallback(async () => {
+    if (user && selectedContract) {
+      console.log('🔄 Refreshing current contract data...')
+      try {
+        const updatedContract = await contractsApi.getById(selectedContract.id)
+        if (updatedContract) {
+          setSelectedContract(updatedContract)
+          
+          // Also update in the contracts array
+          setContracts(prev => prev.map(contract => 
+            contract.id === updatedContract.id ? updatedContract : contract
+          ))
+          
+          console.log('✅ Contract data refreshed successfully')
+        }
+      } catch (error) {
+        console.error('❌ Failed to refresh contract data:', error)
+      }
+    }
+  }, [user, selectedContract])
+
+  // Expose refresh function globally for analysis component
+  useEffect(() => {
+    (window as any).refreshCurrentContract = refreshCurrentContract
+  }, [refreshCurrentContract])
+
   // Handle contract title update with automatic saving
   const handleContractTitleChange = useCallback(async (newTitle: string) => {
     if (!selectedContract || !newTitle.trim()) return

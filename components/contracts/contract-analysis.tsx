@@ -80,6 +80,13 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       if (response.ok) {
         const statusData = await response.json()
         
+        console.log('📊 Analysis status check:', {
+          contractId: contract.id,
+          status: statusData.status,
+          progress: statusData.progress,
+          hasCache: statusData.hasCache
+        })
+        
         if (statusData.status === 'in_progress' && statusData.progress < 100) {
           setAnalysisProgress({
             status: statusData.status,
@@ -88,12 +95,22 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           setIsAnalyzing(true)
           
           // Continue polling while in progress
-          setTimeout(checkAnalysisProgress, 2000)
+          setTimeout(checkAnalysisProgress, 3000) // Slightly longer interval
         } else if (statusData.status === 'complete') {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
-          // Refresh the page data to show completed analysis
-          window.location.reload()
+          
+          // Instead of page reload, just refresh the contract data
+          console.log('✅ Analysis complete, refreshing contract data...')
+          
+          // Force refresh of the current contract to get updated cache
+          if (typeof window !== 'undefined' && (window as any).refreshCurrentContract) {
+            (window as any).refreshCurrentContract()
+          }
+        } else if (statusData.status === 'failed') {
+          setAnalysisProgress(null)
+          setIsAnalyzing(false)
+          console.error('❌ Analysis failed for contract:', contract.id)
         } else {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
@@ -102,6 +119,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     } catch (error) {
       console.error('Error checking analysis progress:', error)
       setAnalysisProgress(null)
+      setIsAnalyzing(false)
     }
   }, [contract])
 
@@ -501,18 +519,18 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     }
   }
 
-  // Auto-analyze when user explicitly clicks on tabs (remove automatic analysis)
+  // Handle tab clicks - should NOT trigger automatic analysis anymore
   const handleTabClick = (tab: 'summary' | 'complete' | 'risks' | 'chat') => {
     setActiveTab(tab)
     
-    // Only analyze if we don't have cached data and user explicitly requested it
-    if (contract && tab === 'summary' && !summary) {
-      analyzeContract('summary')
-    } else if (contract && tab === 'complete' && missingInfo.length === 0) {
-      analyzeContract('complete')
-    } else if (contract && tab === 'risks' && risks.length === 0) {
-      analyzeContract('risks')
-    }
+    // DO NOT auto-analyze anymore - all analysis should happen automatically on upload
+    // Users can manually refresh if needed using the "Refresh All" button
+    console.log('📑 Tab clicked:', tab, 'Available cached data:', {
+      summary: !!summary,
+      risks: risks.length,
+      complete: missingInfo.length,
+      chat: chatMessages.length
+    })
   }
 
   if (!contract) {

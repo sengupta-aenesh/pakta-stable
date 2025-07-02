@@ -788,9 +788,12 @@ export default function UnifiedSidebar({
 
   const filteredContracts = searchTerm
     ? contracts.filter(contract =>
-        contract.title.toLowerCase().includes(searchTerm.toLowerCase())
+        contract.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (contract.analysis_status === 'complete' || contract.analysis_status === null) // Show completed or legacy contracts
       )
-    : contracts
+    : contracts.filter(contract => 
+        contract.analysis_status === 'complete' || contract.analysis_status === null // Show completed or legacy contracts
+      )
 
   return (
     <div 

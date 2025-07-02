@@ -416,6 +416,92 @@
   font-style: italic;
 }
 
+/* Analysis in Progress Styles */
+.analysisInProgress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+}
+
+.analysisMessage {
+  text-align: center;
+  max-width: 400px;
+}
+
+.analysisMessage h3 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1f2937;
+}
+
+.analysisMessage p {
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.progressContainer {
+  margin: 24px 0;
+}
+
+.progressBar {
+  width: 100%;
+  height: 12px;
+  background-color: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transition: width 0.5s ease;
+  border-radius: 6px;
+}
+
+.progressText {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.analysisSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.step {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.step.completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.step.pending {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.waitMessage {
+  font-size: 14px;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 16px;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .toolbar {
