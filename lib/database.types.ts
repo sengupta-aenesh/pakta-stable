@@ -14,10 +14,16 @@ export interface Database {
           analysis_cache: {
             summary?: any
             risks?: any
+            complete?: any
             lastAnalyzed?: string
             editableFields?: any[]
             parameters?: Record<string, any>
           }
+          analysis_status: string | null
+          analysis_progress: number | null
+          last_analyzed_at: string | null
+          analysis_retry_count: number | null
+          analysis_error: string | null
           created_at: string
           updated_at: string
         }
@@ -33,10 +39,16 @@ export interface Database {
           analysis_cache?: {
             summary?: any
             risks?: any
+            complete?: any
             lastAnalyzed?: string
             editableFields?: any[]
             parameters?: Record<string, any>
           }
+          analysis_status?: string | null
+          analysis_progress?: number | null
+          last_analyzed_at?: string | null
+          analysis_retry_count?: number | null
+          analysis_error?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -52,10 +64,16 @@ export interface Database {
           analysis_cache?: {
             summary?: any
             risks?: any
+            complete?: any
             lastAnalyzed?: string
             editableFields?: any[]
             parameters?: Record<string, any>
           }
+          analysis_status?: string | null
+          analysis_progress?: number | null
+          last_analyzed_at?: string | null
+          analysis_retry_count?: number | null
+          analysis_error?: string | null
           created_at?: string
           updated_at?: string
         }

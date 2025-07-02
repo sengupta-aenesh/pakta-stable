@@ -24,6 +24,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
   const [isLoading, setIsLoading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
+  const [analysisProgress, setAnalysisProgress] = useState<{status: string, progress: number} | null>(null)
   
   // Track pending requests to prevent duplicate API calls
   const pendingRequests = useRef<{ [key: string]: boolean }>({
@@ -70,6 +71,40 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     }
   }, [scrollToRiskCard, contract])
 
+  // Check analysis progress for the current contract
+  const checkAnalysisProgress = useCallback(async () => {
+    if (!contract) return
+    
+    try {
+      const response = await fetch(`/api/contract/analysis-status?contractId=${contract.id}`)
+      if (response.ok) {
+        const statusData = await response.json()
+        
+        if (statusData.status === 'in_progress' && statusData.progress < 100) {
+          setAnalysisProgress({
+            status: statusData.status,
+            progress: statusData.progress
+          })
+          setIsAnalyzing(true)
+          
+          // Continue polling while in progress
+          setTimeout(checkAnalysisProgress, 2000)
+        } else if (statusData.status === 'complete') {
+          setAnalysisProgress(null)
+          setIsAnalyzing(false)
+          // Refresh the page data to show completed analysis
+          window.location.reload()
+        } else {
+          setAnalysisProgress(null)
+          setIsAnalyzing(false)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking analysis progress:', error)
+      setAnalysisProgress(null)
+    }
+  }, [contract])
+
   useEffect(() => {
     if (contract) {
       // Clear previous contract's data first
@@ -77,6 +112,9 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       setRisks([])
       setMissingInfo([])
       setChatMessages([])
+      
+      // Check if analysis is in progress
+      checkAnalysisProgress()
       
       // Then load cached data for the new contract if available
       if (contract.analysis_cache?.summary) {
@@ -515,7 +553,22 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
 
         {!isHeaderCollapsed && (
           <div className={styles.headerContent}>
-            {activeTab !== 'chat' && (
+            {/* Progress Display */}
+            {analysisProgress && (
+              <div className={styles.progressContainer}>
+                <div className={styles.progressBar}>
+                  <div 
+                    className={styles.progressFill}
+                    style={{ width: `${analysisProgress.progress}%` }}
+                  />
+                </div>
+                <span className={styles.progressText}>
+                  Analyzing... {analysisProgress.progress}%
+                </span>
+              </div>
+            )}
+            
+            {activeTab !== 'chat' && !analysisProgress && (
               <button 
                 className={styles.refreshButton}
                 onClick={() => {
@@ -526,6 +579,34 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 disabled={isAnalyzing}
               >
                 {isAnalyzing ? 'Analyzing...' : '🔄 Refresh Analysis'}
+              </button>
+            )}
+            
+            {/* Refresh All Analysis Button */}
+            {!analysisProgress && (
+              <button 
+                className={`${styles.refreshButton} ${styles.refreshAllButton}`}
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/contract/refresh-analysis', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ contractId: contract?.id })
+                    })
+                    
+                    if (response.ok) {
+                      setAnalysisProgress({ status: 'in_progress', progress: 0 })
+                      setIsAnalyzing(true)
+                      checkAnalysisProgress()
+                    }
+                  } catch (error) {
+                    console.error('Failed to refresh analysis:', error)
+                  }
+                }}
+                disabled={isAnalyzing}
+                title="Refresh all analysis (Summary + Risks + Complete)"
+              >
+                🔄 Refresh All
               </button>
             )}
             

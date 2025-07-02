@@ -63,7 +63,7 @@ export default function ContractList({
       if (!user) throw new Error('User not authenticated')
       
       // Save to database
-      await contractsApi.create({
+      const newContract = await contractsApi.create({
         user_id: user.id,
         title,
         content: extractedText,
@@ -71,6 +71,21 @@ export default function ContractList({
         file_key: null,   // No key since we're not using uploadthing
         analysis_cache: {}
       })
+      
+      // Trigger automatic analysis
+      try {
+        const analysisResponse = await fetch('/api/contract/auto-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contractId: newContract.id })
+        })
+        
+        if (!analysisResponse.ok) {
+          console.warn('Analysis start failed, but contract uploaded successfully')
+        }
+      } catch (analysisError) {
+        console.error('Analysis trigger failed:', analysisError)
+      }
       
       onContractsUpdate()
     } catch (error) {
@@ -98,7 +113,7 @@ export default function ContractList({
         if (!user) throw new Error('User not authenticated')
         
         // Save to database
-        await contractsApi.create({
+        const newContract = await contractsApi.create({
           user_id: user.id,
           title,
           content: extractedText,
@@ -106,6 +121,21 @@ export default function ContractList({
           file_key: file.key,
           analysis_cache: {}
         })
+        
+        // Trigger automatic analysis
+        try {
+          const analysisResponse = await fetch('/api/contract/auto-analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractId: newContract.id })
+          })
+          
+          if (!analysisResponse.ok) {
+            console.warn('Analysis start failed, but contract uploaded successfully')
+          }
+        } catch (analysisError) {
+          console.error('Analysis trigger failed:', analysisError)
+        }
         
         onContractsUpdate()
       } catch (error) {

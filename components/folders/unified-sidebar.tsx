@@ -429,6 +429,27 @@ export default function UnifiedSidebar({
       })
       console.log('✅ File Upload - Database save successful, contract ID:', newContract.id)
       
+      // Trigger automatic analysis
+      console.log('🤖 File Upload - Starting automatic analysis')
+      try {
+        const analysisResponse = await fetch('/api/contract/auto-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contractId: newContract.id })
+        })
+        
+        if (analysisResponse.ok) {
+          console.log('✅ File Upload - Automatic analysis started successfully')
+          onToast?.('Contract uploaded! AI analysis started automatically.', 'success')
+        } else {
+          console.warn('⚠️ File Upload - Analysis start failed, but contract uploaded successfully')
+          onToast?.('Contract uploaded successfully! You can analyze it manually.', 'success')
+        }
+      } catch (analysisError) {
+        console.error('❌ File Upload - Analysis trigger failed:', analysisError)
+        onToast?.('Contract uploaded successfully! You can analyze it manually.', 'success')
+      }
+      
       onContractsUpdate()
       
       // Automatically select and load the newly uploaded contract
@@ -438,7 +459,6 @@ export default function UnifiedSidebar({
       // Reset file input
       event.target.value = ''
       console.log('🎉 File Upload - Upload process completed successfully')
-      onToast?.('Contract uploaded and loaded successfully!', 'success')
     } catch (error) {
       console.error('❌ File Upload - Upload failed:', error)
       console.error('Error details:', {
