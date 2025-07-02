@@ -6,11 +6,23 @@ export interface Contract {
   upload_url: string | null
   file_key: string | null
   folder_id: string | null
+  creation_session_id: string | null
   analysis_cache: {
     summary?: ContractSummary
     risks?: RiskAnalysis
+    complete?: {
+      missingInfo: MissingInfoItem[]
+      processingSteps?: any
+      processedContent?: string
+    }
+    chat?: Array<{role: string, content: string}>
     lastAnalyzed?: string
   }
+  analysis_status: string | null
+  analysis_progress: number | null
+  last_analyzed_at: string | null
+  analysis_retry_count: number | null
+  analysis_error: string | null
   created_at: string
   updated_at: string
 }
@@ -64,9 +76,12 @@ export interface MissingInfoItem {
   label: string
   description: string
   placeholder: string
+  fieldType: string
+  legalContext?: string
+  context?: string
   occurrences: Array<{
     text: string
-    position: { start: number; end: number }
+    position?: { start: number; end: number }
   }>
   userInput: string
 }

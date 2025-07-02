@@ -53,6 +53,7 @@ export default function UnifiedSidebar({
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{step: string, progress: number} | null>(null)
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -397,11 +398,13 @@ export default function UnifiedSidebar({
 
     try {
       setUploading(true)
+      setUploadProgress({step: 'Extracting text from document...', progress: 20})
       
       console.log('📄 File Upload - Extracting text from docx file')
       // Extract text from docx
       const extractedText = await extractTextFromDocx(file)
       console.log('✅ File Upload - Text extraction successful, length:', extractedText.length)
+      setUploadProgress({step: 'Processing document...', progress: 40})
       
       // Extract title from filename
       const title = file.name.replace('.docx', '')
@@ -416,6 +419,7 @@ export default function UnifiedSidebar({
       }
       console.log('✅ File Upload - User authenticated:', currentUser.email)
       
+      setUploadProgress({step: 'Saving contract to database...', progress: 60})
       console.log('💾 File Upload - Saving to database')
       // Save to database with folder assignment
       const newContract = await contractsApi.create({
@@ -428,6 +432,7 @@ export default function UnifiedSidebar({
         analysis_cache: {}
       })
       console.log('✅ File Upload - Database save successful, contract ID:', newContract.id)
+      setUploadProgress({step: 'Starting AI analysis...', progress: 80})
       
       // Trigger automatic analysis
       console.log('🤖 File Upload - Starting automatic analysis')
@@ -440,13 +445,16 @@ export default function UnifiedSidebar({
         
         if (analysisResponse.ok) {
           console.log('✅ File Upload - Automatic analysis started successfully')
+          setUploadProgress({step: 'Upload complete! Analysis starting...', progress: 100})
           onToast?.('Contract uploaded! AI analysis started automatically.', 'success')
         } else {
           console.warn('⚠️ File Upload - Analysis start failed, but contract uploaded successfully')
+          setUploadProgress({step: 'Upload complete!', progress: 100})
           onToast?.('Contract uploaded successfully! You can analyze it manually.', 'success')
         }
       } catch (analysisError) {
         console.error('❌ File Upload - Analysis trigger failed:', analysisError)
+        setUploadProgress({step: 'Upload complete!', progress: 100})
         onToast?.('Contract uploaded successfully! You can analyze it manually.', 'success')
       }
       
@@ -480,6 +488,10 @@ export default function UnifiedSidebar({
       onToast?.(userMessage, 'error')
     } finally {
       setUploading(false)
+      // Clear progress after a short delay
+      setTimeout(() => {
+        setUploadProgress(null)
+      }, 2000)
     }
   }
 
@@ -852,8 +864,23 @@ export default function UnifiedSidebar({
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>{uploading ? 'Uploading...' : 'Upload (docx)'}</span>
+              <span>{uploading ? 'Uploading...' : 'Upload Contract'}</span>
             </label>
+            
+            {/* Upload Progress Bar */}
+            {uploadProgress && (
+              <div className={styles.uploadProgressContainer}>
+                <div className={styles.uploadProgressBar}>
+                  <div 
+                    className={styles.uploadProgressFill}
+                    style={{ width: `${uploadProgress.progress}%` }}
+                  />
+                </div>
+                <span className={styles.uploadProgressText}>
+                  {uploadProgress.step}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

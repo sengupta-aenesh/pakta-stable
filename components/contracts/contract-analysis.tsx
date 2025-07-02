@@ -596,7 +596,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 }}
                 disabled={isAnalyzing}
               >
-                {isAnalyzing ? 'Analyzing...' : '🔄 Refresh Analysis'}
+                {isAnalyzing ? 'Analyzing...' : 'Refresh Analysis'}
               </button>
             )}
             
@@ -624,7 +624,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 disabled={isAnalyzing}
                 title="Refresh all analysis (Summary + Risks + Complete)"
               >
-                🔄 Refresh All
+                Refresh All Analysis
               </button>
             )}
             

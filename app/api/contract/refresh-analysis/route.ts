@@ -26,14 +26,38 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
   })
 
   try {
-    // Call the auto-analyze endpoint with forceRefresh = true
-    const autoAnalyzeUrl = new URL('/api/contract/auto-analyze', request.url)
+    // Import the database functions
+    const { contractsApi } = await import('@/lib/supabase')
     
-    const response = await fetch(autoAnalyzeUrl.toString(), {
+    // Get contract details
+    const contract = await contractsApi.getById(contractId, user.id)
+    if (!contract) {
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
+    }
+
+    if (!contract.content || contract.content.trim().length === 0) {
+      return NextResponse.json({ error: 'Contract has no content to analyze' }, { status: 400 })
+    }
+
+    // Reset analysis status and clear cache to force refresh
+    await contractsApi.update(contractId, {
+      analysis_status: 'pending',
+      analysis_progress: 0,
+      analysis_retry_count: 0,
+      analysis_error: null,
+      analysis_cache: {} // Clear existing cache to force refresh
+    })
+
+    // Trigger auto-analysis by making a proper internal request
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : request.url.split('/api')[0]
+    
+    // Start the analysis in the background (don't await to avoid timeout)
+    fetch(`${baseUrl}/api/contract/auto-analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Forward authorization header
         'Authorization': request.headers.get('Authorization') || '',
         'Cookie': request.headers.get('Cookie') || ''
       },
@@ -41,15 +65,11 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
         contractId,
         forceRefresh: true
       })
+    }).catch(error => {
+      console.error('Background analysis request failed:', error)
     })
 
-    const result = await response.json()
-
-    if (!response.ok) {
-      return NextResponse.json(result, { status: response.status })
-    }
-
-    addSentryBreadcrumb('Refresh analysis completed', 'contract', 'info', {
+    addSentryBreadcrumb('Refresh analysis started', 'contract', 'info', {
       contractId,
       success: true
     })
@@ -57,7 +77,8 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({
       success: true,
       message: 'Analysis refresh started successfully',
-      ...result
+      status: 'in_progress',
+      progress: 0
     })
 
   } catch (error) {

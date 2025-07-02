@@ -17,7 +17,10 @@
       "Bash(npx next build:*)",
       "Bash(mkdir:*)",
       "Bash(curl:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "WebFetch(domain:www.ycombinator.com)",
+      "WebFetch(domain:contractpodai.com)",
+      "WebFetch(domain:www.ironclad.com)"
     ],
     "deny": []
   }
