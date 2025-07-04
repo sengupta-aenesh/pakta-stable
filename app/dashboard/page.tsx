@@ -95,7 +95,7 @@ function DashboardContent() {
       source: fromURL ? 'URL' : 'sidebar',
       success: true
     })
-  }, [])
+  }, [selectedContract])
 
   // Debug duplicate keys
   useEffect(() => {

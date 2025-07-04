@@ -62,9 +62,15 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     
     try {
       console.log('🔄 Reloading contract data for ID:', contract.id)
-      // Simply trigger a re-fetch of the contract's cached data without page reload
-      console.log('✅ Analysis complete, data should be cached in backend')
-      // The useEffect will automatically reload cached data when contract changes
+      
+      // Call the global refresh function from dashboard if available
+      if (typeof window !== 'undefined' && (window as any).refreshCurrentContract) {
+        console.log('🔄 Using global refresh function...')
+        await (window as any).refreshCurrentContract()
+        console.log('✅ Contract data refreshed via global function')
+      } else {
+        console.warn('⚠️ Global refresh function not available, analysis results may not appear immediately')
+      }
     } catch (error) {
       console.error('Failed to reload contract data:', error)
     }
@@ -127,6 +133,14 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           
           // Reload the current contract data to get fresh cache
           await reloadContractData()
+          
+          // Force a delay and trigger re-render to ensure fresh data loads
+          setTimeout(() => {
+            console.log('🔄 Triggering contract data reload...')
+            if (typeof window !== 'undefined' && (window as any).refreshCurrentContract) {
+              (window as any).refreshCurrentContract()
+            }
+          }, 1000)
         } else if (statusData.status === 'failed') {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
@@ -141,9 +155,18 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       setAnalysisProgress(null)
       setIsAnalyzing(false)
     }
-  }, [contract])
+  }, [contract, reloadContractData])
 
   useEffect(() => {
+    console.log('🔄 Contract or analysis cache changed:', {
+      contractId: contract?.id,
+      hasContract: !!contract,
+      hasSummaryCache: !!contract?.analysis_cache?.summary,
+      hasRisksCache: !!contract?.analysis_cache?.risks,
+      hasCompleteCache: !!contract?.analysis_cache?.complete,
+      analysisStatus: contract?.analysis_status
+    })
+    
     if (contract) {
       // Clear previous contract's data first
       setSummary(null)
@@ -201,7 +224,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       setMissingInfo([])
       setChatMessages([])
     }
-  }, [contract?.id]) // Important: Watch contract.id, not just contract
+  }, [contract?.id, contract?.analysis_cache]) // Watch both contract ID and analysis cache for updates
 
   const analyzeContract = useCallback(async (type: 'summary' | 'complete' | 'risks', forceRefresh = false) => {
     if (!contract) return
@@ -635,6 +658,17 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 className={`${styles.refreshButton} ${styles.analyzeButton}`}
                 onClick={async () => {
                   console.log('🔄 Starting comprehensive analysis for contract:', contract?.id)
+                  console.log('📋 Contract data before analysis:', {
+                    contractId: contract?.id,
+                    hasContent: !!contract?.content,
+                    contentLength: contract?.content?.length,
+                    currentStatus: contract?.analysis_status,
+                    currentProgress: contract?.analysis_progress,
+                    hasCachedSummary: !!contract?.analysis_cache?.summary,
+                    hasCachedRisks: !!contract?.analysis_cache?.risks,
+                    hasCachedComplete: !!contract?.analysis_cache?.complete
+                  })
+                  
                   try {
                     // Clear current data first
                     setSummary(null)
@@ -642,19 +676,27 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     setMissingInfo([])
                     setChatMessages([])
                     
+                    console.log('📡 Making API call to /api/contract/refresh-analysis')
                     const response = await fetch('/api/contract/refresh-analysis', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ contractId: contract?.id })
                     })
                     
+                    console.log('📡 API response status:', response.status, response.statusText)
+                    
                     if (response.ok) {
-                      console.log('✅ Comprehensive analysis started successfully')
+                      const responseData = await response.json()
+                      console.log('✅ Comprehensive analysis started successfully:', responseData)
                       setAnalysisProgress({ status: 'in_progress', progress: 0 })
                       setIsAnalyzing(true)
+                      
+                      // Start checking progress immediately
+                      console.log('⏱️ Starting progress check...')
                       checkAnalysisProgress()
                     } else {
                       const errorData = await response.json()
+                      console.error('❌ API call failed:', errorData)
                       throw new Error(errorData.error || 'Failed to start analysis')
                     }
                   } catch (error) {
