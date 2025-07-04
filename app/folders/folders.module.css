@@ -255,9 +255,9 @@
 
 .searchBar:focus {
   outline: none;
-  border-color: #D1D5DB;
+  border-color: #111827;
   background-color: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.05);
 }
 
 /* Create Folder Button - Rectangular with text and icon */
@@ -368,7 +368,7 @@
 
 .uploadProgressFill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(90deg, #111827, #374151);
   transition: width 0.3s ease;
   border-radius: 3px;
 }
@@ -444,8 +444,8 @@
 
 .folderNameInput:focus {
   outline: none;
-  border-color: #D1D5DB;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.05);
 }
 
 /* Scrollable Folders Container */

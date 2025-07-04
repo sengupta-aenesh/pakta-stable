@@ -1,0 +1,158 @@
+/* Contract Status Badge Styles */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.badge.small {
+  padding: 2px 4px;
+  font-size: 9px;
+}
+
+.badge.medium {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.icon {
+  font-size: 8px;
+  line-height: 1;
+  filter: grayscale(0.3);
+}
+
+.text {
+  white-space: nowrap;
+  letter-spacing: 0.025em;
+}
+
+/* Status-specific styles with brand colors */
+.uploading {
+  background: rgba(17, 24, 39, 0.05);
+  color: #111827;
+  border-color: rgba(17, 24, 39, 0.1);
+  animation: pulse 2s infinite;
+}
+
+.pending {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  border-color: rgba(107, 114, 128, 0.2);
+}
+
+.analyzing {
+  background: rgba(17, 24, 39, 0.08);
+  color: #111827;
+  border-color: rgba(17, 24, 39, 0.15);
+  animation: spin 2s linear infinite;
+}
+
+.complete {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.2);
+}
+
+.failed {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.ready {
+  background: rgba(107, 114, 128, 0.05);
+  color: #6b7280;
+  border-color: rgba(107, 114, 128, 0.1);
+}
+
+/* Progress Ring Styles */
+.progressRing {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+}
+
+.progressSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progressBackground {
+  stroke: rgba(107, 114, 128, 0.2);
+}
+
+.progressForeground {
+  stroke: #111827;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+
+.progressText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 6px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hover effects */
+.badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.analyzing .icon {
+  animation: spin 1.5s linear infinite;
+}
+
+/* Size adjustments for progress ring */
+.small .progressRing {
+  width: 12px;
+  height: 12px;
+}
+
+.small .progressText {
+  font-size: 5px;
+}
+
+.medium .progressRing {
+  width: 18px;
+  height: 18px;
+}
+
+.medium .progressText {
+  font-size: 7px;
+}

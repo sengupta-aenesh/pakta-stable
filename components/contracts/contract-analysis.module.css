@@ -106,7 +106,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(90deg, #111827, #374151);
   transition: width 0.5s ease;
   border-radius: 4px;
 }
@@ -317,8 +317,8 @@
 }
 
 .clickableRisk:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  border-color: #111827;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.1);
   transform: translateY(-1px);
 }
 
@@ -328,8 +328,8 @@
 
 .emphasizedRiskCard {
   animation: emphasizeRiskCard 3s ease-in-out;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25) !important;
+  border-color: #111827 !important;
+  box-shadow: 0 4px 20px rgba(17, 24, 39, 0.25) !important;
 }
 
 @keyframes emphasizeRiskCard {
@@ -339,15 +339,15 @@
   }
   10% { 
     transform: scale(1.02);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02));
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.05), rgba(17, 24, 39, 0.02));
   }
   20% { 
     transform: scale(1.01);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.03));
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.08), rgba(17, 24, 39, 0.03));
   }
   30% { 
     transform: scale(1.02);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02));
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.05), rgba(17, 24, 39, 0.02));
   }
   50% { 
     transform: scale(1);
@@ -369,7 +369,7 @@
 }
 
 .clickableRisk:hover .scrollIcon {
-  color: #3b82f6;
+  color: #111827;
 }
 
 .scrollHint {
@@ -826,8 +826,8 @@
 }
 
 .importanceBadge.optional {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .occurrenceCount {
@@ -912,8 +912,8 @@
 
 .missingInfoInput:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
 }
 
 .missingInfoInput::placeholder {
@@ -965,7 +965,7 @@
 }
 
 .applyChangesButton {
-  background: #3b82f6;
+  background: #111827;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -979,7 +979,7 @@
 }
 
 .applyChangesButton:hover:not(:disabled) {
-  background: #2563eb;
+  background: #374151;
   transform: translateY(-1px);
 }
 
@@ -1016,12 +1016,54 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #3b82f6;
+  background: #111827;
   color: white;
   border-radius: 50%;
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
+}
+
+/* Prominent Progress Display */
+.prominentProgress {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.progressHeader h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.progressHeader span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.progressDescription {
+  margin: 12px 0 0 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.4;
+  text-align: center;
+  font-style: italic;
 }
 
 /* Mobile responsiveness for Complete tab */

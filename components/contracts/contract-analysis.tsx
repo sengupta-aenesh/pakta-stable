@@ -47,6 +47,15 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     }
   }
 
+  // Helper function to get progress description
+  const getProgressDescription = (progress: number): string => {
+    if (progress < 30) return "Reading and understanding your contract..."
+    if (progress < 60) return "Identifying key terms and clauses..."
+    if (progress < 80) return "Analyzing risks and compliance issues..."
+    if (progress < 95) return "Finalizing comprehensive analysis..."
+    return "Almost complete! Preparing results..."
+  }
+
   // Function to scroll to and highlight a specific risk card
   const scrollToRiskCard = useCallback((riskId: string) => {
     const riskElement = document.querySelector(`[data-risk-card-id="${riskId}"]`)
@@ -571,18 +580,22 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
 
         {!isHeaderCollapsed && (
           <div className={styles.headerContent}>
-            {/* Progress Display */}
+            {/* Prominent Progress Display */}
             {analysisProgress && (
-              <div className={styles.progressContainer}>
+              <div className={styles.prominentProgress}>
+                <div className={styles.progressHeader}>
+                  <h4>AI Analysis in Progress</h4>
+                  <span>{analysisProgress.progress}%</span>
+                </div>
                 <div className={styles.progressBar}>
                   <div 
                     className={styles.progressFill}
                     style={{ width: `${analysisProgress.progress}%` }}
                   />
                 </div>
-                <span className={styles.progressText}>
-                  Analyzing... {analysisProgress.progress}%
-                </span>
+                <p className={styles.progressDescription}>
+                  {getProgressDescription(analysisProgress.progress)}
+                </p>
               </div>
             )}
             

@@ -45,9 +45,9 @@
 }
 
 .modeToggle.editing {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  color: #1d4ed8;
+  background: #f3f4f6;
+  border-color: #111827;
+  color: #111827;
 }
 
 .modeToggle.viewing {
@@ -186,8 +186,8 @@
 }
 
 .editor:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
 }
 
 .viewer {
@@ -211,8 +211,8 @@
 }
 
 .editableViewer:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
 }
 
 /* Ensure text is selectable and editable in edit mode */
@@ -311,12 +311,12 @@
 
 /* Custom text selection styling */
 .highlightedContent::selection {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(17, 24, 39, 0.2);
   color: inherit;
 }
 
 .highlightedContent::-moz-selection {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(17, 24, 39, 0.2);
   color: inherit;
 }
 
@@ -385,15 +385,15 @@
   }
   25% { 
     transform: scale(1.02);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 16px rgba(17, 24, 39, 0.3);
   }
   50% { 
     transform: scale(1.01);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 6px 20px rgba(17, 24, 39, 0.2);
   }
   75% { 
     transform: scale(1.02);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 16px rgba(17, 24, 39, 0.3);
   }
 }
 
@@ -458,7 +458,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(90deg, #111827, #374151);
   transition: width 0.5s ease;
   border-radius: 6px;
 }
@@ -534,7 +534,7 @@
 
 /* Focus states for accessibility */
 .riskHighlight:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #111827;
   outline-offset: 2px;
 }
 

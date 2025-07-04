@@ -20,7 +20,9 @@
       "Bash(npm run lint)",
       "WebFetch(domain:www.ycombinator.com)",
       "WebFetch(domain:contractpodai.com)",
-      "WebFetch(domain:www.ironclad.com)"
+      "WebFetch(domain:www.ironclad.com)",
+      "Bash(npx next lint:*)",
+      "Bash(npm install)"
     ],
     "deny": []
   }

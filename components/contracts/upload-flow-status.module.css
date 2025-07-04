@@ -1,0 +1,279 @@
+/* Upload Flow Status Styles */
+
+.container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+}
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 8px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #111827, #374151);
+  transition: width 0.5s ease;
+  border-radius: 4px;
+}
+
+.progressText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Steps Container */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stepContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.step.pending {
+  opacity: 0.5;
+}
+
+.step.active {
+  opacity: 1;
+  background: rgba(17, 24, 39, 0.02);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 -16px;
+}
+
+.step.complete {
+  opacity: 1;
+}
+
+.step.error {
+  opacity: 1;
+  background: rgba(220, 38, 38, 0.02);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 -16px;
+}
+
+/* Step Icon Container */
+.stepIconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.step.pending .stepIconContainer {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.step.active .stepIconContainer {
+  background: #111827;
+  color: white;
+}
+
+.step.complete .stepIconContainer {
+  background: #059669;
+  color: white;
+}
+
+.step.error .stepIconContainer {
+  background: #dc2626;
+  color: white;
+}
+
+/* Step Icon */
+.stepIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.stepNumber {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+
+.spinnerInner {
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Step Content */
+.stepContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.stepDescription {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.step.active .stepDescription {
+  color: #111827;
+  font-weight: 500;
+}
+
+.step.error .stepDescription {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Connector Line */
+.connector {
+  width: 2px;
+  height: 16px;
+  background: #e5e7eb;
+  margin: 0 0 0 15px;
+  transition: background-color 0.3s ease;
+}
+
+.connectorComplete {
+  background: #059669;
+}
+
+/* Error Container */
+.errorContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(220, 38, 38, 0.05);
+  border: 1px solid rgba(220, 38, 38, 0.1);
+  border-radius: 8px;
+}
+
+.errorIcon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.errorContent {
+  flex: 1;
+}
+
+.errorTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-bottom: 4px;
+}
+
+.errorMessage {
+  font-size: 13px;
+  color: #991b1b;
+  line-height: 1.4;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+    max-width: 100%;
+  }
+  
+  .title {
+    font-size: 16px;
+  }
+  
+  .step {
+    padding: 10px 0;
+  }
+  
+  .step.active,
+  .step.error {
+    padding: 10px 12px;
+    margin: 0 -12px;
+  }
+  
+  .stepIconContainer {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .stepIcon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .spinner {
+    width: 14px;
+    height: 14px;
+  }
+}

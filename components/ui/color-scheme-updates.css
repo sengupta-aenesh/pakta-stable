@@ -1,0 +1,260 @@
+/* Color Scheme Updates - Replace Blue with Brand Colors */
+/* Apply these updates to remove blue colors throughout the application */
+
+/* Progress Bars - Replace blue gradients with brand colors */
+.progressFill,
+.uploadProgressFill {
+  background: linear-gradient(90deg, #111827, #374151) !important;
+}
+
+/* Risk Highlights - Replace blue hover states */
+.riskHighlight:hover,
+.clickableRisk:hover {
+  border-color: #111827 !important;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.1) !important;
+}
+
+.clickableRisk:hover .scrollIcon {
+  color: #111827 !important;
+}
+
+/* Emphasized Risk Cards - Replace blue with brand colors */
+.emphasizedRiskCard {
+  border-color: #111827 !important;
+  box-shadow: 0 4px 20px rgba(17, 24, 39, 0.25) !important;
+}
+
+/* Keyframe animations - Replace blue with brand colors */
+@keyframes emphasizeRiskCard {
+  0%, 100% { 
+    transform: scale(1);
+    background: #ffffff;
+  }
+  10% { 
+    transform: scale(1.02);
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.05), rgba(17, 24, 39, 0.02));
+  }
+  20% { 
+    transform: scale(1.01);
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.08), rgba(17, 24, 39, 0.03));
+  }
+  30% { 
+    transform: scale(1.02);
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.05), rgba(17, 24, 39, 0.02));
+  }
+  50% { 
+    transform: scale(1);
+    background: #ffffff;
+  }
+}
+
+@keyframes emphasize {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  25% { 
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(17, 24, 39, 0.3);
+  }
+  50% { 
+    transform: scale(1.01);
+    box-shadow: 0 6px 20px rgba(17, 24, 39, 0.2);
+  }
+  75% { 
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(17, 24, 39, 0.3);
+  }
+}
+
+/* Focus States - Replace blue focus rings */
+.missingInfoInput:focus {
+  border-color: #111827 !important;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1) !important;
+}
+
+.editor:focus,
+.editableViewer:focus {
+  border-color: #111827 !important;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1) !important;
+}
+
+.riskHighlight:focus {
+  outline: 2px solid #111827 !important;
+  outline-offset: 2px;
+}
+
+/* Button Colors - Replace blue buttons */
+.applyChangesButton {
+  background: #111827 !important;
+  color: white;
+}
+
+.applyChangesButton:hover:not(:disabled) {
+  background: #374151 !important;
+}
+
+/* Mode Toggle - Replace blue editing state */
+.modeToggle.editing {
+  background: #f3f4f6 !important;
+  border-color: #111827 !important;
+  color: #111827 !important;
+}
+
+/* Step Numbers - Replace blue backgrounds */
+.stepNumber {
+  background: #111827 !important;
+  color: white;
+}
+
+/* Optional Badges - Replace blue with neutral colors */
+.importanceBadge.optional {
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+}
+
+/* Text Selection - Replace blue selection color */
+.highlightedContent::selection {
+  background: rgba(17, 24, 39, 0.2) !important;
+  color: inherit;
+}
+
+.highlightedContent::-moz-selection {
+  background: rgba(17, 24, 39, 0.2) !important;
+  color: inherit;
+}
+
+/* Analysis Progress Bars */
+.analysisMessage .progressFill {
+  background: linear-gradient(90deg, #111827, #374151) !important;
+}
+
+.interactive-contract-editor .progressFill {
+  background: linear-gradient(90deg, #111827, #374151) !important;
+}
+
+/* Contract Analysis Progress */
+.contract-analysis .progressFill {
+  background: linear-gradient(90deg, #111827, #374151) !important;
+}
+
+/* Upload Progress in Sidebar */
+.uploadProgressFill {
+  background: linear-gradient(90deg, #111827, #374151) !important;
+}
+
+/* Success States - Keep existing green */
+.complete,
+.step.complete .stepIconContainer {
+  background: #059669 !important;
+  color: white;
+}
+
+/* Error States - Keep existing red */
+.failed,
+.step.error .stepIconContainer {
+  background: #dc2626 !important;
+  color: white;
+}
+
+/* Hover Effects for Interactive Elements */
+.tab:hover {
+  color: #111827 !important;
+}
+
+.tab.active {
+  background-color: #ffffff;
+  color: #111827 !important;
+}
+
+/* Primary Action Buttons */
+.refreshButton {
+  background: #111827 !important;
+  color: #fff;
+}
+
+.refreshButton:hover {
+  background: #374151 !important;
+}
+
+/* Chat Input Focus */
+.chatInput input:focus {
+  border-color: #111827 !important;
+}
+
+.chatInput button {
+  background: #111827 !important;
+  color: #ffffff;
+}
+
+.chatInput button:hover:not(:disabled) {
+  background: #374151 !important;
+}
+
+/* Upload and Create Buttons */
+.createFolderButton,
+.uploadButton {
+  background-color: #111827 !important;
+  color: #F9FAFB;
+}
+
+.createFolderButton:hover,
+.uploadButton:hover {
+  background-color: #374151 !important;
+}
+
+/* Empty State Buttons */
+.emptyStateButton {
+  background-color: #111827 !important;
+  color: white;
+}
+
+.emptyStateButton:hover {
+  background-color: #374151 !important;
+}
+
+/* Back Button Hover */
+.backButton:hover {
+  background-color: #111827 !important;
+  color: #ffffff;
+  border-color: #111827 !important;
+}
+
+/* Mobile Edit Button */
+.mobileEditButton {
+  background: #111827 !important;
+  color: #fff;
+}
+
+.mobileEditButton:hover {
+  background: #374151 !important;
+}
+
+/* Search Bar Focus */
+.searchBar:focus {
+  border-color: #111827 !important;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.05) !important;
+}
+
+/* Folder Name Input Focus */
+.folderNameInput:focus {
+  border-color: #111827 !important;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.05) !important;
+}
+
+/* Document Title Input Focus */
+.documentTitleInput:focus {
+  outline: 2px solid #111827 !important;
+  outline-offset: -2px;
+}
+
+/* Analysis Steps in Progress Display */
+.analysisSteps .step.completed {
+  background-color: #d1fae5 !important;
+  color: #065f46;
+}
+
+.analysisSteps .step.pending {
+  background-color: #f3f4f6 !important;
+  color: #6b7280;
+}

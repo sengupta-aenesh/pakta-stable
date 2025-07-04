@@ -8,6 +8,8 @@ import { Contract, contractsApi } from '@/lib/supabase-client'
 import { getCurrentUser } from '@/lib/auth-client'
 import mammoth from 'mammoth'
 import styles from '@/app/folders/folders.module.css'
+import ContractStatusBadge from '@/components/contracts/contract-status-badge'
+import UploadFlowStatus from '@/components/contracts/upload-flow-status'
 
 interface UnifiedSidebarProps {
   folders: Folder[]
@@ -54,6 +56,8 @@ export default function UnifiedSidebar({
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{step: string, progress: number} | null>(null)
+  const [uploadStep, setUploadStep] = useState<string>('')
+  const [uploadError, setUploadError] = useState<string>('')
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -398,12 +402,15 @@ export default function UnifiedSidebar({
 
     try {
       setUploading(true)
+      setUploadError('')
+      setUploadStep('extract')
       setUploadProgress({step: 'Extracting text from document...', progress: 20})
       
       console.log('📄 File Upload - Extracting text from docx file')
       // Extract text from docx
       const extractedText = await extractTextFromDocx(file)
       console.log('✅ File Upload - Text extraction successful, length:', extractedText.length)
+      setUploadStep('save')
       setUploadProgress({step: 'Processing document...', progress: 40})
       
       // Extract title from filename
@@ -432,6 +439,7 @@ export default function UnifiedSidebar({
         analysis_cache: {}
       })
       console.log('✅ File Upload - Database save successful, contract ID:', newContract.id)
+      setUploadStep('analyze')
       setUploadProgress({step: 'Starting AI analysis...', progress: 80})
       
       // Trigger automatic analysis
@@ -485,13 +493,16 @@ export default function UnifiedSidebar({
         userMessage = 'Network error. Please check your connection and try again.'
       }
       
+      setUploadError(userMessage)
       onToast?.(userMessage, 'error')
     } finally {
       setUploading(false)
       // Clear progress after a short delay
       setTimeout(() => {
         setUploadProgress(null)
-      }, 2000)
+        setUploadStep('')
+        setUploadError('')
+      }, 3000)
     }
   }
 
@@ -573,6 +584,13 @@ export default function UnifiedSidebar({
           <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
         </svg>
         <span className={styles.contractName} style={{ pointerEvents: 'none' }}>{truncatedTitle}</span>
+        
+        {/* Contract Status Badge */}
+        <ContractStatusBadge 
+          status={contract.analysis_status as any}
+          progress={contract.analysis_progress || 0}
+          size="small"
+        />
         
         {/* Delete Contract Button */}
         <button
@@ -800,12 +818,9 @@ export default function UnifiedSidebar({
 
   const filteredContracts = searchTerm
     ? contracts.filter(contract =>
-        contract.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (contract.analysis_status === 'complete' || contract.analysis_status === null) // Show completed or legacy contracts
+        contract.title.toLowerCase().includes(searchTerm.toLowerCase())
       )
-    : contracts.filter(contract => 
-        contract.analysis_status === 'complete' || contract.analysis_status === null // Show completed or legacy contracts
-      )
+    : contracts
 
   return (
     <div 
@@ -867,18 +882,14 @@ export default function UnifiedSidebar({
               <span>{uploading ? 'Uploading...' : 'Upload Contract'}</span>
             </label>
             
-            {/* Upload Progress Bar */}
-            {uploadProgress && (
-              <div className={styles.uploadProgressContainer}>
-                <div className={styles.uploadProgressBar}>
-                  <div 
-                    className={styles.uploadProgressFill}
-                    style={{ width: `${uploadProgress.progress}%` }}
-                  />
-                </div>
-                <span className={styles.uploadProgressText}>
-                  {uploadProgress.step}
-                </span>
+            {/* Upload Progress Status */}
+            {uploading && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: '8px' }}>
+                <UploadFlowStatus
+                  currentStep={uploadStep}
+                  progress={uploadProgress?.progress || 0}
+                  error={uploadError}
+                />
               </div>
             )}
           </div>
