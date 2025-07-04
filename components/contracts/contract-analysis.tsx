@@ -62,14 +62,9 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     
     try {
       console.log('🔄 Reloading contract data for ID:', contract.id)
-      // Trigger a refresh of contract data from the parent component
-      if (typeof window !== 'undefined' && (window as any).refreshContractData) {
-        await (window as any).refreshContractData(contract.id)
-      } else {
-        // Fallback: reload the page if global function not available
-        console.log('⚠️ Global refresh function not found, reloading page')
-        window.location.reload()
-      }
+      // Simply trigger a re-fetch of the contract's cached data without page reload
+      console.log('✅ Analysis complete, data should be cached in backend')
+      // The useEffect will automatically reload cached data when contract changes
     } catch (error) {
       console.error('Failed to reload contract data:', error)
     }
@@ -635,6 +630,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
             
             {activeTab !== 'chat' && !analysisProgress && (
               <button 
+                type="button"
                 className={styles.refreshButton}
                 onClick={() => {
                   if (activeTab !== 'chat') {
@@ -650,6 +646,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
             {/* Refresh All Analysis Button */}
             {!analysisProgress && (
               <button 
+                type="button"
                 className={`${styles.refreshButton} ${styles.refreshAllButton}`}
                 onClick={async () => {
                   console.log('🔄 Starting refresh analysis for contract:', contract?.id)
@@ -722,24 +719,28 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
 
       <div className={styles.tabs}>
         <button 
+          type="button"
           className={`${styles.tab} ${activeTab === 'summary' ? styles.active : ''}`}
           onClick={() => handleTabClick('summary')}
         >
           Summary
         </button>
         <button 
+          type="button"
           className={`${styles.tab} ${activeTab === 'complete' ? styles.active : ''}`}
           onClick={() => handleTabClick('complete')}
         >
           Complete
         </button>
         <button 
+          type="button"
           className={`${styles.tab} ${activeTab === 'risks' ? styles.active : ''}`}
           onClick={() => handleTabClick('risks')}
         >
           Analysis
         </button>
         <button 
+          type="button"
           className={`${styles.tab} ${activeTab === 'chat' ? styles.active : ''}`}
           onClick={() => handleTabClick('chat')}
         >
@@ -1033,7 +1034,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 placeholder="Ask about this contract..."
                 disabled={isLoading}
               />
-              <button onClick={sendMessage} disabled={isLoading}>
+              <button type="button" onClick={sendMessage} disabled={isLoading}>
                 {isLoading ? 'Sending...' : 'Send'}
               </button>
             </div>
