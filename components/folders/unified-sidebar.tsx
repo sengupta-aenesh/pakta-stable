@@ -439,32 +439,12 @@ export default function UnifiedSidebar({
         analysis_cache: {}
       })
       console.log('✅ File Upload - Database save successful, contract ID:', newContract.id)
-      setUploadStep('analyze')
-      setUploadProgress({step: 'Starting AI analysis...', progress: 80})
+      setUploadStep('complete')
+      setUploadProgress({step: 'Upload complete!', progress: 100})
       
-      // Trigger automatic analysis
-      console.log('🤖 File Upload - Starting automatic analysis')
-      try {
-        const analysisResponse = await fetch('/api/contract/auto-analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contractId: newContract.id })
-        })
-        
-        if (analysisResponse.ok) {
-          console.log('✅ File Upload - Automatic analysis started successfully')
-          setUploadProgress({step: 'Upload complete! Analysis starting...', progress: 100})
-          onToast?.('Contract uploaded! AI analysis started automatically.', 'success')
-        } else {
-          console.warn('⚠️ File Upload - Analysis start failed, but contract uploaded successfully')
-          setUploadProgress({step: 'Upload complete!', progress: 100})
-          onToast?.('Contract uploaded successfully! You can analyze it manually.', 'success')
-        }
-      } catch (analysisError) {
-        console.error('❌ File Upload - Analysis trigger failed:', analysisError)
-        setUploadProgress({step: 'Upload complete!', progress: 100})
-        onToast?.('Contract uploaded successfully! You can analyze it manually.', 'success')
-      }
+      // Contract uploaded successfully - no automatic analysis
+      console.log('✅ File Upload - Contract uploaded successfully')
+      onToast?.('Contract uploaded successfully! Click "Analyze" to start AI analysis.', 'success')
       
       onContractsUpdate()
       

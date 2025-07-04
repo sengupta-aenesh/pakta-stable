@@ -628,28 +628,13 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
               </div>
             )}
             
-            {activeTab !== 'chat' && !analysisProgress && (
-              <button 
-                type="button"
-                className={styles.refreshButton}
-                onClick={() => {
-                  if (activeTab !== 'chat') {
-                    analyzeContract(activeTab as 'summary' | 'complete' | 'risks', true)
-                  }
-                }}
-                disabled={isAnalyzing}
-              >
-                {isAnalyzing ? 'Analyzing...' : 'Refresh Analysis'}
-              </button>
-            )}
-            
-            {/* Refresh All Analysis Button */}
+            {/* Single Analyze Button */}
             {!analysisProgress && (
               <button 
                 type="button"
-                className={`${styles.refreshButton} ${styles.refreshAllButton}`}
+                className={`${styles.refreshButton} ${styles.analyzeButton}`}
                 onClick={async () => {
-                  console.log('🔄 Starting refresh analysis for contract:', contract?.id)
+                  console.log('🔄 Starting comprehensive analysis for contract:', contract?.id)
                   try {
                     // Clear current data first
                     setSummary(null)
@@ -664,23 +649,23 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     })
                     
                     if (response.ok) {
-                      console.log('✅ Refresh analysis started successfully')
+                      console.log('✅ Comprehensive analysis started successfully')
                       setAnalysisProgress({ status: 'in_progress', progress: 0 })
                       setIsAnalyzing(true)
                       checkAnalysisProgress()
                     } else {
                       const errorData = await response.json()
-                      throw new Error(errorData.error || 'Failed to start refresh analysis')
+                      throw new Error(errorData.error || 'Failed to start analysis')
                     }
                   } catch (error) {
-                    console.error('❌ Failed to refresh analysis:', error)
-                    alert(`Failed to refresh analysis: ${error.message}. Please try again.`)
+                    console.error('❌ Failed to start analysis:', error)
+                    alert(`Failed to start analysis: ${error.message}. Please try again.`)
                   }
                 }}
                 disabled={isAnalyzing}
-                title="Refresh all analysis (Summary + Risks + Complete)"
+                title="Analyze contract - includes summary, risk analysis, and completeness check"
               >
-                Refresh All Analysis
+                {isAnalyzing ? 'Analyzing...' : 'Analyze Contract'}
               </button>
             )}
             
