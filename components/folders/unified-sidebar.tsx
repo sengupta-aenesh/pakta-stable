@@ -393,12 +393,12 @@ export default function UnifiedSidebar({
     const file = event.target.files?.[0]
     if (!file) return
 
-    console.log('📁 File Upload - Starting upload process:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      selectedFolder: selectedFolder
-    })
+    // Prevent multiple simultaneous uploads
+    if (uploading) {
+      onToast?.('Please wait for the current upload to complete before uploading another file.', 'warning')
+      event.target.value = '' // Clear the input
+      return
+    }
 
     try {
       setUploading(true)

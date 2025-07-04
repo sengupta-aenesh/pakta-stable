@@ -44,27 +44,32 @@ function DashboardContent() {
     reanalyzeRisksRef.current = fn
   }, [])
 
-  // Contract selection handler - moved early to avoid forward reference issues
+  // Contract selection handler - optimized to prevent cascading re-renders
   const handleContractSelect = useCallback(async (contract: Contract, fromURL = false) => {
+    // Prevent unnecessary re-selection of the same contract
+    if (selectedContract?.id === contract.id) {
+      console.log('✅ Contract already selected, skipping re-selection:', contract.id)
+      return
+    }
+    
     console.log('🎯 Contract selected - START:', {
       contractId: contract.id,
       contractTitle: contract.title,
       source: fromURL ? 'URL' : 'sidebar',
-      currentSelected: selectedContract?.id || 'none',
-      hasAnalysisCache: !!contract.analysis_cache,
-      hasRisksCache: !!contract.analysis_cache?.risks,
-      cachedRisksCount: contract.analysis_cache?.risks?.risks?.length || 0,
-      timestamp: new Date().toISOString()
+      currentSelected: selectedContract?.id || 'none'
     })
+    
+    // Clear previous contract data immediately to prevent conflicts
+    setContractRisks([])
     
     // Only update URL if this is a manual selection (not from URL monitoring)
     if (!fromURL) {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.set('contractId', contract.id)
       window.history.pushState({}, '', newUrl.toString())
-      console.log('🔗 Updated URL with contract ID:', contract.id)
     }
     
+    // Set the new contract
     setSelectedContract(contract)
     
     // Load cached risks from RiskAnalysis object
@@ -74,28 +79,16 @@ function DashboardContent() {
         ? riskAnalysis  // Fallback for old direct array format
         : riskAnalysis.risks || []  // New RiskAnalysis object format
       console.log('📥 Loading cached risks:', cachedRisks.length, 'risks')
-      console.log('📋 First cached risk:', cachedRisks[0] ? {
-        id: cachedRisks[0].id,
-        hasClause: !!cachedRisks[0].clause,
-        clauseLength: cachedRisks[0].clause?.length || 0,
-        category: cachedRisks[0].category
-      } : 'No risks')
       setContractRisks(cachedRisks)
-    } else {
-      // No cached risks, start with empty array
-      setContractRisks([])
     }
+    
     // On mobile, switch to analysis view when contract is selected
     if (window.innerWidth <= 768) {
       setMobileView('analysis')
     }
     
-    console.log('🎯 Contract selected - COMPLETE:', {
-      contractId: contract.id,
-      source: fromURL ? 'URL' : 'sidebar',
-      success: true
-    })
-  }, [selectedContract])
+    console.log('🎯 Contract selected - COMPLETE:', contract.id)
+  }, [selectedContract?.id]) // Only depend on the ID to prevent excessive re-renders
 
   // Debug duplicate keys
   useEffect(() => {
@@ -148,17 +141,7 @@ function DashboardContent() {
     }
   }, [searchParams, contracts, handleContractSelect]) // Add handleContractSelect back
 
-  // Debug contractRisks changes
-  useEffect(() => {
-    console.log('📊 Contract risks updated:', {
-      risksCount: contractRisks.length,
-      firstRisk: contractRisks[0] ? {
-        id: contractRisks[0].id,
-        hasClause: !!contractRisks[0].clause,
-        clausePreview: contractRisks[0].clause?.substring(0, 50) + '...' || 'No clause'
-      } : 'No risks'
-    })
-  }, [contractRisks])
+  // Removed debug logging to improve performance during contract switching
 
   // Expose update contract content function globally
   useEffect(() => {

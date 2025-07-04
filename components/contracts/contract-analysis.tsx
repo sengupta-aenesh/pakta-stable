@@ -100,21 +100,22 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     }
   }, [scrollToRiskCard, contract])
 
-  // Check analysis progress for the current contract
+  // Check analysis progress for the current contract with debouncing
+  const progressCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
   const checkAnalysisProgress = useCallback(async () => {
     if (!contract) return
+    
+    // Clear any existing timeout to prevent multiple concurrent checks
+    if (progressCheckTimeoutRef.current) {
+      clearTimeout(progressCheckTimeoutRef.current)
+      progressCheckTimeoutRef.current = null
+    }
     
     try {
       const response = await fetch(`/api/contract/analysis-status?contractId=${contract.id}`)
       if (response.ok) {
         const statusData = await response.json()
-        
-        console.log('📊 Analysis status check:', {
-          contractId: contract.id,
-          status: statusData.status,
-          progress: statusData.progress,
-          hasCache: statusData.hasCache
-        })
         
         if (statusData.status === 'in_progress' && statusData.progress < 100) {
           setAnalysisProgress({
@@ -123,28 +124,25 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           })
           setIsAnalyzing(true)
           
-          // Continue polling while in progress
-          setTimeout(checkAnalysisProgress, 3000) // Slightly longer interval
+          // Continue polling while in progress, but only if contract hasn't changed
+          progressCheckTimeoutRef.current = setTimeout(() => {
+            if (contract?.id === statusData.contractId) { // Only continue if same contract
+              checkAnalysisProgress()
+            }
+          }, 3000)
         } else if (statusData.status === 'complete') {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
           
-          console.log('✅ Analysis complete, refreshing contract data...')
-          
           // Reload the current contract data to get fresh cache
           await reloadContractData()
           
-          // Force a delay and trigger re-render to ensure fresh data loads
+          // Force refresh after delay to ensure fresh data loads
           setTimeout(() => {
-            console.log('🔄 Triggering contract data reload...')
             if (typeof window !== 'undefined' && (window as any).refreshCurrentContract) {
               (window as any).refreshCurrentContract()
             }
           }, 1000)
-        } else if (statusData.status === 'failed') {
-          setAnalysisProgress(null)
-          setIsAnalyzing(false)
-          console.error('❌ Analysis failed for contract:', contract.id)
         } else {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
@@ -156,19 +154,20 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       setIsAnalyzing(false)
     }
   }, [contract, reloadContractData])
+  
+  // Cleanup progress checking timeout
+  useEffect(() => {
+    return () => {
+      if (progressCheckTimeoutRef.current) {
+        clearTimeout(progressCheckTimeoutRef.current)
+        progressCheckTimeoutRef.current = null
+      }
+    }
+  }, [contract?.id])
 
   useEffect(() => {
-    console.log('🔄 Contract or analysis cache changed:', {
-      contractId: contract?.id,
-      hasContract: !!contract,
-      hasSummaryCache: !!contract?.analysis_cache?.summary,
-      hasRisksCache: !!contract?.analysis_cache?.risks,
-      hasCompleteCache: !!contract?.analysis_cache?.complete,
-      analysisStatus: contract?.analysis_status
-    })
-    
     if (contract) {
-      // Clear previous contract's data first
+      // Clear previous contract's data first to prevent conflicts
       setSummary(null)
       setRisks([])
       setMissingInfo([])
@@ -225,6 +224,15 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       setChatMessages([])
     }
   }, [contract?.id, contract?.analysis_cache]) // Watch both contract ID and analysis cache for updates
+
+  // Cleanup function to prevent memory leaks when switching contracts
+  useEffect(() => {
+    return () => {
+      // Clear any pending timeouts when component unmounts or contract changes
+      setAnalysisProgress(null)
+      setIsAnalyzing(false)
+    }
+  }, [contract?.id])
 
   const analyzeContract = useCallback(async (type: 'summary' | 'complete' | 'risks', forceRefresh = false) => {
     if (!contract) return
@@ -657,17 +665,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 type="button"
                 className={`${styles.refreshButton} ${styles.analyzeButton}`}
                 onClick={async () => {
-                  console.log('🔄 Starting comprehensive analysis for contract:', contract?.id)
-                  console.log('📋 Contract data before analysis:', {
-                    contractId: contract?.id,
-                    hasContent: !!contract?.content,
-                    contentLength: contract?.content?.length,
-                    currentStatus: contract?.analysis_status,
-                    currentProgress: contract?.analysis_progress,
-                    hasCachedSummary: !!contract?.analysis_cache?.summary,
-                    hasCachedRisks: !!contract?.analysis_cache?.risks,
-                    hasCachedComplete: !!contract?.analysis_cache?.complete
-                  })
+                  if (!contract?.id) return
                   
                   try {
                     // Clear current data first
@@ -676,31 +674,22 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     setMissingInfo([])
                     setChatMessages([])
                     
-                    console.log('📡 Making API call to /api/contract/refresh-analysis')
                     const response = await fetch('/api/contract/refresh-analysis', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ contractId: contract?.id })
+                      body: JSON.stringify({ contractId: contract.id })
                     })
                     
-                    console.log('📡 API response status:', response.status, response.statusText)
-                    
                     if (response.ok) {
-                      const responseData = await response.json()
-                      console.log('✅ Comprehensive analysis started successfully:', responseData)
                       setAnalysisProgress({ status: 'in_progress', progress: 0 })
                       setIsAnalyzing(true)
-                      
-                      // Start checking progress immediately
-                      console.log('⏱️ Starting progress check...')
                       checkAnalysisProgress()
                     } else {
                       const errorData = await response.json()
-                      console.error('❌ API call failed:', errorData)
                       throw new Error(errorData.error || 'Failed to start analysis')
                     }
                   } catch (error) {
-                    console.error('❌ Failed to start analysis:', error)
+                    console.error('Failed to start analysis:', error)
                     alert(`Failed to start analysis: ${error.message}. Please try again.`)
                   }
                 }}
