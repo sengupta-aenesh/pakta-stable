@@ -67,11 +67,12 @@ function DashboardContent() {
     
     setSelectedContract(contract)
     
-    // Load cached risks if available - now stored as direct array
+    // Load cached risks from RiskAnalysis object
     if (contract.analysis_cache?.risks) {
-      const cachedRisks = Array.isArray(contract.analysis_cache.risks) 
-        ? contract.analysis_cache.risks 
-        : (contract.analysis_cache.risks as any)?.risks || []  // Fallback for old format
+      const riskAnalysis = contract.analysis_cache.risks
+      const cachedRisks = Array.isArray(riskAnalysis) 
+        ? riskAnalysis  // Fallback for old direct array format
+        : riskAnalysis.risks || []  // New RiskAnalysis object format
       console.log('📥 Loading cached risks:', cachedRisks.length, 'risks')
       console.log('📋 First cached risk:', cachedRisks[0] ? {
         id: cachedRisks[0].id,

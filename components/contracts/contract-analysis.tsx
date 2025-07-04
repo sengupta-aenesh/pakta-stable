@@ -56,6 +56,25 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
     return "Almost complete! Preparing results..."
   }
 
+  // Function to reload contract data with fresh cache
+  const reloadContractData = useCallback(async () => {
+    if (!contract?.id) return
+    
+    try {
+      console.log('🔄 Reloading contract data for ID:', contract.id)
+      // Trigger a refresh of contract data from the parent component
+      if (typeof window !== 'undefined' && (window as any).refreshContractData) {
+        await (window as any).refreshContractData(contract.id)
+      } else {
+        // Fallback: reload the page if global function not available
+        console.log('⚠️ Global refresh function not found, reloading page')
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Failed to reload contract data:', error)
+    }
+  }, [contract?.id])
+
   // Function to scroll to and highlight a specific risk card
   const scrollToRiskCard = useCallback((riskId: string) => {
     const riskElement = document.querySelector(`[data-risk-card-id="${riskId}"]`)
@@ -109,13 +128,10 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           setAnalysisProgress(null)
           setIsAnalyzing(false)
           
-          // Instead of page reload, just refresh the contract data
           console.log('✅ Analysis complete, refreshing contract data...')
           
-          // Force refresh of the current contract to get updated cache
-          if (typeof window !== 'undefined' && (window as any).refreshCurrentContract) {
-            (window as any).refreshCurrentContract()
-          }
+          // Reload the current contract data to get fresh cache
+          await reloadContractData()
         } else if (statusData.status === 'failed') {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
@@ -145,28 +161,40 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       
       // Then load cached data for the new contract if available
       if (contract.analysis_cache?.summary) {
+        console.log('📄 Loading cached summary:', contract.analysis_cache.summary)
         // Check if cached summary has the new structure
         const cachedSummary = contract.analysis_cache.summary as any
         if (cachedSummary.overview || cachedSummary.contract_type) {
+          console.log('✅ Valid summary format detected, setting summary')
           setSummary(cachedSummary as ContractSummary)
         } else {
-          // Old format, clear cache to force refresh
+          console.log('⚠️ Invalid summary format, clearing summary:', cachedSummary)
           setSummary(null)
         }
+      } else {
+        console.log('📄 No cached summary found')
+        setSummary(null)
       }
       if (contract.analysis_cache?.complete) {
         const cachedMissingInfo = contract.analysis_cache.complete.missingInfo as MissingInfoItem[] || []
         setMissingInfo(cachedMissingInfo)
       }
       if (contract.analysis_cache?.risks) {
+        console.log('📊 Loading cached risks:', contract.analysis_cache.risks)
         // Handle both old and new cache structure formats
         const riskData = contract.analysis_cache.risks
-        const cachedRisks = Array.isArray(riskData) ? riskData : (riskData as any)?.risks || []
+        const cachedRisks = Array.isArray(riskData) 
+          ? riskData  // Old direct array format
+          : riskData?.risks || []  // New RiskAnalysis object format
+        console.log('✅ Loaded', cachedRisks.length, 'cached risks')
         setRisks(cachedRisks)
         // Update parent component with cached risks
         if (onRisksUpdate) {
           onRisksUpdate(cachedRisks)
         }
+      } else {
+        console.log('📊 No cached risks found')
+        setRisks([])
       }
       if (contract.analysis_cache?.chat) {
         setChatMessages(contract.analysis_cache.chat as Array<{role: string, content: string}>)
@@ -221,6 +249,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       }
       
       const data = await response.json()
+      console.log('📋 Analysis response received:', { type, data: typeof data, hasData: !!data })
       
       // Check for validation error
       if (data.error === 'NOT_A_CONTRACT') {
@@ -229,6 +258,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       }
       
       if (type === 'summary') {
+        console.log('✅ Setting summary data:', data)
         setSummary(data)  // API now returns summary directly
       } else if (type === 'complete') {
         const newMissingInfo = data.missingInfo || []
@@ -251,7 +281,11 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           }
         }
       } else {
-        const newRisks = Array.isArray(data) ? data : (data.risks || [])  // API now returns risks directly
+        // Handle RiskAnalysis object format
+        console.log('📊 Setting risk analysis data:', data)
+        const riskAnalysisData = data
+        const newRisks = riskAnalysisData.risks || []
+        console.log('✅ Extracted', newRisks.length, 'risks from analysis data')
         setRisks(newRisks)
         // Update parent component with new risks
         if (onRisksUpdate) {
@@ -618,7 +652,14 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
               <button 
                 className={`${styles.refreshButton} ${styles.refreshAllButton}`}
                 onClick={async () => {
+                  console.log('🔄 Starting refresh analysis for contract:', contract?.id)
                   try {
+                    // Clear current data first
+                    setSummary(null)
+                    setRisks([])
+                    setMissingInfo([])
+                    setChatMessages([])
+                    
                     const response = await fetch('/api/contract/refresh-analysis', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -626,12 +667,17 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     })
                     
                     if (response.ok) {
+                      console.log('✅ Refresh analysis started successfully')
                       setAnalysisProgress({ status: 'in_progress', progress: 0 })
                       setIsAnalyzing(true)
                       checkAnalysisProgress()
+                    } else {
+                      const errorData = await response.json()
+                      throw new Error(errorData.error || 'Failed to start refresh analysis')
                     }
                   } catch (error) {
-                    console.error('Failed to refresh analysis:', error)
+                    console.error('❌ Failed to refresh analysis:', error)
+                    alert(`Failed to refresh analysis: ${error.message}. Please try again.`)
                   }
                 }}
                 disabled={isAnalyzing}

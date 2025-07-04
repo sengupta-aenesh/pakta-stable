@@ -41,7 +41,17 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
         
       case 'risks':
         const riskAnalysis = await identifyRiskyTerms(content)
-        result = riskAnalysis.risks  // Store risks array directly
+        // Store complete RiskAnalysis object as expected by types
+        result = {
+          overallRiskScore: riskAnalysis.overallRiskScore || 0,
+          totalRisksFound: riskAnalysis.risks?.length || 0,
+          highRiskCount: riskAnalysis.risks?.filter(r => r.riskLevel === 'high').length || 0,
+          mediumRiskCount: riskAnalysis.risks?.filter(r => r.riskLevel === 'medium').length || 0,
+          lowRiskCount: riskAnalysis.risks?.filter(r => r.riskLevel === 'low').length || 0,
+          risks: riskAnalysis.risks || [],
+          recommendations: riskAnalysis.recommendations || [],
+          executiveSummary: riskAnalysis.executiveSummary || 'Risk analysis completed'
+        }
         break
         
       case 'complete':

@@ -117,8 +117,18 @@ export async function performSequentialAnalysis(contractId: string, content: str
       contractId
     )
 
-    // Cache risk result - store risks array directly
-    await contractsApi.updateAnalysisCache(contractId, 'risks', riskResult.risks)
+    // Cache risk result - store complete RiskAnalysis object as expected by types
+    const riskAnalysisData: any = {
+      overallRiskScore: riskResult.overallRiskScore || 0,
+      totalRisksFound: riskResult.risks?.length || 0,
+      highRiskCount: riskResult.risks?.filter(r => r.riskLevel === 'high').length || 0,
+      mediumRiskCount: riskResult.risks?.filter(r => r.riskLevel === 'medium').length || 0,
+      lowRiskCount: riskResult.risks?.filter(r => r.riskLevel === 'low').length || 0,
+      risks: riskResult.risks || [],
+      recommendations: riskResult.recommendations || [],
+      executiveSummary: riskResult.executiveSummary || 'Risk analysis completed'
+    }
+    await contractsApi.updateAnalysisCache(contractId, 'risks', riskAnalysisData)
     await updateAnalysisStatus(contractId, 'risks_complete', 66, null, 'Risk analysis complete')
 
     // Step 3: Complete Analysis (Progress: 66% -> 100%)
