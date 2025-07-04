@@ -18,7 +18,7 @@ export const GET = apiErrorHandler(async (request: NextRequest) => {
 
   try {
     // Get contract with analysis status
-    const contract = await contractsApi.getById(contractId, user.id)
+    const contract = await contractsApi.getById(contractId)
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
@@ -58,7 +58,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
   }
 
   try {
-    const contract = await contractsApi.getById(contractId, user.id)
+    const contract = await contractsApi.getById(contractId)
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }

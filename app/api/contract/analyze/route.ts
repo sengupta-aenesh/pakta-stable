@@ -36,12 +36,12 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
         if ('error' in summary) {
           return NextResponse.json(summary, { status: 400 })
         }
-        result = { summary }
+        result = summary  // Store direct summary object, not wrapped
         break
         
       case 'risks':
         const riskAnalysis = await identifyRiskyTerms(content)
-        result = { risks: riskAnalysis.risks, riskAnalysis }
+        result = riskAnalysis.risks  // Store risks array directly
         break
         
       case 'complete':

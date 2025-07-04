@@ -30,7 +30,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
 
   try {
     // Get contract details
-    const contract = await contractsApi.getById(contractId, user.id)
+    const contract = await contractsApi.getById(contractId)
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
@@ -82,7 +82,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
   }
 })
 
-async function performSequentialAnalysis(contractId: string, content: string, userId: string) {
+export async function performSequentialAnalysis(contractId: string, content: string, userId: string) {
   const maxRetries = 2
   let currentRetryCount = 0
 
@@ -102,8 +102,8 @@ async function performSequentialAnalysis(contractId: string, content: string, us
       throw new Error(`Summary analysis failed: ${summaryResult.message || 'Validation error'}`)
     }
 
-    // Cache summary result
-    await contractsApi.updateAnalysisCache(contractId, 'summary', { summary: summaryResult })
+    // Cache summary result - store direct summary object
+    await contractsApi.updateAnalysisCache(contractId, 'summary', summaryResult)
     await updateAnalysisStatus(contractId, 'summary_complete', 33, null, 'Summary analysis complete')
 
     // Step 2: Risk Analysis (Progress: 33% -> 66%)
@@ -117,8 +117,8 @@ async function performSequentialAnalysis(contractId: string, content: string, us
       contractId
     )
 
-    // Cache risk result
-    await contractsApi.updateAnalysisCache(contractId, 'risks', { risks: riskResult.risks, riskAnalysis: riskResult })
+    // Cache risk result - store risks array directly
+    await contractsApi.updateAnalysisCache(contractId, 'risks', riskResult.risks)
     await updateAnalysisStatus(contractId, 'risks_complete', 66, null, 'Risk analysis complete')
 
     // Step 3: Complete Analysis (Progress: 66% -> 100%)

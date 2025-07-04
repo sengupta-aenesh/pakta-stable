@@ -229,7 +229,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       }
       
       if (type === 'summary') {
-        setSummary(data.summary)
+        setSummary(data)  // API now returns summary directly
       } else if (type === 'complete') {
         const newMissingInfo = data.missingInfo || []
         setMissingInfo(newMissingInfo)
@@ -251,7 +251,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           }
         }
       } else {
-        const newRisks = data.risks || []
+        const newRisks = Array.isArray(data) ? data : (data.risks || [])  // API now returns risks directly
         setRisks(newRisks)
         // Update parent component with new risks
         if (onRisksUpdate) {

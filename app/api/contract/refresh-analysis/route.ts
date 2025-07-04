@@ -30,7 +30,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     const { contractsApi } = await import('@/lib/supabase')
     
     // Get contract details
-    const contract = await contractsApi.getById(contractId, user.id)
+    const contract = await contractsApi.getById(contractId)
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
@@ -48,25 +48,12 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
       analysis_cache: {} // Clear existing cache to force refresh
     })
 
-    // Trigger auto-analysis by making a proper internal request
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : request.url.split('/api')[0]
+    // Import the analysis function to avoid auth header issues
+    const { performSequentialAnalysis } = await import('../auto-analyze/route')
     
-    // Start the analysis in the background (don't await to avoid timeout)
-    fetch(`${baseUrl}/api/contract/auto-analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': request.headers.get('Authorization') || '',
-        'Cookie': request.headers.get('Cookie') || ''
-      },
-      body: JSON.stringify({
-        contractId,
-        forceRefresh: true
-      })
-    }).catch(error => {
-      console.error('Background analysis request failed:', error)
+    // Start the analysis in the background (don't await to avoid timeout)  
+    performSequentialAnalysis(contractId, contract.content, user.id).catch(error => {
+      console.error('Background analysis failed:', error)
     })
 
     addSentryBreadcrumb('Refresh analysis started', 'contract', 'info', {
