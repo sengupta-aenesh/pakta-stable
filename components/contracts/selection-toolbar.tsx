@@ -52,17 +52,28 @@ export default function SelectionToolbar({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const toolbarRef = useRef<HTMLDivElement>(null)
 
-  // Utility function to strip markdown formatting
-  const stripMarkdown = (text: string): string => {
+  // Utility function to beautify AI response text
+  const beautifyResponse = (text: string): string => {
     return text
+      // Remove markdown formatting
       .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold **text**
       .replace(/\*(.*?)\*/g, '$1')     // Remove italic *text*
       .replace(/#{1,6}\s(.*)/g, '$1')  // Remove headers # ## ### etc
       .replace(/`(.*?)`/g, '$1')       // Remove inline code `text`
       .replace(/```[\s\S]*?```/g, '')  // Remove code blocks
       .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links [text](url)
-      .replace(/^\s*[-*+]\s/gm, '')    // Remove bullet points
-      .replace(/^\s*\d+\.\s/gm, '')    // Remove numbered lists
+      
+      // Format lists and bullet points better
+      .replace(/^\s*[-*+]\s/gm, '• ')    // Convert bullet points to bullet symbol
+      .replace(/^\s*(\d+)\.\s/gm, '$1. ') // Keep numbered lists but ensure spacing
+      
+      // Improve paragraph spacing
+      .replace(/\n\s*\n/g, '\n\n')     // Normalize paragraph breaks
+      .replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2') // Add breaks after sentences that start new topics
+      
+      // Clean up extra whitespace
+      .replace(/\s+/g, ' ')            // Multiple spaces to single space
+      .replace(/\n\s+/g, '\n')         // Remove leading spaces from new lines
       .trim()
   }
 
@@ -232,7 +243,7 @@ export default function SelectionToolbar({
       const explanation = await onExplain(selectedText)
       console.log('Received explanation:', explanation)
       
-      const cleanedExplanation = stripMarkdown(explanation)
+      const cleanedExplanation = beautifyResponse(explanation)
       console.log('Cleaned explanation:', cleanedExplanation)
       
       setExplanationData({ 
@@ -265,7 +276,7 @@ export default function SelectionToolbar({
       const redraftResult = await onRedraft(selectedText)
       console.log('Received redraft result:', redraftResult)
       
-      const cleanedExplanation = stripMarkdown(redraftResult.explanation)
+      const cleanedExplanation = beautifyResponse(redraftResult.explanation)
       console.log('Cleaned redraft explanation:', cleanedExplanation)
       
       setRedraftData({ 
@@ -322,7 +333,7 @@ export default function SelectionToolbar({
         title="Drag to move toolbar"
       />
       
-      {/* Header with selected text and close button */}
+      {/* Header with selected text */}
       <div className={styles.header}>
         <div className={styles.selectedTextPreview}>
           <span className={styles.previewText}>
@@ -332,17 +343,6 @@ export default function SelectionToolbar({
             {selectedText.length} chars
           </span>
         </div>
-        
-        <button 
-          className={styles.closeButton}
-          onClick={onClose}
-          title="Close (Esc)"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
       </div>
 
       {/* Content based on mode */}
@@ -398,9 +398,13 @@ export default function SelectionToolbar({
               </div>
             ) : explanationData?.explanation ? (
               <div className={styles.explanation}>
-                <h4>🤖 AI Legal Analysis</h4>
+                <h4>AI Legal Analysis</h4>
                 <div className={styles.explanationText}>
-                  {explanationData.explanation}
+                  {explanationData.explanation.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: '12px', lineHeight: '1.5' }}>
+                      {paragraph}
+                    </p>
+                  ))}
                 </div>
               </div>
             ) : (
@@ -437,14 +441,14 @@ export default function SelectionToolbar({
             ) : redraftData?.redraftedText ? (
               <div className={styles.comparison}>
                 <div className={styles.originalText}>
-                  <h4>📝 Original</h4>
+                  <h4>Original</h4>
                   <div className={styles.textContent}>
                     {redraftData.originalText}
                   </div>
                 </div>
                 
                 <div className={styles.redraftedText}>
-                  <h4>✨ AI Suggestion</h4>
+                  <h4>AI Suggestion</h4>
                   <div className={styles.textContent}>
                     {redraftData.redraftedText}
                   </div>
@@ -452,8 +456,14 @@ export default function SelectionToolbar({
                 
                 {redraftData.explanation && (
                   <div className={styles.redraftExplanation}>
-                    <h4>💡 Changes Made</h4>
-                    <p>{redraftData.explanation}</p>
+                    <h4>Changes Made</h4>
+                    <div style={{ lineHeight: '1.5' }}>
+                      {redraftData.explanation.split('\n\n').map((paragraph, index) => (
+                        <p key={index} style={{ marginBottom: '12px' }}>
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 )}
                 
