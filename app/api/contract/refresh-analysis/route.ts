@@ -51,9 +51,19 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     // Import the analysis function to avoid auth header issues
     const { performSequentialAnalysis } = await import('../auto-analyze/route')
     
+    console.log('🚀 Starting background analysis for contract:', contractId)
+    
     // Start the analysis in the background (don't await to avoid timeout)  
     performSequentialAnalysis(contractId, contract.content, user.id).catch(error => {
-      console.error('Background analysis failed:', error)
+      console.error('❌ Background analysis failed for contract:', contractId, error)
+      // Update contract status to failed
+      contractsApi.update(contractId, {
+        analysis_status: 'failed',
+        analysis_error: error.message,
+        analysis_progress: 0
+      }).catch(updateError => {
+        console.error('Failed to update contract status to failed:', updateError)
+      })
     })
 
     addSentryBreadcrumb('Refresh analysis started', 'contract', 'info', {

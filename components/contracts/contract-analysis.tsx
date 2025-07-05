@@ -117,6 +117,14 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       if (response.ok) {
         const statusData = await response.json()
         
+        console.log('📊 Analysis status response:', {
+          contractId: contract.id,
+          statusDataContractId: statusData.contractId,
+          status: statusData.status,
+          progress: statusData.progress,
+          willContinuePolling: contract?.id === statusData.contractId
+        })
+        
         if (statusData.status === 'in_progress' && statusData.progress < 100) {
           setAnalysisProgress({
             status: statusData.status,
@@ -126,11 +134,15 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           
           // Continue polling while in progress, but only if contract hasn't changed
           progressCheckTimeoutRef.current = setTimeout(() => {
-            if (contract?.id === statusData.contractId) { // Only continue if same contract
+            if (contract?.id === statusData.contractId) { // statusData.contractId comes from API response
+              console.log('🔄 Continuing progress check for contract:', contract.id)
               checkAnalysisProgress()
+            } else {
+              console.log('⏹️ Stopping progress check - contract changed from', statusData.contractId, 'to', contract?.id)
             }
           }, 3000)
         } else if (statusData.status === 'complete') {
+          console.log('🎉 Analysis completed! Refreshing contract data...')
           setAnalysisProgress(null)
           setIsAnalyzing(false)
           
@@ -139,10 +151,16 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           
           // Force refresh after delay to ensure fresh data loads
           setTimeout(() => {
+            console.log('🔄 Force refreshing contract after analysis completion...')
             if (typeof window !== 'undefined' && (window as any).refreshCurrentContract) {
               (window as any).refreshCurrentContract()
             }
           }, 1000)
+        } else if (statusData.status === 'failed') {
+          console.error('❌ Analysis failed:', statusData.error)
+          setAnalysisProgress(null)
+          setIsAnalyzing(false)
+          alert(`Analysis failed: ${statusData.error || 'Unknown error'}. Please try again.`)
         } else {
           setAnalysisProgress(null)
           setIsAnalyzing(false)
@@ -177,6 +195,13 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       checkAnalysisProgress()
       
       // Then load cached data for the new contract if available
+      console.log('🔍 Checking for cached analysis data:', {
+        hasSummary: !!contract.analysis_cache?.summary,
+        hasRisks: !!contract.analysis_cache?.risks,
+        hasComplete: !!contract.analysis_cache?.complete,
+        analysisStatus: contract.analysis_status
+      })
+      
       if (contract.analysis_cache?.summary) {
         console.log('📄 Loading cached summary:', contract.analysis_cache.summary)
         // Check if cached summary has the new structure
@@ -194,6 +219,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       }
       if (contract.analysis_cache?.complete) {
         const cachedMissingInfo = contract.analysis_cache.complete.missingInfo as MissingInfoItem[] || []
+        console.log('📋 Loading cached complete analysis:', cachedMissingInfo.length, 'missing items')
         setMissingInfo(cachedMissingInfo)
       }
       if (contract.analysis_cache?.risks) {
@@ -667,6 +693,12 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 onClick={async () => {
                   if (!contract?.id) return
                   
+                  console.log('🔄 Starting analysis for contract:', {
+                    contractId: contract.id,
+                    hasContent: !!contract.content,
+                    contentLength: contract.content?.length
+                  })
+                  
                   try {
                     // Clear current data first
                     setSummary(null)
@@ -680,16 +712,29 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                       body: JSON.stringify({ contractId: contract.id })
                     })
                     
+                    console.log('📡 Analysis API response:', {
+                      status: response.status,
+                      statusText: response.statusText,
+                      ok: response.ok
+                    })
+                    
                     if (response.ok) {
+                      const responseData = await response.json()
+                      console.log('✅ Analysis started successfully:', responseData)
+                      
                       setAnalysisProgress({ status: 'in_progress', progress: 0 })
                       setIsAnalyzing(true)
+                      
+                      // Start checking progress immediately
+                      console.log('⏱️ Starting progress monitoring...')
                       checkAnalysisProgress()
                     } else {
                       const errorData = await response.json()
+                      console.error('❌ Analysis API failed:', errorData)
                       throw new Error(errorData.error || 'Failed to start analysis')
                     }
                   } catch (error) {
-                    console.error('Failed to start analysis:', error)
+                    console.error('❌ Failed to start analysis:', error)
                     alert(`Failed to start analysis: ${error.message}. Please try again.`)
                   }
                 }}
