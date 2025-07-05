@@ -22,7 +22,8 @@
       "WebFetch(domain:contractpodai.com)",
       "WebFetch(domain:www.ironclad.com)",
       "Bash(npx next lint:*)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

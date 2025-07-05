@@ -52,28 +52,76 @@ export default function SelectionToolbar({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const toolbarRef = useRef<HTMLDivElement>(null)
 
-  // Utility function to beautify AI response text
+  // Enhanced utility function to beautify AI response text
   const beautifyResponse = (text: string): string => {
+    if (!text || typeof text !== 'string') return ''
+    
     return text
-      // Remove markdown formatting
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold **text**
-      .replace(/\*(.*?)\*/g, '$1')     // Remove italic *text*
-      .replace(/#{1,6}\s(.*)/g, '$1')  // Remove headers # ## ### etc
-      .replace(/`(.*?)`/g, '$1')       // Remove inline code `text`
-      .replace(/```[\s\S]*?```/g, '')  // Remove code blocks
-      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links [text](url)
+      // First, normalize line endings
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
       
-      // Format lists and bullet points better
-      .replace(/^\s*[-*+]\s/gm, '• ')    // Convert bullet points to bullet symbol
-      .replace(/^\s*(\d+)\.\s/gm, '$1. ') // Keep numbered lists but ensure spacing
+      // Remove markdown formatting more comprehensively
+      .replace(/\*\*\*(.*?)\*\*\*/g, '$1')  // Remove bold+italic ***text***
+      .replace(/\*\*(.*?)\*\*/g, '$1')      // Remove bold **text**
+      .replace(/\*(.*?)\*/g, '$1')          // Remove italic *text*
+      .replace(/_{3}(.*?)_{3}/g, '$1')      // Remove bold+italic ___text___
+      .replace(/_{2}(.*?)_{2}/g, '$1')      // Remove bold __text__
+      .replace(/_(.*?)_/g, '$1')            // Remove italic _text_
+      .replace(/~~(.*?)~~/g, '$1')          // Remove strikethrough ~~text~~
       
-      // Improve paragraph spacing
-      .replace(/\n\s*\n/g, '\n\n')     // Normalize paragraph breaks
-      .replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2') // Add breaks after sentences that start new topics
+      // Remove headers (with optional trailing ###)
+      .replace(/^#{1,6}\s+(.*?)#*$/gm, '$1')
       
-      // Clean up extra whitespace
-      .replace(/\s+/g, ' ')            // Multiple spaces to single space
-      .replace(/\n\s+/g, '\n')         // Remove leading spaces from new lines
+      // Remove code formatting
+      .replace(/`{3}[\s\S]*?`{3}/g, '')     // Remove code blocks ```code```
+      .replace(/`(.*?)`/g, '$1')            // Remove inline code `text`
+      
+      // Remove links but keep the text
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')  // [text](url) -> text
+      .replace(/\[([^\]]*)\]\[[^\]]*\]/g, '$1') // [text][ref] -> text
+      .replace(/https?:\/\/[^\s]+/g, '')        // Remove standalone URLs
+      
+      // Remove blockquotes
+      .replace(/^>\s*/gm, '')
+      
+      // Remove horizontal rules
+      .replace(/^[-*_]{3,}$/gm, '')
+      
+      // Handle lists more intelligently
+      .replace(/^\s*[-*+]\s+/gm, '• ')          // Convert bullets to bullet symbol
+      .replace(/^\s*(\d+)[.)]\s+/gm, '$1. ')    // Normalize numbered lists
+      
+      // Handle tables (remove table formatting)
+      .replace(/\|[^|\n]*\|/g, (match) => {
+        return match.replace(/\|/g, ' ').trim()
+      })
+      .replace(/^[-+|:\s]*$/gm, '')  // Remove table separator lines
+      
+      // Improve sentence and paragraph structure
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')       // Collapse multiple line breaks to double
+      .replace(/([.!?:])(\s*)([A-Z])/g, '$1\n\n$3') // Break after sentences that start new topics
+      .replace(/([.!?])\s+([A-Z][a-z]+:)/g, '$1\n\n$2') // Break before labels like "Note:" "Important:"
+      
+      // Clean up spacing around punctuation
+      .replace(/\s+([,.!?;:])/g, '$1')         // Remove space before punctuation
+      .replace(/([,.!?;:])([A-Z])/g, '$1 $2')   // Add space after punctuation before capitals
+      
+      // Enhance list formatting
+      .replace(/^(•\s*.+)$/gm, (match) => {
+        return match.charAt(0).toUpperCase() + match.slice(1)  // Capitalize first letter of bullets
+      })
+      
+      // Clean up extra whitespace comprehensively
+      .replace(/[ \t]+/g, ' ')                 // Multiple spaces/tabs to single space
+      .replace(/\n[ \t]+/g, '\n')              // Remove leading spaces from new lines
+      .replace(/[ \t]+\n/g, '\n')              // Remove trailing spaces before new lines
+      .replace(/^\s+|\s+$/g, '')               // Trim start and end
+      
+      // Final cleanup: ensure proper sentence spacing
+      .replace(/([.!?])\n\n([a-z])/g, '$1\n\n$2') // Keep lowercase after breaks (might be continuation)
+      .replace(/\n{3,}/g, '\n\n')              // Limit to maximum 2 line breaks
+      
       .trim()
   }
 
@@ -400,11 +448,35 @@ export default function SelectionToolbar({
               <div className={styles.explanation}>
                 <h4>AI Legal Analysis</h4>
                 <div className={styles.explanationText}>
-                  {explanationData.explanation.split('\n\n').map((paragraph, index) => (
-                    <p key={index} style={{ marginBottom: '12px', lineHeight: '1.5' }}>
-                      {paragraph}
-                    </p>
-                  ))}
+                  {explanationData.explanation.split('\n\n').map((paragraph, index) => {
+                    // Handle bullet points specially
+                    if (paragraph.startsWith('• ')) {
+                      return (
+                        <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
+                          {paragraph}
+                        </div>
+                      )
+                    }
+                    // Handle numbered lists
+                    if (/^\d+\.\s/.test(paragraph)) {
+                      return (
+                        <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
+                          {paragraph}
+                        </div>
+                      )
+                    }
+                    // Regular paragraphs
+                    return (
+                      <p key={index} style={{ 
+                        marginBottom: '16px', 
+                        lineHeight: '1.6',
+                        fontSize: '14px',
+                        color: 'var(--text-primary, #333)'
+                      }}>
+                        {paragraph}
+                      </p>
+                    )
+                  })}
                 </div>
               </div>
             ) : (
@@ -457,12 +529,36 @@ export default function SelectionToolbar({
                 {redraftData.explanation && (
                   <div className={styles.redraftExplanation}>
                     <h4>Changes Made</h4>
-                    <div style={{ lineHeight: '1.5' }}>
-                      {redraftData.explanation.split('\n\n').map((paragraph, index) => (
-                        <p key={index} style={{ marginBottom: '12px' }}>
-                          {paragraph}
-                        </p>
-                      ))}
+                    <div style={{ lineHeight: '1.6' }}>
+                      {redraftData.explanation.split('\n\n').map((paragraph, index) => {
+                        // Handle bullet points specially
+                        if (paragraph.startsWith('• ')) {
+                          return (
+                            <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
+                              {paragraph}
+                            </div>
+                          )
+                        }
+                        // Handle numbered lists
+                        if (/^\d+\.\s/.test(paragraph)) {
+                          return (
+                            <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
+                              {paragraph}
+                            </div>
+                          )
+                        }
+                        // Regular paragraphs
+                        return (
+                          <p key={index} style={{ 
+                            marginBottom: '14px', 
+                            lineHeight: '1.6',
+                            fontSize: '14px',
+                            color: 'var(--text-primary, #333)'
+                          }}>
+                            {paragraph}
+                          </p>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
