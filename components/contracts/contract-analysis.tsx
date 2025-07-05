@@ -117,13 +117,10 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       if (response.ok) {
         const statusData = await response.json()
         
-        console.log('📊 Analysis status response:', {
-          contractId: contract.id,
-          statusDataContractId: statusData.contractId,
-          status: statusData.status,
-          progress: statusData.progress,
-          willContinuePolling: contract?.id === statusData.contractId
-        })
+        // Only log significant status changes to reduce console noise
+        if (statusData.status === 'complete' || statusData.status === 'failed' || statusData.progress % 25 === 0) {
+          console.log('📊 Analysis status:', statusData.status, `${statusData.progress}%`)
+        }
         
         // Check if analysis is still running (any status that's not complete or failed)
         const isAnalysisRunning = statusData.status === 'in_progress' || 
@@ -204,52 +201,49 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
       setMissingInfo([])
       setChatMessages([])
       
-      // Check if analysis is in progress
-      checkAnalysisProgress()
+      // Check if analysis is in progress (but don't trigger progress monitoring)
+      if (contract.analysis_status === 'in_progress' || 
+          contract.analysis_status === 'summary_complete' || 
+          contract.analysis_status === 'risks_complete') {
+        console.log('📊 Contract has analysis in progress, starting monitoring:', contract.analysis_status)
+        setAnalysisProgress({ status: contract.analysis_status, progress: contract.analysis_progress || 0 })
+        setIsAnalyzing(true)
+        checkAnalysisProgress() // Only start monitoring if analysis is actually running
+      } else {
+        console.log('📊 Contract analysis not in progress, status:', contract.analysis_status)
+        setAnalysisProgress(null)
+        setIsAnalyzing(false)
+      }
       
       // Then load cached data for the new contract if available
-      console.log('🔍 Checking for cached analysis data:', {
-        hasSummary: !!contract.analysis_cache?.summary,
-        hasRisks: !!contract.analysis_cache?.risks,
-        hasComplete: !!contract.analysis_cache?.complete,
-        analysisStatus: contract.analysis_status
-      })
       
       if (contract.analysis_cache?.summary) {
-        console.log('📄 Loading cached summary:', contract.analysis_cache.summary)
         // Check if cached summary has the new structure
         const cachedSummary = contract.analysis_cache.summary as any
         if (cachedSummary.overview || cachedSummary.contract_type) {
-          console.log('✅ Valid summary format detected, setting summary')
           setSummary(cachedSummary as ContractSummary)
         } else {
-          console.log('⚠️ Invalid summary format, clearing summary:', cachedSummary)
           setSummary(null)
         }
       } else {
-        console.log('📄 No cached summary found')
         setSummary(null)
       }
       if (contract.analysis_cache?.complete) {
         const cachedMissingInfo = contract.analysis_cache.complete.missingInfo as MissingInfoItem[] || []
-        console.log('📋 Loading cached complete analysis:', cachedMissingInfo.length, 'missing items')
         setMissingInfo(cachedMissingInfo)
       }
       if (contract.analysis_cache?.risks) {
-        console.log('📊 Loading cached risks:', contract.analysis_cache.risks)
         // Handle both old and new cache structure formats
         const riskData = contract.analysis_cache.risks
         const cachedRisks = Array.isArray(riskData) 
           ? riskData  // Old direct array format
           : riskData?.risks || []  // New RiskAnalysis object format
-        console.log('✅ Loaded', cachedRisks.length, 'cached risks')
         setRisks(cachedRisks)
         // Update parent component with cached risks
         if (onRisksUpdate) {
           onRisksUpdate(cachedRisks)
         }
       } else {
-        console.log('📊 No cached risks found')
         setRisks([])
       }
       if (contract.analysis_cache?.chat) {
@@ -706,11 +700,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                 onClick={async () => {
                   if (!contract?.id) return
                   
-                  console.log('🔄 Starting analysis for contract:', {
-                    contractId: contract.id,
-                    hasContent: !!contract.content,
-                    contentLength: contract.content?.length
-                  })
+                  console.log('🔄 Starting analysis for contract:', contract.id)
                   
                   try {
                     // Clear current data first
@@ -725,21 +715,14 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                       body: JSON.stringify({ contractId: contract.id })
                     })
                     
-                    console.log('📡 Analysis API response:', {
-                      status: response.status,
-                      statusText: response.statusText,
-                      ok: response.ok
-                    })
-                    
                     if (response.ok) {
                       const responseData = await response.json()
-                      console.log('✅ Analysis started successfully:', responseData)
+                      console.log('✅ Analysis started successfully')
                       
                       setAnalysisProgress({ status: 'in_progress', progress: 0 })
                       setIsAnalyzing(true)
                       
                       // Start checking progress immediately
-                      console.log('⏱️ Starting progress monitoring...')
                       checkAnalysisProgress()
                     } else {
                       const errorData = await response.json()

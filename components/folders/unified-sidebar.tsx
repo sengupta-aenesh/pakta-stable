@@ -436,7 +436,9 @@ export default function UnifiedSidebar({
         upload_url: null,
         file_key: null,
         folder_id: selectedFolder,
-        analysis_cache: {}
+        analysis_cache: {},
+        analysis_status: null,
+        analysis_progress: null
       })
       console.log('✅ File Upload - Database save successful, contract ID:', newContract.id)
       setUploadStep('complete')
