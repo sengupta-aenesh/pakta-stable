@@ -125,17 +125,30 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
           willContinuePolling: contract?.id === statusData.contractId
         })
         
-        if (statusData.status === 'in_progress' && statusData.progress < 100) {
+        // Check if analysis is still running (any status that's not complete or failed)
+        const isAnalysisRunning = statusData.status === 'in_progress' || 
+                                 statusData.status === 'pending' || 
+                                 statusData.status === 'summary_complete' || 
+                                 statusData.status === 'risks_complete'
+        
+        console.log('🔍 Analysis status check:', {
+          status: statusData.status,
+          progress: statusData.progress,
+          isAnalysisRunning,
+          shouldContinuePolling: isAnalysisRunning && statusData.progress < 100
+        })
+        
+        if (isAnalysisRunning && statusData.progress < 100) {
           setAnalysisProgress({
             status: statusData.status,
             progress: statusData.progress
           })
           setIsAnalyzing(true)
           
-          // Continue polling while in progress, but only if contract hasn't changed
+          // Continue polling while analysis is running, but only if contract hasn't changed
           progressCheckTimeoutRef.current = setTimeout(() => {
             if (contract?.id === statusData.contractId) { // statusData.contractId comes from API response
-              console.log('🔄 Continuing progress check for contract:', contract.id)
+              console.log('🔄 Continuing progress check for contract:', contract.id, 'status:', statusData.status)
               checkAnalysisProgress()
             } else {
               console.log('⏹️ Stopping progress check - contract changed from', statusData.contractId, 'to', contract?.id)
