@@ -1009,8 +1009,13 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
             ) : risks.length > 0 ? (
               <>
                 <div className={styles.overallScore}>
-                  <span>Overall Risk Score</span>
-                  <span className={styles.score}>{overallRiskScore.toFixed(0)}/10</span>
+                  <div>
+                    <span>Overall Risk Score</span>
+                    <span className={styles.score}>{overallRiskScore.toFixed(0)}/10</span>
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+                    {risks.length} risks identified • {risks.filter(r => r.riskLevel === 'high').length} high • {risks.filter(r => r.riskLevel === 'medium').length} medium • {risks.filter(r => r.riskLevel === 'low').length} low
+                  </div>
                 </div>
                 
                 {risks.map((risk, index) => (
@@ -1023,7 +1028,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     <div className={styles.riskHeader}>
                       <span className={`${styles.riskDot} ${styles[risk.riskLevel]}`}></span>
                       <span className={styles.riskCategory}>
-                        {risk.category} ({risk.riskScore}/10)
+                        Risk {index + 1} of {risks.length} • {risk.category} (Severity: {risk.riskScore}/10)
                       </span>
                       <span className={styles.riskLevel}>{risk.riskLevel.toUpperCase()}</span>
                       <svg 
