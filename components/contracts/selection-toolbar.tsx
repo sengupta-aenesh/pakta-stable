@@ -88,7 +88,7 @@ export default function SelectionToolbar({
       // Remove horizontal rules
       .replace(/^[-*_]{3,}$/gm, '')
       
-      // Handle lists more intelligently
+      // Handle lists more intelligently - preserve line breaks for proper formatting
       .replace(/^\s*[-*+]\s+/gm, '• ')          // Convert bullets to bullet symbol
       .replace(/^\s*(\d+)[.)]\s+/gm, '$1. ')    // Normalize numbered lists
       
@@ -98,19 +98,23 @@ export default function SelectionToolbar({
       })
       .replace(/^[-+|:\s]*$/gm, '')  // Remove table separator lines
       
+      // Improve numbered list formatting - ensure each item is on its own line
+      .replace(/(\d+\.\s[^.\n]*?)(\d+\.\s)/g, '$1\n\n$2')  // Add line breaks between numbered items
+      .replace(/(•\s[^.\n]*?)(•\s)/g, '$1\n\n$2')          // Add line breaks between bullet items
+      
       // Improve sentence and paragraph structure
       .replace(/\n\s*\n\s*\n+/g, '\n\n')       // Collapse multiple line breaks to double
-      .replace(/([.!?:])(\s*)([A-Z])/g, '$1\n\n$3') // Break after sentences that start new topics
-      .replace(/([.!?])\s+([A-Z][a-z]+:)/g, '$1\n\n$2') // Break before labels like "Note:" "Important:"
+      .replace(/([.!?:])\s+([A-Z][a-z]+)/g, (match, punct, word) => {
+        // Only break if it looks like a new sentence or section
+        if (word.length > 3 && !['The', 'This', 'That', 'And', 'But', 'For', 'However'].includes(word)) {
+          return `${punct}\n\n${word}`
+        }
+        return `${punct} ${word}`
+      })
       
       // Clean up spacing around punctuation
       .replace(/\s+([,.!?;:])/g, '$1')         // Remove space before punctuation
       .replace(/([,.!?;:])([A-Z])/g, '$1 $2')   // Add space after punctuation before capitals
-      
-      // Enhance list formatting
-      .replace(/^(•\s*.+)$/gm, (match) => {
-        return match.charAt(0).toUpperCase() + match.slice(1)  // Capitalize first letter of bullets
-      })
       
       // Clean up extra whitespace comprehensively
       .replace(/[ \t]+/g, ' ')                 // Multiple spaces/tabs to single space
@@ -118,8 +122,7 @@ export default function SelectionToolbar({
       .replace(/[ \t]+\n/g, '\n')              // Remove trailing spaces before new lines
       .replace(/^\s+|\s+$/g, '')               // Trim start and end
       
-      // Final cleanup: ensure proper sentence spacing
-      .replace(/([.!?])\n\n([a-z])/g, '$1\n\n$2') // Keep lowercase after breaks (might be continuation)
+      // Final cleanup: ensure proper spacing
       .replace(/\n{3,}/g, '\n\n')              // Limit to maximum 2 line breaks
       
       .trim()
@@ -449,31 +452,58 @@ export default function SelectionToolbar({
                 <h4>AI Legal Analysis</h4>
                 <div className={styles.explanationText}>
                   {explanationData.explanation.split('\n\n').map((paragraph, index) => {
+                    const trimmedParagraph = paragraph.trim()
+                    if (!trimmedParagraph) return null
+                    
                     // Handle bullet points specially
-                    if (paragraph.startsWith('• ')) {
+                    if (trimmedParagraph.startsWith('• ')) {
                       return (
-                        <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
-                          {paragraph}
+                        <div key={index} style={{ 
+                          marginBottom: '10px', 
+                          paddingLeft: '0',
+                          lineHeight: '1.6',
+                          fontSize: '13px',
+                          color: '#374151',
+                          display: 'flex',
+                          alignItems: 'flex-start'
+                        }}>
+                          <span style={{ marginRight: '8px', color: '#059669', fontWeight: '600' }}>•</span>
+                          <span style={{ flex: 1 }}>{trimmedParagraph.substring(2)}</span>
                         </div>
                       )
                     }
                     // Handle numbered lists
-                    if (/^\d+\.\s/.test(paragraph)) {
-                      return (
-                        <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
-                          {paragraph}
-                        </div>
-                      )
+                    if (/^\d+\.\s/.test(trimmedParagraph)) {
+                      const match = trimmedParagraph.match(/^(\d+)\.\s(.*)/)
+                      if (match) {
+                        return (
+                          <div key={index} style={{ 
+                            marginBottom: '10px', 
+                            paddingLeft: '0',
+                            lineHeight: '1.6',
+                            fontSize: '13px',
+                            color: '#374151',
+                            display: 'flex',
+                            alignItems: 'flex-start'
+                          }}>
+                            <span style={{ marginRight: '8px', color: '#0284c7', fontWeight: '600', minWidth: '20px' }}>
+                              {match[1]}.
+                            </span>
+                            <span style={{ flex: 1 }}>{match[2]}</span>
+                          </div>
+                        )
+                      }
                     }
                     // Regular paragraphs
                     return (
                       <p key={index} style={{ 
-                        marginBottom: '16px', 
+                        marginBottom: '12px', 
                         lineHeight: '1.6',
-                        fontSize: '14px',
-                        color: 'var(--text-primary, #333)'
+                        fontSize: '13px',
+                        color: '#374151',
+                        margin: '0 0 12px 0'
                       }}>
-                        {paragraph}
+                        {trimmedParagraph}
                       </p>
                     )
                   })}
@@ -531,31 +561,58 @@ export default function SelectionToolbar({
                     <h4>Changes Made</h4>
                     <div style={{ lineHeight: '1.6' }}>
                       {redraftData.explanation.split('\n\n').map((paragraph, index) => {
+                        const trimmedParagraph = paragraph.trim()
+                        if (!trimmedParagraph) return null
+                        
                         // Handle bullet points specially
-                        if (paragraph.startsWith('• ')) {
+                        if (trimmedParagraph.startsWith('• ')) {
                           return (
-                            <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
-                              {paragraph}
+                            <div key={index} style={{ 
+                              marginBottom: '10px', 
+                              paddingLeft: '0',
+                              lineHeight: '1.6',
+                              fontSize: '13px',
+                              color: '#92400e',
+                              display: 'flex',
+                              alignItems: 'flex-start'
+                            }}>
+                              <span style={{ marginRight: '8px', color: '#d97706', fontWeight: '600' }}>•</span>
+                              <span style={{ flex: 1 }}>{trimmedParagraph.substring(2)}</span>
                             </div>
                           )
                         }
                         // Handle numbered lists
-                        if (/^\d+\.\s/.test(paragraph)) {
-                          return (
-                            <div key={index} style={{ marginBottom: '8px', paddingLeft: '16px', lineHeight: '1.6' }}>
-                              {paragraph}
-                            </div>
-                          )
+                        if (/^\d+\.\s/.test(trimmedParagraph)) {
+                          const match = trimmedParagraph.match(/^(\d+)\.\s(.*)/)
+                          if (match) {
+                            return (
+                              <div key={index} style={{ 
+                                marginBottom: '10px', 
+                                paddingLeft: '0',
+                                lineHeight: '1.6',
+                                fontSize: '13px',
+                                color: '#92400e',
+                                display: 'flex',
+                                alignItems: 'flex-start'
+                              }}>
+                                <span style={{ marginRight: '8px', color: '#d97706', fontWeight: '600', minWidth: '20px' }}>
+                                  {match[1]}.
+                                </span>
+                                <span style={{ flex: 1 }}>{match[2]}</span>
+                              </div>
+                            )
+                          }
                         }
                         // Regular paragraphs
                         return (
                           <p key={index} style={{ 
-                            marginBottom: '14px', 
+                            marginBottom: '12px', 
                             lineHeight: '1.6',
-                            fontSize: '14px',
-                            color: 'var(--text-primary, #333)'
+                            fontSize: '13px',
+                            color: '#92400e',
+                            margin: '0 0 12px 0'
                           }}>
-                            {paragraph}
+                            {trimmedParagraph}
                           </p>
                         )
                       })}
