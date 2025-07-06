@@ -167,18 +167,239 @@ export default function InteractiveContractEditor({
     onRegisterUpdateFunction(updateContentFunction)
   }, [onRegisterUpdateFunction])
 
-  // Function to map risks to exact text positions with improved accuracy
+  // Enhanced fuzzy string matching function
+  const calculateSimilarity = useCallback((str1: string, str2: string): number => {
+    // Normalize strings for comparison
+    const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+    const s1 = normalize(str1)
+    const s2 = normalize(str2)
+    
+    if (s1 === s2) return 1.0
+    if (s1.length === 0 || s2.length === 0) return 0.0
+    
+    // Use Jaro-Winkler-like similarity for fuzzy matching
+    const longer = s1.length > s2.length ? s1 : s2
+    const shorter = s1.length > s2.length ? s2 : s1
+    
+    if (longer.length === 0) return 1.0
+    
+    // Calculate character-level similarity
+    const editDistance = levenshteinDistance(s1, s2)
+    const maxLength = Math.max(s1.length, s2.length)
+    const similarity = (maxLength - editDistance) / maxLength
+    
+    // Boost score for substring matches
+    if (longer.includes(shorter)) {
+      return Math.max(similarity, 0.8)
+    }
+    
+    return similarity
+  }, [])
+
+  // Simple Levenshtein distance calculation
+  const levenshteinDistance = useCallback((str1: string, str2: string): number => {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null))
+    
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,     // deletion
+          matrix[j - 1][i] + 1,     // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
+        )
+      }
+    }
+    
+    return matrix[str2.length][str1.length]
+  }, [])
+
+  // Advanced text search with multiple strategies
+  const findTextInDocument = useCallback((text: string, searchClause: string): Array<{start: number, end: number, confidence: number, matchText: string}> => {
+    const matches: Array<{start: number, end: number, confidence: number, matchText: string}> = []
+    const clauseText = searchClause.trim()
+    
+    if (!clauseText || clauseText.length < 5) return matches
+    
+    // Strategy 1: Exact match (highest confidence)
+    let searchIndex = 0
+    while (true) {
+      const exactIndex = text.indexOf(clauseText, searchIndex)
+      if (exactIndex === -1) break
+      
+      matches.push({
+        start: exactIndex,
+        end: exactIndex + clauseText.length,
+        confidence: 1.0,
+        matchText: clauseText
+      })
+      searchIndex = exactIndex + 1
+    }
+    
+    // Strategy 2: Case-insensitive exact match
+    if (matches.length === 0) {
+      const lowerText = text.toLowerCase()
+      const lowerClause = clauseText.toLowerCase()
+      searchIndex = 0
+      
+      while (true) {
+        const caseIndex = lowerText.indexOf(lowerClause, searchIndex)
+        if (caseIndex === -1) break
+        
+        const actualText = text.substring(caseIndex, caseIndex + clauseText.length)
+        matches.push({
+          start: caseIndex,
+          end: caseIndex + clauseText.length,
+          confidence: 0.95,
+          matchText: actualText
+        })
+        searchIndex = caseIndex + 1
+      }
+    }
+    
+    // Strategy 3: Normalized whitespace matching
+    if (matches.length === 0) {
+      const normalizedClause = clauseText.replace(/\s+/g, ' ').trim()
+      const normalizedText = text.replace(/\s+/g, ' ')
+      const normalizedLower = normalizedText.toLowerCase()
+      const clauseLower = normalizedClause.toLowerCase()
+      
+      const normalizedIndex = normalizedLower.indexOf(clauseLower)
+      if (normalizedIndex !== -1) {
+        // Map back to original text positions
+        let originalStart = 0
+        let normalizedPos = 0
+        
+        for (let i = 0; i < text.length && normalizedPos < normalizedIndex; i++) {
+          if (text[i].match(/\s/)) {
+            if (i === 0 || !text[i-1].match(/\s/)) {
+              normalizedPos++
+            }
+          } else {
+            normalizedPos++
+          }
+          originalStart = i + 1
+        }
+        
+        // Find end position
+        let originalEnd = originalStart
+        let matchedChars = 0
+        for (let i = originalStart; i < text.length && matchedChars < normalizedClause.length; i++) {
+          if (!text[i].match(/\s/)) {
+            matchedChars++
+          } else if (matchedChars > 0 && normalizedClause[matchedChars] === ' ') {
+            matchedChars++
+          }
+          originalEnd = i + 1
+        }
+        
+        const actualText = text.substring(originalStart, originalEnd)
+        matches.push({
+          start: originalStart,
+          end: originalEnd,
+          confidence: 0.85,
+          matchText: actualText
+        })
+      }
+    }
+    
+    // Strategy 4: Fuzzy matching with sliding window
+    if (matches.length === 0 && clauseText.length >= 20) {
+      const windowSize = clauseText.length
+      const threshold = clauseText.length > 100 ? 0.7 : 0.8
+      
+      for (let i = 0; i <= text.length - windowSize; i += Math.max(1, Math.floor(windowSize / 4))) {
+        const window = text.substring(i, i + windowSize)
+        const similarity = calculateSimilarity(window, clauseText)
+        
+        if (similarity >= threshold) {
+          matches.push({
+            start: i,
+            end: i + windowSize,
+            confidence: similarity * 0.8, // Reduce confidence for fuzzy matches
+            matchText: window
+          })
+          break // Take first good fuzzy match to avoid duplicates
+        }
+      }
+    }
+    
+    // Strategy 5: Key phrase extraction for long clauses
+    if (matches.length === 0 && clauseText.length > 50) {
+      // Extract meaningful phrases (non-stop words, 15+ chars)
+      const phrases = clauseText
+        .split(/[.!?;,]/)
+        .map(phrase => phrase.trim())
+        .filter(phrase => phrase.length >= 15)
+        .filter(phrase => !phrase.match(/^(the|and|or|but|if|when|where|which|that|this|shall|will|may|must|should|could|would)\s/i))
+        .sort((a, b) => b.length - a.length) // Try longest phrases first
+      
+      for (const phrase of phrases) {
+        const phraseMatches = findTextInDocument(text, phrase)
+        if (phraseMatches.length > 0) {
+          // Extend the match to include more context if possible
+          const bestMatch = phraseMatches[0]
+          const contextStart = Math.max(0, bestMatch.start - 50)
+          const contextEnd = Math.min(text.length, bestMatch.end + 50)
+          
+          // Try to find sentence boundaries for better highlighting
+          let expandedStart = bestMatch.start
+          let expandedEnd = bestMatch.end
+          
+          // Expand to sentence start
+          for (let i = bestMatch.start - 1; i >= contextStart; i--) {
+            if (text[i].match(/[.!?]/)) break
+            if (text[i].match(/[A-Z]/) && i > 0 && text[i-1].match(/\s/)) break
+            expandedStart = i
+          }
+          
+          // Expand to sentence end
+          for (let i = bestMatch.end; i < contextEnd; i++) {
+            expandedEnd = i + 1
+            if (text[i].match(/[.!?]/)) break
+          }
+          
+          const expandedText = text.substring(expandedStart, expandedEnd).trim()
+          matches.push({
+            start: expandedStart,
+            end: expandedEnd,
+            confidence: bestMatch.confidence * 0.7, // Lower confidence for expanded matches
+            matchText: expandedText
+          })
+          break
+        }
+      }
+    }
+    
+    // Remove overlapping matches, keeping highest confidence
+    const uniqueMatches = matches
+      .sort((a, b) => b.confidence - a.confidence)
+      .filter((match, index, arr) => {
+        return !arr.slice(0, index).some(existingMatch => 
+          (match.start < existingMatch.end && match.end > existingMatch.start)
+        )
+      })
+    
+    return uniqueMatches
+  }, [calculateSimilarity])
+
+  // Enhanced function to map risks to exact text positions
   const mapRisksToText = useCallback((text: string, riskList: RiskFactor[]): RiskHighlight[] => {
     if (!text || !riskList || riskList.length === 0) {
       console.log('🗺️ mapRisksToText: No text or risks to map')
       return []
     }
     
-    console.log('🗺️ mapRisksToText called with:', { 
+    console.log('🗺️ Enhanced risk mapping started:', { 
       textLength: text.length, 
       risksCount: riskList.length
     })
+    
     const highlights: RiskHighlight[] = []
+    const processedRanges: Array<{start: number, end: number}> = []
     
     riskList.forEach((risk, index) => {
       if (!risk || !risk.clause) {
@@ -187,144 +408,79 @@ export default function InteractiveContractEditor({
       }
       
       const clauseText = risk.clause.trim()
-      console.log(`🔍 Searching for risk ${index}: "${clauseText.substring(0, 50)}..."`)
+      console.log(`🔍 Enhanced search for risk ${index}: "${clauseText.substring(0, 50)}..."`)
       
-      let foundIndex = -1
-      let actualMatchText = clauseText
+      const matches = findTextInDocument(text, clauseText)
       
-      // Strategy 1: Exact match (most accurate)
-      foundIndex = text.indexOf(clauseText)
-      if (foundIndex !== -1) {
-        actualMatchText = clauseText
-        console.log(`✅ Risk ${index} found via exact matching at position ${foundIndex}`)
-      }
-      
-      // Strategy 2: Case-insensitive exact match
-      if (foundIndex === -1) {
-        const lowerText = text.toLowerCase()
-        const lowerClause = clauseText.toLowerCase()
-        const lowerIndex = lowerText.indexOf(lowerClause)
-        if (lowerIndex !== -1) {
-          foundIndex = lowerIndex
-          actualMatchText = text.substring(lowerIndex, lowerIndex + clauseText.length)
-          console.log(`✅ Risk ${index} found via case-insensitive matching at position ${foundIndex}`)
-        }
-      }
-      
-      // Strategy 3: Normalized whitespace match (with correct position mapping)
-      if (foundIndex === -1) {
-        const normalizedClause = clauseText.replace(/\s+/g, ' ').trim()
+      if (matches.length > 0) {
+        // Select best match that doesn't overlap with existing highlights
+        let bestMatch = null
         
-        // Create a mapping of normalized positions to original positions
-        const positionMap: number[] = []
-        let normalizedIndex = 0
-        let wasSpace = false
-        
-        for (let i = 0; i < text.length; i++) {
-          const char = text[i]
-          if (char.match(/\s/)) {
-            if (!wasSpace) {
-              positionMap[normalizedIndex] = i
-              normalizedIndex++
-              wasSpace = true
-            }
-          } else {
-            positionMap[normalizedIndex] = i
-            normalizedIndex++
-            wasSpace = false
-          }
-        }
-        
-        const normalizedText = text.replace(/\s+/g, ' ')
-        const normalizedMatchIndex = normalizedText.toLowerCase().indexOf(normalizedClause.toLowerCase())
-        
-        if (normalizedMatchIndex !== -1 && positionMap[normalizedMatchIndex] !== undefined) {
-          foundIndex = positionMap[normalizedMatchIndex]
+        for (const match of matches) {
+          // Check for overlap with already processed ranges
+          const hasOverlap = processedRanges.some(range => 
+            (match.start < range.end && match.end > range.start)
+          )
           
-          // Find the end position more accurately
-          let endPos = foundIndex
-          let matchedChars = 0
-          for (let i = foundIndex; i < text.length && matchedChars < normalizedClause.length; i++) {
-            if (!text[i].match(/\s/) || matchedChars === 0 || !normalizedClause[matchedChars - 1]?.match(/\s/)) {
-              matchedChars++
-            }
-            endPos = i + 1
-          }
-          
-          actualMatchText = text.substring(foundIndex, endPos)
-          console.log(`✅ Risk ${index} found via normalized matching at position ${foundIndex}`)
-        }
-      }
-      
-      // Strategy 4: Partial phrase matching (only for long clauses)
-      if (foundIndex === -1 && clauseText.length > 100) {
-        // Split into meaningful phrases and find the longest matching phrase
-        const phrases = clauseText
-          .split(/[.!?;]/)
-          .map(phrase => phrase.trim())
-          .filter(phrase => phrase.length > 30) // Only longer phrases
-          .sort((a, b) => b.length - a.length) // Try longest first
-        
-        for (const phrase of phrases) {
-          const phraseIndex = text.toLowerCase().indexOf(phrase.toLowerCase())
-          if (phraseIndex !== -1) {
-            foundIndex = phraseIndex
-            actualMatchText = text.substring(phraseIndex, phraseIndex + phrase.length)
-            console.log(`✅ Risk ${index} found via phrase matching: "${phrase.substring(0, 50)}..."`)
+          if (!hasOverlap) {
+            bestMatch = match
             break
           }
         }
-      }
-      
-      if (foundIndex !== -1) {
-        const matchLength = actualMatchText.length
-        const newStart = foundIndex
-        const newEnd = foundIndex + matchLength
         
-        // Improved overlap detection - check for any overlap, not just containment
-        const isOverlapping = highlights.some(existing => {
-          const existingStart = existing.textPosition.start
-          const existingEnd = existing.textPosition.end
+        if (bestMatch) {
+          console.log(`✅ Risk ${index} mapped with confidence ${bestMatch.confidence.toFixed(2)} at position ${bestMatch.start}-${bestMatch.end}`)
           
-          // Check if ranges overlap at all
-          return (newStart < existingEnd && newEnd > existingStart)
-        })
-        
-        if (!isOverlapping) {
-          console.log(`✅ Risk ${index} mapped successfully at position ${foundIndex}-${foundIndex + matchLength}`)
           highlights.push({
             ...risk,
             textPosition: {
-              start: newStart,
-              end: newEnd
+              start: bestMatch.start,
+              end: bestMatch.end
             },
             elementId: `risk-highlight-${risk.id || index}`
           })
-        } else {
-          console.log(`⚠️ Risk ${index} overlaps with existing highlight at position ${foundIndex}`)
           
-          // For debugging: show what it would overlap with
-          const overlapping = highlights.find(existing => {
-            const existingStart = existing.textPosition.start
-            const existingEnd = existing.textPosition.end
-            return (newStart < existingEnd && newEnd > existingStart)
+          // Track this range as processed
+          processedRanges.push({
+            start: bestMatch.start,
+            end: bestMatch.end
           })
-          if (overlapping) {
-            console.log(`   Overlaps with existing highlight: ${overlapping.textPosition.start}-${overlapping.textPosition.end}`)
-          }
+        } else {
+          console.log(`⚠️ Risk ${index} found matches but all overlap with existing highlights`)
+          // Log overlapping matches for debugging
+          matches.forEach((match, matchIndex) => {
+            console.log(`   Match ${matchIndex}: ${match.start}-${match.end} (confidence: ${match.confidence.toFixed(2)})`)
+          })
         }
       } else {
-        console.log(`❌ Risk ${index} not found in text:`)
+        console.log(`❌ Risk ${index} not found with any strategy:`)
         console.log(`   Clause: "${clauseText.substring(0, 100)}${clauseText.length > 100 ? '...' : ''}"`)
-        console.log(`   Text sample: "${text.substring(0, 200)}..."`)
+        
+        // For debugging: try to find partial matches
+        const words = clauseText.split(/\s+/).filter(word => word.length > 3)
+        const foundWords = words.filter(word => text.toLowerCase().includes(word.toLowerCase()))
+        console.log(`   Found ${foundWords.length}/${words.length} key words in text: ${foundWords.slice(0, 3).join(', ')}`)
       }
     })
     
     // Sort by position to ensure proper rendering order
     const sortedHighlights = highlights.sort((a, b) => a.textPosition.start - b.textPosition.start)
-    console.log(`📊 Final risk mapping result: ${sortedHighlights.length}/${riskList.length} risks mapped`)
+    
+    console.log(`📊 Enhanced mapping result: ${sortedHighlights.length}/${riskList.length} risks mapped (${((sortedHighlights.length / riskList.length) * 100).toFixed(1)}% success rate)`)
+    
+    // Log detailed mapping statistics
+    const mappedRisks = sortedHighlights.length
+    const totalRisks = riskList.length
+    const successRate = ((mappedRisks / totalRisks) * 100).toFixed(1)
+    
+    console.log(`📈 Mapping Statistics:`)
+    console.log(`   • Successfully mapped: ${mappedRisks}/${totalRisks} risks`)
+    console.log(`   • Success rate: ${successRate}%`)
+    console.log(`   • Average risk text length: ${Math.round(riskList.reduce((sum, risk) => sum + (risk.clause?.length || 0), 0) / totalRisks)} chars`)
+    console.log(`   • Contract length: ${text.length} chars`)
+    
     return sortedHighlights
-  }, [])
+  }, [findTextInDocument])
 
   // Document beautification function
   const beautifyContent = useCallback((rawContent: string): string => {

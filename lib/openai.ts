@@ -112,42 +112,80 @@ ${content}`
 
 export async function identifyRiskyTerms(content: string): Promise<RiskAnalysis> {
   try {
+    // For very large contracts, use chunk-based analysis
+    const contentLength = content.length
+    const maxChunkSize = 25000 // Conservative limit for comprehensive analysis
+    
+    if (contentLength > maxChunkSize) {
+      console.log(`🔍 Large contract detected (${contentLength} chars), using comprehensive chunk analysis`)
+      return await performComprehensiveChunkAnalysis(content)
+    }
+    
+    // For normal-sized contracts, use enhanced single-pass analysis
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: LEGAL_EXPERT_SYSTEM_PROMPT
+          content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
+
+CRITICAL ANALYSIS INSTRUCTIONS:
+- Perform EXHAUSTIVE risk analysis - do not artificially limit the number of risks
+- Find ALL significant risks, whether 5 or 50+ risks exist
+- Be thorough and comprehensive - every risky clause should be identified
+- Prioritize accuracy and completeness over brevity`
         },
         {
           role: "user",
-          content: `Perform a comprehensive legal risk analysis of this contract. Find AT LEAST 8-12 significant risks across all categories. Be comprehensive and thorough.
+          content: `Perform a COMPREHENSIVE and EXHAUSTIVE legal risk analysis of this contract. Do NOT limit yourself to any specific number of risks - find ALL significant risks that exist in this contract, whether that's 5, 15, 25, or more.
 
-For EACH risky term or clause found:
+**RISK IDENTIFICATION STRATEGY:**
+1. Analyze EVERY clause, sentence, and provision systematically
+2. Look for risks in ALL categories: Payment Terms, Liability, Termination, IP, Confidentiality, Dispute Resolution, Force Majeure, Warranties, Indemnification, Compliance, Governing Law, Amendment, Assignment, Severability, Integration, Notice, Performance Standards, Remedies, etc.
+3. Consider both obvious and subtle legal risks
+4. Identify risks for ALL parties involved, not just one side
+5. Look for missing protective clauses as risks
+6. Consider enforceability and compliance risks
 
-1. Quote the EXACT text from the contract (the specific sentence or paragraph) - copy it character-for-character with no modifications
-2. Identify the clause location (section/paragraph number if available)
-3. Assign a risk level: high (7-10), medium (4-6), or low (1-3)
-4. Provide a specific risk score from 1-10
-5. Categorize the risk type (Payment Terms, Liability, Termination, IP, Confidentiality, Dispute Resolution, Force Majeure, Warranties, Indemnification, Compliance, Other)
-6. Explain WHY this is risky in 2-3 sentences
-7. Suggest a specific alternative clause or modification
-8. Note which party is most affected
-9. Include relevant legal precedent or standard practice if applicable
+**TEXT QUOTING RULES FOR ACCURATE MAPPING:**
+- Quote the CORE RISKY PHRASE or sentence that contains the risk
+- Keep quotes concise but complete enough to be uniquely identifiable
+- If a risk spans multiple sentences, quote the most problematic sentence
+- Remove excess surrounding text that doesn't contribute to the risk
+- Ensure each quote is 15-200 words for optimal mapping accuracy
+- Focus on the specific language that creates the legal risk
+
+**EXAMPLES OF GOOD QUOTES:**
+✅ GOOD: "shall be liable for all damages, costs, and expenses of any kind"
+✅ GOOD: "may terminate this agreement at any time without cause or notice"
+✅ GOOD: "confidential information includes any information disclosed by either party"
+❌ TOO LONG: [entire 300-word paragraph]
+❌ TOO SHORT: "terminate"
+
+For EACH risk found, provide:
+1. Precise quote of the risky text (15-200 words, core risk language only)
+2. Section/clause location if identifiable
+3. Risk level: high (7-10), medium (4-6), or low (1-3)
+4. Specific risk score (1-10)
+5. Risk category
+6. Clear explanation of WHY this creates legal risk (2-3 sentences)
+7. Specific improvement suggestion
+8. Which party is most negatively affected
+9. Relevant legal precedent or standard practice (if applicable)
 
 Also provide:
 - Overall risk score (1-10)
 - Executive summary (2-3 sentences)
-- Top 3 recommendations for risk mitigation
+- Top 5 critical recommendations for risk mitigation
 
-Format as JSON with structure:
+Format as JSON:
 {
   "overallRiskScore": number,
   "executiveSummary": string,
   "risks": [
     {
-      "clause": "exact quoted text",
-      "clauseLocation": "Section X.X or Paragraph X",
+      "clause": "precise quoted risky text (15-200 words)",
+      "clauseLocation": "Section X.X or description",
       "riskLevel": "high|medium|low",
       "riskScore": number,
       "category": string,
@@ -157,38 +195,54 @@ Format as JSON with structure:
       "legalPrecedent": string (optional)
     }
   ],
-  "recommendations": [string, string, string]
+  "recommendations": [string, string, string, string, string]
 }
 
-Contract:
-${content}`
+**CONTRACT TO ANALYZE:**
+${content}
+
+Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. Be exhaustive and thorough.`
         }
       ],
-      max_tokens: 6000,
-      temperature: 0.3,
+      max_tokens: 12000, // Increased for comprehensive analysis
+      temperature: 0.2,  // Lower temperature for consistency
       response_format: { type: "json_object" }
     })
     
     const result = JSON.parse(response.choices[0].message.content || "{}")
     
-    // Process and structure the risks
-    const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => ({
-      id: `risk-${index}`,
-      clause: risk.clause || "",
-      clauseLocation: risk.clauseLocation || "Not specified",
-      riskLevel: risk.riskLevel || "medium",
-      riskScore: risk.riskScore || 5,
-      category: risk.category || "Other",
-      explanation: risk.explanation || "",
-      suggestion: risk.suggestion || "",
-      legalPrecedent: risk.legalPrecedent,
-      affectedParty: risk.affectedParty || "All parties"
-    }))
+    // Process and structure the risks with enhanced validation
+    const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => {
+      // Validate and clean the clause text for better mapping
+      let clause = (risk.clause || "").trim()
+      
+      // Remove common formatting artifacts that interfere with mapping
+      clause = clause.replace(/^\d+\.\s*/, '') // Remove leading numbers
+      clause = clause.replace(/^[a-z]\)\s*/i, '') // Remove leading letters
+      clause = clause.replace(/^\s*[-•]\s*/, '') // Remove leading bullets
+      clause = clause.replace(/\s+/g, ' ') // Normalize whitespace
+      
+      return {
+        id: `risk-${index}`,
+        clause: clause,
+        clauseLocation: risk.clauseLocation || "Not specified",
+        riskLevel: risk.riskLevel || "medium",
+        riskScore: risk.riskScore || 5,
+        category: risk.category || "Other",
+        explanation: risk.explanation || "",
+        suggestion: risk.suggestion || "",
+        legalPrecedent: risk.legalPrecedent,
+        affectedParty: risk.affectedParty || "All parties"
+      }
+    })
     
     // Count risks by level
     const highRiskCount = risks.filter(r => r.riskLevel === 'high').length
     const mediumRiskCount = risks.filter(r => r.riskLevel === 'medium').length
     const lowRiskCount = risks.filter(r => r.riskLevel === 'low').length
+    
+    console.log(`✅ Comprehensive risk analysis completed: ${risks.length} total risks found`)
+    console.log(`📊 Risk breakdown: ${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`)
     
     return {
       overallRiskScore: result.overallRiskScore || 5,
@@ -198,12 +252,202 @@ ${content}`
       lowRiskCount,
       risks,
       recommendations: result.recommendations || [],
-      executiveSummary: result.executiveSummary || "No significant risks identified."
+      executiveSummary: result.executiveSummary || "Contract analysis completed."
     }
   } catch (error) {
     console.error('OpenAI risk analysis error:', error)
     throw error
   }
+}
+
+// Enhanced chunk-based analysis for large contracts
+async function performComprehensiveChunkAnalysis(content: string): Promise<RiskAnalysis> {
+  console.log('🔍 Starting comprehensive chunk-based risk analysis...')
+  
+  // Split contract into logical sections for analysis
+  const sections = splitContractIntoSections(content)
+  console.log(`📄 Split contract into ${sections.length} sections for analysis`)
+  
+  const allRisks: RiskFactor[] = []
+  let totalHighRisk = 0
+  let totalMediumRisk = 0
+  let totalLowRisk = 0
+  
+  // Analyze each section
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i]
+    if (section.content.trim().length < 100) continue // Skip very short sections
+    
+    console.log(`🔍 Analyzing section ${i + 1}/${sections.length}: ${section.title}`)
+    
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
+            
+You are analyzing a SECTION of a larger contract. Be comprehensive for this section - find ALL risks within this section, whether 1 or 20+ risks exist. Do not limit yourself.`
+          },
+          {
+            role: "user",
+            content: `Analyze this CONTRACT SECTION for ALL legal risks. Find every significant risk in this section - do not limit the number of risks.
+
+**SECTION: ${section.title}**
+${section.content}
+
+**ANALYSIS REQUIREMENTS:**
+- Find ALL risks in this section (comprehensive analysis)
+- Quote precise risky phrases (15-200 words each)
+- Use section context: "${section.title}"
+- Focus on mapping-friendly quotes that can be found in the text
+
+Provide JSON with ALL risks found:
+{
+  "risks": [
+    {
+      "clause": "precise risky text quote",
+      "clauseLocation": "${section.title}",
+      "riskLevel": "high|medium|low",
+      "riskScore": number,
+      "category": string,
+      "explanation": string,
+      "suggestion": string,
+      "affectedParty": string,
+      "legalPrecedent": string (optional)
+    }
+  ]
+}`
+          }
+        ],
+        max_tokens: 6000,
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+      })
+      
+      const sectionResult = JSON.parse(response.choices[0].message.content || '{"risks": []}')
+      const sectionRisks = (sectionResult.risks || []).map((risk: any, riskIndex: number) => {
+        // Clean and validate clause text
+        let clause = (risk.clause || "").trim()
+        clause = clause.replace(/^\d+\.\s*/, '')
+        clause = clause.replace(/^[a-z]\)\s*/i, '')
+        clause = clause.replace(/^\s*[-•]\s*/, '')
+        clause = clause.replace(/\s+/g, ' ')
+        
+        const riskData = {
+          id: `risk-${i}-${riskIndex}`,
+          clause: clause,
+          clauseLocation: risk.clauseLocation || section.title,
+          riskLevel: risk.riskLevel || "medium",
+          riskScore: risk.riskScore || 5,
+          category: risk.category || "Other",
+          explanation: risk.explanation || "",
+          suggestion: risk.suggestion || "",
+          legalPrecedent: risk.legalPrecedent,
+          affectedParty: risk.affectedParty || "All parties"
+        }
+        
+        // Count by level
+        if (riskData.riskLevel === 'high') totalHighRisk++
+        else if (riskData.riskLevel === 'medium') totalMediumRisk++
+        else totalLowRisk++
+        
+        return riskData
+      })
+      
+      allRisks.push(...sectionRisks)
+      console.log(`✅ Section ${i + 1} analysis: ${sectionRisks.length} risks found`)
+      
+    } catch (error) {
+      console.error(`❌ Error analyzing section ${i + 1}:`, error)
+      continue
+    }
+  }
+  
+  // Generate overall assessment
+  const overallRiskScore = Math.min(10, Math.max(1, 
+    Math.round((totalHighRisk * 8 + totalMediumRisk * 5 + totalLowRisk * 2) / Math.max(1, allRisks.length))
+  ))
+  
+  console.log(`✅ Comprehensive chunk analysis completed: ${allRisks.length} total risks`)
+  console.log(`📊 Final breakdown: ${totalHighRisk} high, ${totalMediumRisk} medium, ${totalLowRisk} low`)
+  
+  return {
+    overallRiskScore,
+    totalRisksFound: allRisks.length,
+    highRiskCount: totalHighRisk,
+    mediumRiskCount: totalMediumRisk,
+    lowRiskCount: totalLowRisk,
+    risks: allRisks,
+    recommendations: [
+      "Review all high-risk items for immediate attention",
+      "Consider legal counsel for contract modifications",
+      "Implement risk mitigation strategies for medium-risk items",
+      "Establish compliance monitoring for regulatory risks",
+      "Document all agreed modifications in writing"
+    ],
+    executiveSummary: `Comprehensive analysis identified ${allRisks.length} legal risks across ${totalHighRisk + totalMediumRisk + totalLowRisk} categories. ${totalHighRisk} high-priority risks require immediate attention.`
+  }
+}
+
+// Helper function to split contract into logical sections
+function splitContractIntoSections(content: string): Array<{title: string, content: string}> {
+  const sections: Array<{title: string, content: string}> = []
+  
+  // Common section patterns in legal contracts
+  const sectionPatterns = [
+    { pattern: /WHEREAS.*?(?=WHEREAS|NOW THEREFORE)/gis, title: "WHEREAS Clauses" },
+    { pattern: /NOW,?\s*THEREFORE.*?(?=\d+\.|ARTICLE|SECTION|IN WITNESS)/gis, title: "Main Agreement" },
+    { pattern: /\b(?:ARTICLE|SECTION)\s+[IVX\d]+[:\.].*?(?=ARTICLE|SECTION|IN WITNESS|$)/gis, title: "Article/Section" },
+    { pattern: /\d+\.\s*[A-Z][^.]*\..*?(?=\d+\.|ARTICLE|SECTION|IN WITNESS|$)/gis, title: "Numbered Clause" },
+    { pattern: /IN WITNESS WHEREOF.*$/gis, title: "Signature Section" }
+  ]
+  
+  let remainingContent = content
+  let processedLength = 0
+  
+  // Extract identifiable sections
+  sectionPatterns.forEach((patternObj, patternIndex) => {
+    const matches = content.match(patternObj.pattern)
+    if (matches) {
+      matches.forEach((match, matchIndex) => {
+        const sectionContent = match.trim()
+        if (sectionContent.length > 200) { // Only include substantial sections
+          sections.push({
+            title: `${patternObj.title} ${matchIndex + 1}`,
+            content: sectionContent
+          })
+          processedLength += sectionContent.length
+        }
+      })
+    }
+  })
+  
+  // If we haven't captured most of the content with pattern matching, add chunks
+  if (processedLength < content.length * 0.7) {
+    console.log('📄 Adding additional content chunks for comprehensive coverage')
+    
+    const chunkSize = 4000
+    const overlap = 200
+    
+    for (let i = 0; i < content.length; i += chunkSize - overlap) {
+      const chunk = content.substring(i, i + chunkSize)
+      if (chunk.trim().length > 500) {
+        sections.push({
+          title: `Content Section ${Math.floor(i / chunkSize) + 1}`,
+          content: chunk
+        })
+      }
+    }
+  }
+  
+  // Ensure we have reasonable section sizes
+  const finalSections = sections.filter(section => 
+    section.content.length >= 200 && section.content.length <= 8000
+  )
+  
+  return finalSections.length > 0 ? finalSections : [{ title: "Full Contract", content: content }]
 }
 
 export async function chatWithContract(content: string, question: string, previousMessages?: any[]): Promise<string> {
