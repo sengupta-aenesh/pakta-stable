@@ -1001,22 +1001,46 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
 
         {activeTab === 'risks' && (
           <div className={styles.risks}>
-            <h3>Risk Analysis</h3>
+            <div className={styles.riskAnalysisHeader}>
+              <h3 className={styles.riskAnalysisTitle}>Risk Analysis</h3>
+              
+              <div className={styles.overallRiskScore}>
+                <span className={styles.overallScoreLabel}>Overall Risk Score</span>
+                <span className={styles.overallScoreValue}>{overallRiskScore.toFixed(0)}/10</span>
+              </div>
+              
+              <div className={styles.riskSummary}>
+                <div className={styles.riskCount}>
+                  <span className={styles.totalRisks}>{risks.length}</span>
+                  <span className={styles.totalRisksLabel}>risks identified</span>
+                </div>
+                
+                <div className={styles.riskBreakdown}>
+                  <div className={styles.riskBreakdownItem}>
+                    <span className={`${styles.riskDot} ${styles.high}`}></span>
+                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'high').length}</span>
+                    <span className={styles.riskBreakdownLabel}>high</span>
+                  </div>
+                  <div className={styles.riskBreakdownItem}>
+                    <span className={`${styles.riskDot} ${styles.medium}`}></span>
+                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'medium').length}</span>
+                    <span className={styles.riskBreakdownLabel}>medium</span>
+                  </div>
+                  <div className={styles.riskBreakdownItem}>
+                    <span className={`${styles.riskDot} ${styles.low}`}></span>
+                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'low').length}</span>
+                    <span className={styles.riskBreakdownLabel}>low</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             {isAnalyzing ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '250px', color: '#6b7280' }}>
                 <span>Performing comprehensive risk analysis...</span>
               </div>
             ) : risks.length > 0 ? (
-              <>
-                <div className={styles.overallScore}>
-                  <div>
-                    <span>Overall Risk Score</span>
-                    <span className={styles.score}>{overallRiskScore.toFixed(0)}/10</span>
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-                    {risks.length} risks identified • {risks.filter(r => r.riskLevel === 'high').length} high • {risks.filter(r => r.riskLevel === 'medium').length} medium • {risks.filter(r => r.riskLevel === 'low').length} low
-                  </div>
-                </div>
+              <div className={styles.risksList}>
                 
                 {risks.map((risk, index) => (
                   <div 
@@ -1064,7 +1088,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     </div>
                   </div>
                 ))}
-              </>
+              </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1', minHeight: '250px', color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
                 <p>Click to analyze contract risks</p>
