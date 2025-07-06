@@ -303,7 +303,9 @@
 }
 
 .riskItem {
-  width: 100%;
+  width: calc(100% + 8px);
+  margin-left: -4px;
+  margin-right: -4px;
   box-sizing: border-box;
   padding: 16px;
   background: #ffffff;
@@ -1205,7 +1207,7 @@
 
 .risksList {
   padding: 0;
-  margin: 0 16px 24px 16px;
+  margin: 0 20px 24px 20px;
 }
 
 /* Mobile responsiveness */
