@@ -53,28 +53,30 @@ export default function TrialStatus({ compact = false }: TrialStatusProps) {
   }
 
   return (
-    <div className={styles.trialStatus}>
-      <div className={styles.statusHeader}>
-        <div className={styles.iconContainer}>
-          <CreditCard className="w-5 h-5" />
+    <div className={styles.trialStatusContainer}>
+      <div className={styles.trialStatus}>
+        <div className={styles.statusHeader}>
+          <div className={styles.iconContainer}>
+            <CreditCard className="w-5 h-5" />
+          </div>
+          <div className={styles.statusText}>
+            <h4 className={styles.statusTitle}>Free Trial Active</h4>
+            <p className={styles.statusSubtitle}>
+              {trialInfo.daysRemaining} days remaining • Auto-converts to Pro on {trialInfo.trialEndDate}
+            </p>
+          </div>
         </div>
-        <div className={styles.statusText}>
-          <h4 className={styles.statusTitle}>Free Trial Active</h4>
-          <p className={styles.statusSubtitle}>
-            {trialInfo.daysRemaining} days remaining • Auto-converts to Pro on {trialInfo.trialEndDate}
-          </p>
-        </div>
-      </div>
-      
-      <div className={styles.trialProgress}>
-        <div className={styles.progressBar}>
-          <div 
-            className={styles.progressFill}
-            style={{ width: `${((7 - trialInfo.daysRemaining) / 7) * 100}%` }}
-          ></div>
-        </div>
-        <div className={styles.progressLabel}>
-          Day {7 - trialInfo.daysRemaining + 1} of 7
+        
+        <div className={styles.trialProgress}>
+          <div className={styles.progressBar}>
+            <div 
+              className={styles.progressFill}
+              style={{ width: `${((7 - trialInfo.daysRemaining) / 7) * 100}%` }}
+            ></div>
+          </div>
+          <div className={styles.progressLabel}>
+            Day {7 - trialInfo.daysRemaining + 1} of 7
+          </div>
         </div>
       </div>
     </div>

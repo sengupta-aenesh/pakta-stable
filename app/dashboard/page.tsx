@@ -377,10 +377,8 @@ function DashboardContent() {
         onContractTitleChange={selectedContract ? handleTitleInputChange : undefined}
       />
 
-      {/* Trial Status */}
-      <div className={styles.trialStatusContainer}>
-        <TrialStatus />
-      </div>
+      {/* Trial Status - only render container if needed */}
+      <TrialStatus />
 
       {/* Main Container with Sidebar and Content */}
       <div className={styles.mainContainer}>
