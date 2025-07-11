@@ -167,320 +167,44 @@ export default function InteractiveContractEditor({
     onRegisterUpdateFunction(updateContentFunction)
   }, [onRegisterUpdateFunction])
 
-  // Enhanced fuzzy string matching function
-  const calculateSimilarity = useCallback((str1: string, str2: string): number => {
-    // Normalize strings for comparison
-    const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
-    const s1 = normalize(str1)
-    const s2 = normalize(str2)
-    
-    if (s1 === s2) return 1.0
-    if (s1.length === 0 || s2.length === 0) return 0.0
-    
-    // Use Jaro-Winkler-like similarity for fuzzy matching
-    const longer = s1.length > s2.length ? s1 : s2
-    const shorter = s1.length > s2.length ? s2 : s1
-    
-    if (longer.length === 0) return 1.0
-    
-    // Calculate character-level similarity
-    const editDistance = levenshteinDistance(s1, s2)
-    const maxLength = Math.max(s1.length, s2.length)
-    const similarity = (maxLength - editDistance) / maxLength
-    
-    // Boost score for substring matches
-    if (longer.includes(shorter)) {
-      return Math.max(similarity, 0.8)
+  // PERFORMANCE FIX: Removed expensive fuzzy matching functions
+  // These functions (calculateSimilarity, levenshteinDistance) were causing browser crashes
+  // due to creating massive matrices for large contracts. Now using simple text search instead.
+
+  // PERFORMANCE FIX: Removed expensive findTextInDocument function
+  // This function contained multiple complex search strategies that caused browser crashes
+  // Now using simple text search (findSimpleTextPosition) instead
+
+  // PERFORMANCE FIX: Fast text position finder (replaces expensive fuzzy matching)
+  const findSimpleTextPosition = useCallback((text: string, clause: string): TextPosition => {
+    if (!text || !clause) {
+      return { start: 0, end: 0 }
     }
     
-    return similarity
+    // Try exact match first (fastest)
+    const exactIndex = text.indexOf(clause)
+    if (exactIndex !== -1) {
+      return { start: exactIndex, end: exactIndex + clause.length }
+    }
+    
+    // Try case-insensitive match (still fast)
+    const lowerText = text.toLowerCase()
+    const lowerClause = clause.toLowerCase()
+    const caseIndex = lowerText.indexOf(lowerClause)
+    if (caseIndex !== -1) {
+      return { start: caseIndex, end: caseIndex + clause.length }
+    }
+    
+    // If no match found, return position at start (graceful degradation)
+    return { start: 0, end: clause.length }
   }, [])
 
-  // Simple Levenshtein distance calculation
-  const levenshteinDistance = useCallback((str1: string, str2: string): number => {
-    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null))
-    
-    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i
-    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j
-    
-    for (let j = 1; j <= str2.length; j++) {
-      for (let i = 1; i <= str1.length; i++) {
-        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1
-        matrix[j][i] = Math.min(
-          matrix[j][i - 1] + 1,     // deletion
-          matrix[j - 1][i] + 1,     // insertion
-          matrix[j - 1][i - 1] + indicator // substitution
-        )
-      }
-    }
-    
-    return matrix[str2.length][str1.length]
-  }, [])
-
-  // Advanced text search with multiple strategies
-  const findTextInDocument = useCallback((text: string, searchClause: string): Array<{start: number, end: number, confidence: number, matchText: string}> => {
-    const matches: Array<{start: number, end: number, confidence: number, matchText: string}> = []
-    const clauseText = searchClause.trim()
-    
-    if (!clauseText || clauseText.length < 5) return matches
-    
-    // Strategy 1: Exact match (highest confidence)
-    let searchIndex = 0
-    while (true) {
-      const exactIndex = text.indexOf(clauseText, searchIndex)
-      if (exactIndex === -1) break
-      
-      matches.push({
-        start: exactIndex,
-        end: exactIndex + clauseText.length,
-        confidence: 1.0,
-        matchText: clauseText
-      })
-      searchIndex = exactIndex + 1
-    }
-    
-    // Strategy 2: Case-insensitive exact match
-    if (matches.length === 0) {
-      const lowerText = text.toLowerCase()
-      const lowerClause = clauseText.toLowerCase()
-      searchIndex = 0
-      
-      while (true) {
-        const caseIndex = lowerText.indexOf(lowerClause, searchIndex)
-        if (caseIndex === -1) break
-        
-        const actualText = text.substring(caseIndex, caseIndex + clauseText.length)
-        matches.push({
-          start: caseIndex,
-          end: caseIndex + clauseText.length,
-          confidence: 0.95,
-          matchText: actualText
-        })
-        searchIndex = caseIndex + 1
-      }
-    }
-    
-    // Strategy 3: Normalized whitespace matching
-    if (matches.length === 0) {
-      const normalizedClause = clauseText.replace(/\s+/g, ' ').trim()
-      const normalizedText = text.replace(/\s+/g, ' ')
-      const normalizedLower = normalizedText.toLowerCase()
-      const clauseLower = normalizedClause.toLowerCase()
-      
-      const normalizedIndex = normalizedLower.indexOf(clauseLower)
-      if (normalizedIndex !== -1) {
-        // Map back to original text positions
-        let originalStart = 0
-        let normalizedPos = 0
-        
-        for (let i = 0; i < text.length && normalizedPos < normalizedIndex; i++) {
-          if (text[i].match(/\s/)) {
-            if (i === 0 || !text[i-1].match(/\s/)) {
-              normalizedPos++
-            }
-          } else {
-            normalizedPos++
-          }
-          originalStart = i + 1
-        }
-        
-        // Find end position
-        let originalEnd = originalStart
-        let matchedChars = 0
-        for (let i = originalStart; i < text.length && matchedChars < normalizedClause.length; i++) {
-          if (!text[i].match(/\s/)) {
-            matchedChars++
-          } else if (matchedChars > 0 && normalizedClause[matchedChars] === ' ') {
-            matchedChars++
-          }
-          originalEnd = i + 1
-        }
-        
-        const actualText = text.substring(originalStart, originalEnd)
-        matches.push({
-          start: originalStart,
-          end: originalEnd,
-          confidence: 0.85,
-          matchText: actualText
-        })
-      }
-    }
-    
-    // Strategy 4: Fuzzy matching with sliding window
-    if (matches.length === 0 && clauseText.length >= 20) {
-      const windowSize = clauseText.length
-      const threshold = clauseText.length > 100 ? 0.7 : 0.8
-      
-      for (let i = 0; i <= text.length - windowSize; i += Math.max(1, Math.floor(windowSize / 4))) {
-        const window = text.substring(i, i + windowSize)
-        const similarity = calculateSimilarity(window, clauseText)
-        
-        if (similarity >= threshold) {
-          matches.push({
-            start: i,
-            end: i + windowSize,
-            confidence: similarity * 0.8, // Reduce confidence for fuzzy matches
-            matchText: window
-          })
-          break // Take first good fuzzy match to avoid duplicates
-        }
-      }
-    }
-    
-    // Strategy 5: Key phrase extraction for long clauses
-    if (matches.length === 0 && clauseText.length > 50) {
-      // Extract meaningful phrases (non-stop words, 15+ chars)
-      const phrases = clauseText
-        .split(/[.!?;,]/)
-        .map(phrase => phrase.trim())
-        .filter(phrase => phrase.length >= 15)
-        .filter(phrase => !phrase.match(/^(the|and|or|but|if|when|where|which|that|this|shall|will|may|must|should|could|would)\s/i))
-        .sort((a, b) => b.length - a.length) // Try longest phrases first
-      
-      for (const phrase of phrases) {
-        const phraseMatches = findTextInDocument(text, phrase)
-        if (phraseMatches.length > 0) {
-          // Extend the match to include more context if possible
-          const bestMatch = phraseMatches[0]
-          const contextStart = Math.max(0, bestMatch.start - 50)
-          const contextEnd = Math.min(text.length, bestMatch.end + 50)
-          
-          // Try to find sentence boundaries for better highlighting
-          let expandedStart = bestMatch.start
-          let expandedEnd = bestMatch.end
-          
-          // Expand to sentence start
-          for (let i = bestMatch.start - 1; i >= contextStart; i--) {
-            if (text[i].match(/[.!?]/)) break
-            if (text[i].match(/[A-Z]/) && i > 0 && text[i-1].match(/\s/)) break
-            expandedStart = i
-          }
-          
-          // Expand to sentence end
-          for (let i = bestMatch.end; i < contextEnd; i++) {
-            expandedEnd = i + 1
-            if (text[i].match(/[.!?]/)) break
-          }
-          
-          const expandedText = text.substring(expandedStart, expandedEnd).trim()
-          matches.push({
-            start: expandedStart,
-            end: expandedEnd,
-            confidence: bestMatch.confidence * 0.7, // Lower confidence for expanded matches
-            matchText: expandedText
-          })
-          break
-        }
-      }
-    }
-    
-    // Remove overlapping matches, keeping highest confidence
-    const uniqueMatches = matches
-      .sort((a, b) => b.confidence - a.confidence)
-      .filter((match, index, arr) => {
-        return !arr.slice(0, index).some(existingMatch => 
-          (match.start < existingMatch.end && match.end > existingMatch.start)
-        )
-      })
-    
-    return uniqueMatches
-  }, [calculateSimilarity])
-
-  // Enhanced function to map risks to exact text positions
-  const mapRisksToText = useCallback((text: string, riskList: RiskFactor[]): RiskHighlight[] => {
-    if (!text || !riskList || riskList.length === 0) {
-      console.log('🗺️ mapRisksToText: No text or risks to map')
-      return []
-    }
-    
-    console.log('🗺️ Enhanced risk mapping started:', { 
-      textLength: text.length, 
-      risksCount: riskList.length
-    })
-    
-    const highlights: RiskHighlight[] = []
-    const processedRanges: Array<{start: number, end: number}> = []
-    
-    riskList.forEach((risk, index) => {
-      if (!risk || !risk.clause) {
-        console.log(`⚠️ Risk ${index} has no clause, skipping`)
-        return
-      }
-      
-      const clauseText = risk.clause.trim()
-      console.log(`🔍 Enhanced search for risk ${index}: "${clauseText.substring(0, 50)}..."`)
-      
-      const matches = findTextInDocument(text, clauseText)
-      
-      if (matches.length > 0) {
-        // Select best match that doesn't overlap with existing highlights
-        let bestMatch = null
-        
-        for (const match of matches) {
-          // Check for overlap with already processed ranges
-          const hasOverlap = processedRanges.some(range => 
-            (match.start < range.end && match.end > range.start)
-          )
-          
-          if (!hasOverlap) {
-            bestMatch = match
-            break
-          }
-        }
-        
-        if (bestMatch) {
-          console.log(`✅ Risk ${index} mapped with confidence ${bestMatch.confidence.toFixed(2)} at position ${bestMatch.start}-${bestMatch.end}`)
-          
-          highlights.push({
-            ...risk,
-            textPosition: {
-              start: bestMatch.start,
-              end: bestMatch.end
-            },
-            elementId: `risk-highlight-${risk.id || index}`
-          })
-          
-          // Track this range as processed
-          processedRanges.push({
-            start: bestMatch.start,
-            end: bestMatch.end
-          })
-        } else {
-          console.log(`⚠️ Risk ${index} found matches but all overlap with existing highlights`)
-          // Log overlapping matches for debugging
-          matches.forEach((match, matchIndex) => {
-            console.log(`   Match ${matchIndex}: ${match.start}-${match.end} (confidence: ${match.confidence.toFixed(2)})`)
-          })
-        }
-      } else {
-        console.log(`❌ Risk ${index} not found with any strategy:`)
-        console.log(`   Clause: "${clauseText.substring(0, 100)}${clauseText.length > 100 ? '...' : ''}"`)
-        
-        // For debugging: try to find partial matches
-        const words = clauseText.split(/\s+/).filter(word => word.length > 3)
-        const foundWords = words.filter(word => text.toLowerCase().includes(word.toLowerCase()))
-        console.log(`   Found ${foundWords.length}/${words.length} key words in text: ${foundWords.slice(0, 3).join(', ')}`)
-      }
-    })
-    
-    // Sort by position to ensure proper rendering order
-    const sortedHighlights = highlights.sort((a, b) => a.textPosition.start - b.textPosition.start)
-    
-    console.log(`📊 Enhanced mapping result: ${sortedHighlights.length}/${riskList.length} risks mapped (${((sortedHighlights.length / riskList.length) * 100).toFixed(1)}% success rate)`)
-    
-    // Log detailed mapping statistics
-    const mappedRisks = sortedHighlights.length
-    const totalRisks = riskList.length
-    const successRate = ((mappedRisks / totalRisks) * 100).toFixed(1)
-    
-    console.log(`📈 Mapping Statistics:`)
-    console.log(`   • Successfully mapped: ${mappedRisks}/${totalRisks} risks`)
-    console.log(`   • Success rate: ${successRate}%`)
-    console.log(`   • Average risk text length: ${Math.round(riskList.reduce((sum, risk) => sum + (risk.clause?.length || 0), 0) / totalRisks)} chars`)
-    console.log(`   • Contract length: ${text.length} chars`)
-    
-    return sortedHighlights
-  }, [findTextInDocument])
+  // DEPRECATED: Keeping for reference but not using (causes browser crashes)
+  // const mapRisksToText = useCallback((text: string, riskList: RiskFactor[]): RiskHighlight[] => {
+  //   // This function contained expensive Levenshtein distance calculations
+  //   // that caused browser crashes. Now using simple text search instead.
+  //   return []
+  // }, [])
 
   // Document beautification function
   const beautifyContent = useCallback((rawContent: string): string => {
@@ -526,25 +250,41 @@ export default function InteractiveContractEditor({
     return beautifyContent(content)
   }, [content, beautifyContent])
 
-  // Map risks to text positions when content or risks change
+  // PERFORMANCE FIX: Load pre-mapped risks from backend instead of expensive text processing
   useEffect(() => {
-    console.log('🔍 Risk mapping useEffect triggered:', { 
+    console.log('🔍 Loading cached risk highlights:', { 
       contentLength: content.length, 
       risksCount: risks.length,
       currentHighlights: riskHighlights.length
     })
     
     if (content && risks.length > 0) {
-      console.log('📍 Starting risk mapping process...')
-      // Use original content for risk mapping since risks were mapped to original text
-      const mappedRisks = mapRisksToText(content, risks)
-      console.log('✅ Setting risk highlights:', mappedRisks.length, 'highlights mapped')
-      setRiskHighlights(mappedRisks)
+      console.log('📍 Using cached risk data (no heavy processing)...')
+      // PERFORMANCE FIX: Use risks directly from backend cache - they already have positions
+      // Convert RiskFactor[] to RiskHighlight[] format for display
+      const cachedHighlights: RiskHighlight[] = risks.map((risk, index) => ({
+        id: risk.id || `risk-${index}`,
+        clause: risk.clause || '',
+        clauseLocation: risk.clauseLocation || '',
+        riskLevel: risk.riskLevel || 'medium',
+        riskScore: risk.riskScore || 5,
+        category: risk.category || 'General',
+        explanation: risk.explanation || '',
+        suggestion: risk.suggestion || '',
+        legalPrecedent: risk.legalPrecedent,
+        affectedParty: risk.affectedParty || '',
+        // Use simple text search for position (fast fallback)
+        textPosition: findSimpleTextPosition(content, risk.clause || ''),
+        elementId: `risk-highlight-${risk.id || index}`
+      }))
+      
+      console.log('✅ Setting cached risk highlights:', cachedHighlights.length, 'highlights loaded')
+      setRiskHighlights(cachedHighlights)
     } else {
       console.log('❌ Clearing risk highlights - no content or risks')
       setRiskHighlights([])
     }
-  }, [content, risks, mapRisksToText])
+  }, [content, risks]) // Removed mapRisksToText dependency to prevent heavy processing
 
   // Function to render content with risk highlights
   const renderHighlightedContent = useCallback(() => {

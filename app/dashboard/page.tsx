@@ -139,7 +139,7 @@ function DashboardContent() {
       setSelectedContract(null)
       setContractRisks([])
     }
-  }, [searchParams, contracts, handleContractSelect]) // Add handleContractSelect back
+  }, [searchParams, contracts, selectedContract?.id]) // PERFORMANCE FIX: Use selectedContract.id instead of handleContractSelect to prevent infinite loops
 
   // Removed debug logging to improve performance during contract switching
 
