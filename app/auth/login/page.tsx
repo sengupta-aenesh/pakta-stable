@@ -94,12 +94,31 @@ export default function LoginPage() {
         </form>
         
         <div className="form-footer">
-          <p className="text-sm text-secondary">
-            Don't have an account?{' '}
-            <Link href="/auth/signup" style={{ fontWeight: '500' }}>
-              Create one
+          <div style={{ 
+            padding: '16px', 
+            backgroundColor: '#F8FAFC', 
+            borderRadius: '8px',
+            textAlign: 'center',
+            marginTop: '16px'
+          }}>
+            <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
+              <strong>Access by invitation only.</strong><br />
+              Contact our team to request access to the platform.
+            </p>
+            <Link 
+              href="/auth/signup" 
+              style={{ 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#0369A1',
+                textDecoration: 'underline',
+                marginTop: '4px',
+                display: 'inline-block'
+              }}
+            >
+              Learn more about access
             </Link>
-          </p>
+          </div>
         </div>
       </div>
       

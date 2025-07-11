@@ -1,90 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { signUp } from '@/lib/auth-client'
-import { Button, Input, Label, Alert, useToast, Toast } from '@/components/ui'
 import Link from 'next/link'
+import { Button } from '@/components/ui'
 import styles from './signup.module.css'
 
 export default function SignUpPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const router = useRouter()
-  const { toast, toasts, removeToast } = useToast()
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    
-    // Validation
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-    
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-    
-    setLoading(true)
-    setError('')
-
-    const result = await signUp(email, password)
-    
-    if (result.error) {
-      setError(result.error)
-      setLoading(false)
-    } else {
-      setSuccess(true)
-      toast('Account created! Check your email.', 'success')
-    }
-  }
-
-  if (success) {
-    return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="auth-header">
-            <div className="auth-icon" style={{ backgroundColor: '#F0FDF4' }}>
-              <svg fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-              Check your email
-            </h1>
-            <p className="text-secondary text-sm">
-              We've sent a confirmation link to {email}
-            </p>
-          </div>
-          
-          <div style={{ marginTop: '32px', padding: '16px', backgroundColor: '#FAFAFA', borderRadius: '8px' }}>
-            <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
-              Please check your email and click the confirmation link to activate your account. 
-              The link will expire in 24 hours.
-            </p>
-          </div>
-          
-          <div style={{ marginTop: '24px' }}>
-            <Button 
-              onClick={() => router.push('/auth/login')} 
-              variant="secondary"
-              size="lg"
-              className="w-full"
-            >
-              Back to Login
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -92,93 +12,160 @@ export default function SignUpPage() {
           <div className={styles.logoContainer}>
             <img src="/logo.png" alt="Contract Manager" className={styles.logo} />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-            Create an account
+          
+          {/* Beautiful invitation icon */}
+          <div className="auth-icon" style={{ 
+            backgroundColor: '#F0F9FF', 
+            marginTop: '16px',
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '16px auto'
+          }}>
+            <svg 
+              width="40" 
+              height="40" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="#0369A1" 
+              strokeWidth={1.5}
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5-1.422A12.963 12.963 0 0121.75 12c0-2.846-.924-5.47-2.48-7.75M5.25 21A12.963 12.963 0 012.25 12c0-2.846.924-5.47 2.48-7.75"
+              />
+            </svg>
+          </div>
+          
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700', 
+            marginBottom: '12px',
+            textAlign: 'center',
+            color: '#0F172A'
+          }}>
+            Registration by Invitation Only
           </h1>
-          <p className="text-secondary text-sm">
-            Start managing your contracts with AI-powered insights
+          
+          <p className="text-secondary" style={{ 
+            textAlign: 'center',
+            fontSize: '16px',
+            lineHeight: '1.6',
+            marginBottom: '24px'
+          }}>
+            Our AI-powered contract analysis platform is currently available to select organizations and enterprises.
           </p>
         </div>
         
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              required
-              disabled={loading}
-            />
+        {/* Elegant information section */}
+        <div style={{ 
+          marginTop: '32px', 
+          padding: '24px', 
+          backgroundColor: '#FAFBFC', 
+          borderRadius: '12px',
+          border: '1px solid #E2E8F0'
+        }}>
+          <h3 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            marginBottom: '16px',
+            color: '#1E293B'
+          }}>
+            Why Invitation Only?
+          </h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ 
+                width: '6px', 
+                height: '6px', 
+                backgroundColor: '#0369A1', 
+                borderRadius: '50%',
+                marginTop: '8px',
+                flexShrink: 0
+              }}></div>
+              <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
+                <strong>Regulatory Compliance:</strong> We're ensuring full compliance with local financial regulations and data protection laws.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ 
+                width: '6px', 
+                height: '6px', 
+                backgroundColor: '#0369A1', 
+                borderRadius: '50%',
+                marginTop: '8px',
+                flexShrink: 0
+              }}></div>
+              <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
+                <strong>Premium Experience:</strong> We're providing personalized onboarding and dedicated support to ensure the best experience.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ 
+                width: '6px', 
+                height: '6px', 
+                backgroundColor: '#0369A1', 
+                borderRadius: '50%',
+                marginTop: '8px',
+                flexShrink: 0
+              }}></div>
+              <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
+                <strong>Enterprise Security:</strong> Each organization receives custom security configurations and access controls.
+              </p>
+            </div>
           </div>
-          
-          <div className="form-group">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              disabled={loading}
-            />
-            <p className="text-xs text-secondary" style={{ marginTop: '4px' }}>
-              Must be at least 6 characters
-            </p>
-          </div>
-          
-          <div className="form-group">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              disabled={loading}
-            />
-          </div>
-          
-          {error && (
-            <Alert variant="error" style={{ marginBottom: '16px' }}>
-              {error}
-            </Alert>
-          )}
-          
-          <Button
-            type="submit"
+        </div>
+        
+        {/* Contact information */}
+        <div style={{ 
+          marginTop: '24px', 
+          padding: '20px', 
+          backgroundColor: '#F8FAFC', 
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          <h4 style={{ 
+            fontSize: '16px', 
+            fontWeight: '600', 
+            marginBottom: '8px',
+            color: '#1E293B'
+          }}>
+            Interested in Access?
+          </h4>
+          <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
+            Contact our team to discuss your contract analysis needs and explore how our AI can transform your legal workflow.
+          </p>
+        </div>
+        
+        {/* Actions */}
+        <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
+          <Button 
+            onClick={() => window.open('mailto:access@contractmanager.com?subject=Access Request&body=Hello, I would like to request access to the Contract Manager platform.', '_blank')} 
             variant="primary"
             size="lg"
-            loading={loading}
-            className="w-full"
+            style={{ flex: 1 }}
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            Request Access
           </Button>
-        </form>
-        
-        <div className="form-footer">
-          <p className="text-sm text-secondary">
-            Already have an account?{' '}
-            <Link href="/auth/login" style={{ fontWeight: '500' }}>
-              Sign in
-            </Link>
-          </p>
+          
+          <Link href="/auth/login" style={{ flex: 1 }}>
+            <Button 
+              variant="secondary"
+              size="lg"
+              className="w-full"
+            >
+              Back to Login
+            </Button>
+          </Link>
         </div>
       </div>
-      
-      {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
     </div>
   )
 }
