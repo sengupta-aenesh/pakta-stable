@@ -175,24 +175,112 @@ export default function InteractiveContractEditor({
   // This function contained multiple complex search strategies that caused browser crashes
   // Now using simple text search (findSimpleTextPosition) instead
 
-  // PERFORMANCE FIX: Fast text position finder (replaces expensive fuzzy matching)
+  // PERFORMANCE FIX: Accurate text position finder with context awareness
   const findSimpleTextPosition = useCallback((text: string, clause: string): TextPosition => {
     if (!text || !clause) {
       return { start: 0, end: 0 }
     }
     
-    // Try exact match first (fastest)
+    // Clean and normalize both texts for better matching
+    const normalizeText = (str: string) => str.replace(/\s+/g, ' ').trim()
+    const normalizedClause = normalizeText(clause)
+    
+    // Strategy 1: Try exact match first (fastest)
     const exactIndex = text.indexOf(clause)
     if (exactIndex !== -1) {
       return { start: exactIndex, end: exactIndex + clause.length }
     }
     
-    // Try case-insensitive match (still fast)
+    // Strategy 2: Try case-insensitive match
     const lowerText = text.toLowerCase()
     const lowerClause = clause.toLowerCase()
     const caseIndex = lowerText.indexOf(lowerClause)
     if (caseIndex !== -1) {
       return { start: caseIndex, end: caseIndex + clause.length }
+    }
+    
+    // Strategy 3: Try normalized whitespace matching
+    const normalizedText = normalizeText(text)
+    const normalizedLowerText = normalizedText.toLowerCase()
+    const normalizedLowerClause = normalizedClause.toLowerCase()
+    
+    const normalizedIndex = normalizedLowerText.indexOf(normalizedLowerClause)
+    if (normalizedIndex !== -1) {
+      // Map back to original text positions
+      let originalPosition = 0
+      let normalizedPosition = 0
+      
+      // Find the original position by walking through the text
+      for (let i = 0; i < text.length && normalizedPosition < normalizedIndex; i++) {
+        if (text[i].match(/\s/)) {
+          // Skip multiple consecutive spaces in normalized version
+          if (i === 0 || !text[i-1].match(/\s/)) {
+            normalizedPosition++
+          }
+        } else {
+          normalizedPosition++
+        }
+        originalPosition = i + 1
+      }
+      
+      return { start: originalPosition, end: originalPosition + clause.length }
+    }
+    
+    // Strategy 4: Try partial matching for significant substrings
+    if (clause.length > 20) {
+      // Try the first and last significant parts
+      const firstPart = clause.substring(0, Math.floor(clause.length / 2)).trim()
+      const lastPart = clause.substring(Math.floor(clause.length / 2)).trim()
+      
+      if (firstPart.length > 10) {
+        const firstIndex = lowerText.indexOf(firstPart.toLowerCase())
+        if (firstIndex !== -1) {
+          // Found first part, try to extend to find full match
+          const potentialEnd = Math.min(text.length, firstIndex + clause.length + 50)
+          const extendedText = text.substring(firstIndex, potentialEnd)
+          
+          // Check if this extended text contains most of our clause
+          const wordsInClause = clause.split(/\s+/).filter(w => w.length > 3)
+          const wordsInExtended = extendedText.split(/\s+/).filter(w => w.length > 3)
+          const matchingWords = wordsInClause.filter(word => 
+            wordsInExtended.some(extWord => extWord.toLowerCase().includes(word.toLowerCase()))
+          )
+          
+          if (matchingWords.length >= wordsInClause.length * 0.7) {
+            return { start: firstIndex, end: Math.min(firstIndex + clause.length, potentialEnd) }
+          }
+        }
+      }
+    }
+    
+    // Strategy 5: Find best matching sentence/paragraph
+    const clauseWords = clause.split(/\s+/).filter(w => w.length > 3)
+    if (clauseWords.length >= 3) {
+      const sentences = text.split(/[.!?]+/)
+      let bestMatch = { start: 0, end: clause.length, score: 0 }
+      
+      sentences.forEach(sentence => {
+        const sentenceWords = sentence.split(/\s+/).filter(w => w.length > 3)
+        const matchingWords = clauseWords.filter(word => 
+          sentenceWords.some(sentWord => sentWord.toLowerCase().includes(word.toLowerCase()))
+        )
+        
+        const score = matchingWords.length / clauseWords.length
+        if (score > bestMatch.score && score >= 0.5) {
+          const sentenceIndex = text.indexOf(sentence)
+          if (sentenceIndex !== -1) {
+            bestMatch = {
+              start: sentenceIndex,
+              end: sentenceIndex + sentence.length,
+              score: score
+            }
+          }
+        }
+      })
+      
+      if (bestMatch.score >= 0.5) {
+        return { start: bestMatch.start, end: bestMatch.end }
+      }
     }
     
     // If no match found, return position at start (graceful degradation)

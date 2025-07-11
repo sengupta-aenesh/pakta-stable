@@ -148,19 +148,24 @@ CRITICAL ANALYSIS INSTRUCTIONS:
 6. Consider enforceability and compliance risks
 
 **TEXT QUOTING RULES FOR ACCURATE MAPPING:**
-- Quote the CORE RISKY PHRASE or sentence that contains the risk
-- Keep quotes concise but complete enough to be uniquely identifiable
+- Quote the EXACT RISKY PHRASE as it appears in the contract (preserve original formatting)
+- Include enough context to make the quote uniquely identifiable in the document
 - If a risk spans multiple sentences, quote the most problematic sentence
 - Remove excess surrounding text that doesn't contribute to the risk
 - Ensure each quote is 15-200 words for optimal mapping accuracy
 - Focus on the specific language that creates the legal risk
+- CRITICAL: Copy the text EXACTLY as written - don't paraphrase or clean up grammar
 
 **EXAMPLES OF GOOD QUOTES:**
 ✅ GOOD: "shall be liable for all damages, costs, and expenses of any kind"
 ✅ GOOD: "may terminate this agreement at any time without cause or notice"
 ✅ GOOD: "confidential information includes any information disclosed by either party"
+✅ GOOD: "The Company    may terminate this agreement" (preserve original spacing)
+✅ GOOD: "Party A shall be liable for damages; however, Party B" (preserve punctuation)
 ❌ TOO LONG: [entire 300-word paragraph]
 ❌ TOO SHORT: "terminate"
+❌ PARAPHRASED: "the company can end the contract" (when original says "may terminate")
+❌ CLEANED UP: "The Company may terminate" (when original has extra spaces)
 
 For EACH risk found, provide:
 1. Precise quote of the risky text (15-200 words, core risk language only)
