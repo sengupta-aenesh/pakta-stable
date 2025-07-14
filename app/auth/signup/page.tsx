@@ -13,21 +13,20 @@ export default function SignUpPage() {
             <img src="/logo.png" alt="Contract Manager" className={styles.logo} />
           </div>
           
-          {/* Beautiful invitation icon */}
-          <div className="auth-icon" style={{ 
+          {/* Invitation icon */}
+          <div style={{ 
             backgroundColor: '#F0F9FF', 
-            marginTop: '16px',
-            width: '80px',
-            height: '80px',
+            width: '64px',
+            height: '64px',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '16px auto'
+            margin: '0 auto 24px auto'
           }}>
             <svg 
-              width="40" 
-              height="40" 
+              width="28" 
+              height="28" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="#0369A1" 
@@ -42,120 +41,80 @@ export default function SignUpPage() {
           </div>
           
           <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700', 
-            marginBottom: '12px',
+            fontSize: '24px', 
+            fontWeight: '600', 
+            marginBottom: '8px',
             textAlign: 'center',
             color: '#0F172A'
           }}>
-            Registration by Invitation Only
+            Sign Up by Invitation Only
           </h1>
           
-          <p className="text-secondary" style={{ 
+          <p className="text-secondary text-sm" style={{ 
             textAlign: 'center',
-            fontSize: '16px',
-            lineHeight: '1.6',
-            marginBottom: '24px'
+            lineHeight: '1.6'
           }}>
-            Our AI-powered contract analysis platform is currently available to select organizations and enterprises.
+            Our contract analysis platform is currently available to select organizations
           </p>
         </div>
         
-        {/* Elegant information section */}
+        {/* Information section */}
         <div style={{ 
           marginTop: '32px', 
-          padding: '24px', 
+          padding: '20px', 
           backgroundColor: '#FAFBFC', 
-          borderRadius: '12px',
+          borderRadius: '8px',
           border: '1px solid #E2E8F0'
         }}>
           <h3 style={{ 
-            fontSize: '18px', 
+            fontSize: '16px', 
             fontWeight: '600', 
-            marginBottom: '16px',
+            marginBottom: '12px',
             color: '#1E293B'
           }}>
             Why Invitation Only?
           </h3>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <div style={{ 
-                width: '6px', 
-                height: '6px', 
-                backgroundColor: '#0369A1', 
-                borderRadius: '50%',
-                marginTop: '8px',
-                flexShrink: 0
-              }}></div>
-              <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
-                <strong>Regulatory Compliance:</strong> We're ensuring full compliance with local financial regulations and data protection laws.
-              </p>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <div style={{ 
-                width: '6px', 
-                height: '6px', 
-                backgroundColor: '#0369A1', 
-                borderRadius: '50%',
-                marginTop: '8px',
-                flexShrink: 0
-              }}></div>
-              <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
-                <strong>Premium Experience:</strong> We're providing personalized onboarding and dedicated support to ensure the best experience.
-              </p>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <div style={{ 
-                width: '6px', 
-                height: '6px', 
-                backgroundColor: '#0369A1', 
-                borderRadius: '50%',
-                marginTop: '8px',
-                flexShrink: 0
-              }}></div>
-              <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
-                <strong>Enterprise Security:</strong> Each organization receives custom security configurations and access controls.
-              </p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
+              • Personalized onboarding and dedicated support
+            </p>
+            <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
+              • Custom security configurations for each organization
+            </p>
+            <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
+              • Ensuring optimal performance and user experience
+            </p>
           </div>
         </div>
         
-        {/* Contact information */}
+        {/* Contact section */}
         <div style={{ 
-          marginTop: '24px', 
-          padding: '20px', 
+          marginTop: '20px', 
+          padding: '16px', 
           backgroundColor: '#F8FAFC', 
           borderRadius: '8px',
           textAlign: 'center'
         }}>
-          <h4 style={{ 
-            fontSize: '16px', 
-            fontWeight: '600', 
-            marginBottom: '8px',
-            color: '#1E293B'
-          }}>
-            Interested in Access?
-          </h4>
-          <p className="text-sm text-secondary" style={{ lineHeight: '1.6' }}>
-            Contact our team to discuss your contract analysis needs and explore how our AI can transform your legal workflow.
+          <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
+            Interested in accessing our platform?<br />
+            Contact our team to request an invitation.
           </p>
         </div>
         
         {/* Actions */}
-        <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
+        <div style={{ marginTop: '24px' }}>
           <Button 
             onClick={() => window.open('mailto:access@contractmanager.com?subject=Access Request&body=Hello, I would like to request access to the Contract Manager platform.', '_blank')} 
             variant="primary"
             size="lg"
-            style={{ flex: 1 }}
+            className="w-full"
+            style={{ marginBottom: '12px' }}
           >
             Request Access
           </Button>
           
-          <Link href="/auth/login" style={{ flex: 1 }}>
+          <Link href="/auth/login">
             <Button 
               variant="secondary"
               size="lg"
