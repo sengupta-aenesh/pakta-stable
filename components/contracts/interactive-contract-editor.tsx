@@ -134,6 +134,7 @@ export default function InteractiveContractEditor({
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const downloadRef = useRef<HTMLDivElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const cursorPositionRef = useRef<number>(0)
 
   // Update content when contract changes
   useEffect(() => {
@@ -786,10 +787,29 @@ export default function InteractiveContractEditor({
 
   // Handle content editing (immediate local state update)
   const handleContentChange = (newContent: string) => {
+    // Store cursor position before updating content
+    if (editorRef.current) {
+      cursorPositionRef.current = editorRef.current.selectionStart
+    }
+    
     setContent(newContent)
     // Don't save immediately - use debounced save instead
     debouncedSave(newContent)
   }
+
+  // Restore cursor position after content update
+  useEffect(() => {
+    if (isEditing && editorRef.current) {
+      const savedPosition = cursorPositionRef.current
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.selectionStart = savedPosition
+          editorRef.current.selectionEnd = savedPosition
+        }
+      }, 0)
+    }
+  }, [content, isEditing])
 
   // Debounced save function - only saves after user stops typing for 2 seconds
   const debouncedSave = useCallback((newContent: string) => {
@@ -885,16 +905,12 @@ export default function InteractiveContractEditor({
       
       // Focus and restore scroll position when entering edit mode
       setTimeout(() => {
-        // Focus the appropriate element (contentEditable or textarea)
-        if (riskHighlights.length > 0) {
-          contentRef.current?.focus()
-        } else {
-          editorRef.current?.focus()
-        }
+        // Always focus on textarea in edit mode
+        editorRef.current?.focus()
         restoreScrollPosition()
       }, 150)
     }
-  }, [isEditing, handleDoneEditing, saveScrollPosition, restoreScrollPosition, riskHighlights.length])
+  }, [isEditing, handleDoneEditing, saveScrollPosition, restoreScrollPosition])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -1052,7 +1068,7 @@ export default function InteractiveContractEditor({
           // Edit mode: Always use textarea for consistent editing experience
           <textarea
             ref={editorRef}
-            value={getEditingContent()}
+            value={content}
             onChange={(e) => {
               // Extract plain text and update content (local state only)
               const plainText = e.target.value
