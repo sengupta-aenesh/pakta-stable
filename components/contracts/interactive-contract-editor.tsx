@@ -124,6 +124,7 @@ export default function InteractiveContractEditor({
   className
 }: InteractiveContractEditorProps) {
   const [content, setContent] = useState('')
+  const [editingContent, setEditingContent] = useState('') // Separate state for editing
   const [riskHighlights, setRiskHighlights] = useState<RiskHighlight[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [textSelection, setTextSelection] = useState<TextSelection | null>(null)
@@ -134,16 +135,19 @@ export default function InteractiveContractEditor({
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const downloadRef = useRef<HTMLDivElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const cursorPositionRef = useRef<number>(0)
 
   // Update content when contract changes
   useEffect(() => {
     if (contract) {
-      setContent(contract.content || '')
+      const newContent = contract.content || ''
+      setContent(newContent)
+      // Set editing content to beautified version for consistent formatting
+      setEditingContent(beautifyContent(newContent))
     } else {
       setContent('')
+      setEditingContent('')
     }
-  }, [contract])
+  }, [contract, beautifyContent])
 
   // Use ref to store the latest onContentChange function to avoid stale closures
   const onContentChangeRef = useRef(onContentChange)
@@ -785,33 +789,17 @@ export default function InteractiveContractEditor({
     }
   }, [showDownloadDropdown])
 
-  // Handle content editing (immediate local state update)
-  const handleContentChange = (newContent: string) => {
-    // Store cursor position before updating content
-    if (editorRef.current) {
-      cursorPositionRef.current = editorRef.current.selectionStart
-    }
+  // Handle editing content change (immediate local state update)
+  const handleEditingContentChange = (newEditingContent: string) => {
+    // Update editing content immediately (no cursor issues)
+    setEditingContent(newEditingContent)
     
-    setContent(newContent)
+    // Update raw content for saving (this becomes the source of truth)
+    setContent(newEditingContent)
+    
     // Don't save immediately - use debounced save instead
-    debouncedSave(newContent)
+    debouncedSave(newEditingContent)
   }
-
-  // Restore cursor position after content update
-  useEffect(() => {
-    if (isEditing && editorRef.current) {
-      const savedPosition = cursorPositionRef.current
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        if (editorRef.current && savedPosition > 0) {
-          const maxPosition = editorRef.current.value.length
-          const safePosition = Math.min(savedPosition, maxPosition)
-          editorRef.current.selectionStart = safePosition
-          editorRef.current.selectionEnd = safePosition
-        }
-      }, 0)
-    }
-  }, [isEditing]) // Remove content dependency to prevent cursor jumping
 
   // Debounced save function - only saves after user stops typing for 2 seconds
   const debouncedSave = useCallback((newContent: string) => {
@@ -871,6 +859,9 @@ export default function InteractiveContractEditor({
     // Save current scroll position
     saveScrollPosition()
     
+    // Update content with the final edited content
+    setContent(editingContent)
+    
     // Exit edit mode
     setIsEditing(false)
     
@@ -891,7 +882,7 @@ export default function InteractiveContractEditor({
     setTimeout(() => {
       restoreScrollPosition()
     }, 500)
-  }, [onReanalyzeRisks, saveScrollPosition, restoreScrollPosition, forceSave])
+  }, [onReanalyzeRisks, saveScrollPosition, restoreScrollPosition, forceSave, editingContent])
 
   // Toggle between view and edit modes
   const toggleEditMode = useCallback(() => {
@@ -903,6 +894,9 @@ export default function InteractiveContractEditor({
       // Save current scroll position before switching modes
       saveScrollPosition()
       
+      // Initialize editing content with beautified version
+      setEditingContent(beautifyContent(content))
+      
       setIsEditing(true)
       
       // Focus and restore scroll position when entering edit mode
@@ -912,7 +906,7 @@ export default function InteractiveContractEditor({
         restoreScrollPosition()
       }, 150)
     }
-  }, [isEditing, handleDoneEditing, saveScrollPosition, restoreScrollPosition])
+  }, [isEditing, handleDoneEditing, saveScrollPosition, restoreScrollPosition, content, beautifyContent])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -1067,21 +1061,14 @@ export default function InteractiveContractEditor({
       {/* Content area */}
       <div className={styles.content}>
         {isEditing ? (
-          // Edit mode: Use beautified content for consistent formatting
+          // Edit mode: Use separate editing state for cursor stability
           <textarea
             ref={editorRef}
-            value={getEditingContent()}
+            value={editingContent}
             onChange={(e) => {
-              // Extract the edited text and convert back to raw content
-              const editedText = e.target.value
-              
-              // Store cursor position before content change
-              if (editorRef.current) {
-                cursorPositionRef.current = editorRef.current.selectionStart
-              }
-              
-              // Update content with the edited text (this becomes the new raw content)
-              handleContentChange(editedText)
+              // Update editing content directly (no cursor issues)
+              const newEditingContent = e.target.value
+              handleEditingContentChange(newEditingContent)
             }}
             className={styles.editor}
             placeholder="Enter contract content..."
