@@ -803,13 +803,15 @@ export default function InteractiveContractEditor({
       const savedPosition = cursorPositionRef.current
       // Small delay to ensure DOM is updated
       setTimeout(() => {
-        if (editorRef.current) {
-          editorRef.current.selectionStart = savedPosition
-          editorRef.current.selectionEnd = savedPosition
+        if (editorRef.current && savedPosition > 0) {
+          const maxPosition = editorRef.current.value.length
+          const safePosition = Math.min(savedPosition, maxPosition)
+          editorRef.current.selectionStart = safePosition
+          editorRef.current.selectionEnd = safePosition
         }
       }, 0)
     }
-  }, [content, isEditing])
+  }, [isEditing]) // Remove content dependency to prevent cursor jumping
 
   // Debounced save function - only saves after user stops typing for 2 seconds
   const debouncedSave = useCallback((newContent: string) => {
@@ -1065,23 +1067,36 @@ export default function InteractiveContractEditor({
       {/* Content area */}
       <div className={styles.content}>
         {isEditing ? (
-          // Edit mode: Always use textarea for consistent editing experience
+          // Edit mode: Use beautified content for consistent formatting
           <textarea
             ref={editorRef}
-            value={content}
+            value={getEditingContent()}
             onChange={(e) => {
-              // Extract plain text and update content (local state only)
-              const plainText = e.target.value
-              handleContentChange(plainText)
+              // Extract the edited text and convert back to raw content
+              const editedText = e.target.value
+              
+              // Store cursor position before content change
+              if (editorRef.current) {
+                cursorPositionRef.current = editorRef.current.selectionStart
+              }
+              
+              // Update content with the edited text (this becomes the new raw content)
+              handleContentChange(editedText)
             }}
             className={styles.editor}
             placeholder="Enter contract content..."
             style={{
               fontFamily: '"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              fontSize: '14px',
-              lineHeight: '1.6',
+              fontSize: '16px',
+              lineHeight: '1.8',
               whiteSpace: 'pre-wrap',
-              wordWrap: 'break-word'
+              wordWrap: 'break-word',
+              padding: '32px',
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              color: '#1f2937'
             }}
           />
         ) : (
