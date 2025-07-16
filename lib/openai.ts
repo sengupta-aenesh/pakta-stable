@@ -265,39 +265,48 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
   }
 }
 
-// Enhanced chunk-based analysis for large contracts
+// HYBRID APPROACH: Enhanced parallel chunk-based analysis for large contracts
 async function performComprehensiveChunkAnalysis(content: string): Promise<RiskAnalysis> {
-  console.log('🔍 Starting comprehensive chunk-based risk analysis...')
+  console.log('🚀 Starting PARALLEL chunk-based risk analysis...')
   
   // Split contract into logical sections for analysis
   const sections = splitContractIntoSections(content)
-  console.log(`📄 Split contract into ${sections.length} sections for analysis`)
+  console.log(`📄 Split contract into ${sections.length} sections for PARALLEL analysis`)
   
-  const allRisks: RiskFactor[] = []
-  let totalHighRisk = 0
-  let totalMediumRisk = 0
-  let totalLowRisk = 0
+  // Filter out very short sections
+  const validSections = sections.filter(section => section.content.trim().length >= 100)
+  console.log(`✅ ${validSections.length} sections ready for parallel processing`)
   
-  // Analyze each section
-  for (let i = 0; i < sections.length; i++) {
-    const section = sections[i]
-    if (section.content.trim().length < 100) continue // Skip very short sections
-    
-    console.log(`🔍 Analyzing section ${i + 1}/${sections.length}: ${section.title}`)
-    
-    try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
-            
+  if (validSections.length === 0) {
+    console.log('⚠️ No valid sections found, falling back to single analysis')
+    return await performSingleAnalysis(content)
+  }
+  
+  // PARALLEL PROCESSING: Analyze all sections simultaneously
+  const startTime = Date.now()
+  console.log(`🔄 Starting parallel analysis of ${validSections.length} sections...`)
+  
+  try {
+    const sectionPromises = validSections.map(async (section, index) => {
+      console.log(`🔍 [${index + 1}/${validSections.length}] Processing: ${section.title}`)
+      
+      // Dynamic token allocation based on section size
+      const sectionLength = section.content.length
+      const maxTokens = Math.min(8000, Math.max(3000, Math.floor(sectionLength / 4)))
+      
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
+              
 You are analyzing a SECTION of a larger contract. Be comprehensive for this section - find ALL risks within this section, whether 1 or 20+ risks exist. Do not limit yourself.`
-          },
-          {
-            role: "user",
-            content: `Analyze this CONTRACT SECTION for ALL legal risks. Find every significant risk in this section - do not limit the number of risks.
+            },
+            {
+              role: "user",
+              content: `Analyze this CONTRACT SECTION for ALL legal risks. Find every significant risk in this section - do not limit the number of risks.
 
 **SECTION: ${section.title}**
 ${section.content}
@@ -324,75 +333,167 @@ Provide JSON with ALL risks found:
     }
   ]
 }`
+            }
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        })
+        
+        const sectionResult = JSON.parse(response.choices[0].message.content || '{"risks": []}')
+        const sectionRisks = (sectionResult.risks || []).map((risk: any, riskIndex: number) => {
+          // Clean and validate clause text
+          let clause = (risk.clause || "").trim()
+          clause = clause.replace(/^\d+\.\s*/, '')
+          clause = clause.replace(/^[a-z]\)\s*/i, '')
+          clause = clause.replace(/^\s*[-•]\s*/, '')
+          clause = clause.replace(/\s+/g, ' ')
+          
+          return {
+            id: `risk-${index}-${riskIndex}`,
+            clause: clause,
+            clauseLocation: risk.clauseLocation || section.title,
+            riskLevel: risk.riskLevel || "medium",
+            riskScore: risk.riskScore || 5,
+            category: risk.category || "Other",
+            explanation: risk.explanation || "",
+            suggestion: risk.suggestion || "",
+            legalPrecedent: risk.legalPrecedent,
+            affectedParty: risk.affectedParty || "All parties"
           }
-        ],
-        max_tokens: 6000,
-        temperature: 0.2,
-        response_format: { type: "json_object" }
-      })
-      
-      const sectionResult = JSON.parse(response.choices[0].message.content || '{"risks": []}')
-      const sectionRisks = (sectionResult.risks || []).map((risk: any, riskIndex: number) => {
-        // Clean and validate clause text
-        let clause = (risk.clause || "").trim()
-        clause = clause.replace(/^\d+\.\s*/, '')
-        clause = clause.replace(/^[a-z]\)\s*/i, '')
-        clause = clause.replace(/^\s*[-•]\s*/, '')
-        clause = clause.replace(/\s+/g, ' ')
+        })
         
-        const riskData = {
-          id: `risk-${i}-${riskIndex}`,
-          clause: clause,
-          clauseLocation: risk.clauseLocation || section.title,
-          riskLevel: risk.riskLevel || "medium",
-          riskScore: risk.riskScore || 5,
-          category: risk.category || "Other",
-          explanation: risk.explanation || "",
-          suggestion: risk.suggestion || "",
-          legalPrecedent: risk.legalPrecedent,
-          affectedParty: risk.affectedParty || "All parties"
-        }
+        console.log(`✅ [${index + 1}/${validSections.length}] Completed: ${section.title} (${sectionRisks.length} risks)`)
+        return sectionRisks
         
-        // Count by level
-        if (riskData.riskLevel === 'high') totalHighRisk++
-        else if (riskData.riskLevel === 'medium') totalMediumRisk++
-        else totalLowRisk++
-        
-        return riskData
-      })
-      
-      allRisks.push(...sectionRisks)
-      console.log(`✅ Section ${i + 1} analysis: ${sectionRisks.length} risks found`)
-      
-    } catch (error) {
-      console.error(`❌ Error analyzing section ${i + 1}:`, error)
-      continue
+      } catch (error) {
+        console.error(`❌ [${index + 1}/${validSections.length}] Failed: ${section.title}`, error)
+        return [] // Return empty array for failed sections
+      }
+    })
+    
+    // Wait for all sections to complete in parallel
+    const allSectionRisks = await Promise.all(sectionPromises)
+    
+    // Combine all risks from all sections
+    const allRisks: RiskFactor[] = allSectionRisks.flat()
+    
+    const processingTime = Date.now() - startTime
+    console.log(`🚀 PARALLEL processing completed in ${processingTime}ms`)
+    console.log(`📊 Total risks found: ${allRisks.length} across ${validSections.length} sections`)
+    
+    // Count risks by level
+    const highRiskCount = allRisks.filter(r => r.riskLevel === 'high').length
+    const mediumRiskCount = allRisks.filter(r => r.riskLevel === 'medium').length
+    const lowRiskCount = allRisks.filter(r => r.riskLevel === 'low').length
+    
+    console.log(`📈 Risk breakdown: ${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`)
+    
+    // Generate comprehensive executive summary
+    const executiveSummary = `Comprehensive parallel analysis of ${validSections.length} contract sections revealed ${allRisks.length} significant legal risks. Risk distribution: ${highRiskCount} high-priority risks requiring immediate attention, ${mediumRiskCount} medium-priority risks needing review, and ${lowRiskCount} low-priority risks for consideration.`
+    
+    // Generate top recommendations based on risks found
+    const recommendations = [
+      `Address ${highRiskCount} high-priority risks immediately to prevent potential legal disputes`,
+      `Review ${mediumRiskCount} medium-priority risks for potential mitigation strategies`,
+      `Consider legal counsel consultation for complex risk categories identified`,
+      `Implement regular contract review processes to maintain risk awareness`,
+      `Establish clear protocols for handling identified risk scenarios`
+    ]
+    
+    // Calculate overall risk score based on weighted average
+    const riskScoreSum = allRisks.reduce((sum, risk) => sum + risk.riskScore, 0)
+    const overallRiskScore = allRisks.length > 0 ? Math.round(riskScoreSum / allRisks.length) : 5
+    
+    return {
+      overallRiskScore,
+      totalRisksFound: allRisks.length,
+      highRiskCount,
+      mediumRiskCount,
+      lowRiskCount,
+      risks: allRisks,
+      recommendations,
+      executiveSummary
     }
+    
+  } catch (error) {
+    console.error('❌ Parallel chunk analysis failed:', error)
+    console.log('🔄 Falling back to single analysis...')
+    return await performSingleAnalysis(content)
   }
+}
+
+// Fallback single analysis function
+async function performSingleAnalysis(content: string): Promise<RiskAnalysis> {
+  console.log('🔍 Performing single-pass analysis...')
   
-  // Generate overall assessment
-  const overallRiskScore = Math.min(10, Math.max(1, 
-    Math.round((totalHighRisk * 8 + totalMediumRisk * 5 + totalLowRisk * 2) / Math.max(1, allRisks.length))
-  ))
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
+
+CRITICAL ANALYSIS INSTRUCTIONS:
+- Perform EXHAUSTIVE risk analysis - do not artificially limit the number of risks
+- Find ALL significant risks, whether 5 or 50+ risks exist
+- Be thorough and comprehensive - every risky clause should be identified
+- Prioritize accuracy and completeness over brevity`
+      },
+      {
+        role: "user",
+        content: `Perform a COMPREHENSIVE and EXHAUSTIVE legal risk analysis of this contract. Do NOT limit yourself to any specific number of risks - find ALL significant risks that exist in this contract, whether that's 5, 15, 25, or more.
+
+**CONTRACT TO ANALYZE:**
+${content}
+
+Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. Be exhaustive and thorough.`
+      }
+    ],
+    max_tokens: 12000,
+    temperature: 0.2,
+    response_format: { type: "json_object" }
+  })
   
-  console.log(`✅ Comprehensive chunk analysis completed: ${allRisks.length} total risks`)
-  console.log(`📊 Final breakdown: ${totalHighRisk} high, ${totalMediumRisk} medium, ${totalLowRisk} low`)
+  const result = JSON.parse(response.choices[0].message.content || "{}")
+  
+  // Process and structure the risks
+  const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => {
+    let clause = (risk.clause || "").trim()
+    clause = clause.replace(/^\d+\.\s*/, '')
+    clause = clause.replace(/^[a-z]\)\s*/i, '')
+    clause = clause.replace(/^\s*[-•]\s*/, '')
+    clause = clause.replace(/\s+/g, ' ')
+    
+    return {
+      id: `risk-${index}`,
+      clause: clause,
+      clauseLocation: risk.clauseLocation || "Not specified",
+      riskLevel: risk.riskLevel || "medium",
+      riskScore: risk.riskScore || 5,
+      category: risk.category || "Other",
+      explanation: risk.explanation || "",
+      suggestion: risk.suggestion || "",
+      legalPrecedent: risk.legalPrecedent,
+      affectedParty: risk.affectedParty || "All parties"
+    }
+  })
+  
+  const highRiskCount = risks.filter(r => r.riskLevel === 'high').length
+  const mediumRiskCount = risks.filter(r => r.riskLevel === 'medium').length
+  const lowRiskCount = risks.filter(r => r.riskLevel === 'low').length
+  
+  console.log(`✅ Single-pass analysis completed: ${risks.length} total risks found`)
   
   return {
-    overallRiskScore,
-    totalRisksFound: allRisks.length,
-    highRiskCount: totalHighRisk,
-    mediumRiskCount: totalMediumRisk,
-    lowRiskCount: totalLowRisk,
-    risks: allRisks,
-    recommendations: [
-      "Review all high-risk items for immediate attention",
-      "Consider legal counsel for contract modifications",
-      "Implement risk mitigation strategies for medium-risk items",
-      "Establish compliance monitoring for regulatory risks",
-      "Document all agreed modifications in writing"
-    ],
-    executiveSummary: `Comprehensive analysis identified ${allRisks.length} legal risks across ${totalHighRisk + totalMediumRisk + totalLowRisk} categories. ${totalHighRisk} high-priority risks require immediate attention.`
+    overallRiskScore: result.overallRiskScore || 5,
+    totalRisksFound: risks.length,
+    highRiskCount,
+    mediumRiskCount,
+    lowRiskCount,
+    risks,
+    recommendations: result.recommendations || [],
+    executiveSummary: result.executiveSummary || "Contract analysis completed."
   }
 }
 
