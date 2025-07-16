@@ -333,6 +333,12 @@ export default function InteractiveContractEditor({
     return beautified.trim()
   }, [])
 
+  // Get editing content - preserve formatting for better editing experience
+  const getEditingContent = useCallback(() => {
+    // Use beautified content for editing to maintain readability
+    return beautifyContent(content)
+  }, [content, beautifyContent])
+
   // Get formatted content for display
   const getFormattedContent = useCallback(() => {
     return beautifyContent(content)
@@ -343,7 +349,8 @@ export default function InteractiveContractEditor({
     console.log('🔍 Loading cached risk highlights:', { 
       contentLength: content.length, 
       risksCount: risks.length,
-      currentHighlights: riskHighlights.length
+      currentHighlights: riskHighlights.length,
+      isEditing
     })
     
     if (content && risks.length > 0) {
@@ -372,7 +379,7 @@ export default function InteractiveContractEditor({
       console.log('❌ Clearing risk highlights - no content or risks')
       setRiskHighlights([])
     }
-  }, [content, risks]) // Removed mapRisksToText dependency to prevent heavy processing
+  }, [content, risks, findSimpleTextPosition]) // Added findSimpleTextPosition to dependencies
 
   // Function to render content with risk highlights
   const renderHighlightedContent = useCallback(() => {
@@ -381,33 +388,38 @@ export default function InteractiveContractEditor({
       return ''
     }
     
-    // For now, always use original content to maintain risk highlighting
-    // TODO: Implement smart risk position mapping for beautified content
-    const displayContent = content
+    // Use beautified content for better readability, but map risks to original positions
+    const displayContent = getFormattedContent()
     
     console.log('🎨 Rendering content with highlights:', { 
       contentLength: displayContent.length, 
-      highlightsCount: riskHighlights.length
+      highlightsCount: riskHighlights.length,
+      isEditing
     })
     
     if (riskHighlights.length === 0) {
       console.log('📄 Rendering plain content (no highlights)')
-      // If no risks, we can show beautified content
-      const contentToShow = isEditing ? content : getFormattedContent()
-      return contentToShow.split('\n').map((line, index) => (
+      // Show beautified content when no risks
+      return displayContent.split('\n').map((line, index) => (
         <React.Fragment key={index}>
           {line}
-          {index < contentToShow.split('\n').length - 1 && <br />}
+          {index < displayContent.split('\n').length - 1 && <br />}
         </React.Fragment>
       ))
     }
     
     console.log('🌈 Rendering highlighted content with', riskHighlights.length, 'highlights')
 
+    // Re-map risk positions to the beautified content for accurate highlighting
+    const remappedHighlights = riskHighlights.map(highlight => ({
+      ...highlight,
+      textPosition: findSimpleTextPosition(displayContent, highlight.clause || '')
+    }))
+
     const parts: React.ReactElement[] = []
     let lastIndex = 0
 
-    riskHighlights.forEach((highlight, index) => {
+    remappedHighlights.forEach((highlight, index) => {
       const { start, end } = highlight.textPosition
       
       // Add text before this highlight (with line break conversion)
@@ -471,7 +483,7 @@ export default function InteractiveContractEditor({
     }
     
     return parts
-  }, [content, riskHighlights, isEditing, getFormattedContent])
+  }, [content, riskHighlights, getFormattedContent, findSimpleTextPosition])
 
   // Handle clicking on risk highlights (from risk panel)
   const handleRiskHighlightClick = (highlight: RiskHighlight) => {
@@ -777,9 +789,39 @@ export default function InteractiveContractEditor({
     onContentChange(newContent)
   }
 
+  // Handle done editing - trigger analysis relaunch
+  const handleDoneEditing = useCallback(async () => {
+    console.log('🔄 Done editing - triggering analysis relaunch')
+    
+    // Save current scroll position
+    saveScrollPosition()
+    
+    // Exit edit mode
+    setIsEditing(false)
+    
+    // Trigger full analysis relaunch after content changes
+    if (onReanalyzeRisks) {
+      console.log('🔄 Triggering full analysis relaunch after editing...')
+      try {
+        await onReanalyzeRisks()
+        console.log('✅ Analysis relaunch completed successfully')
+      } catch (error) {
+        console.error('❌ Analysis relaunch failed:', error)
+      }
+    } else {
+      console.log('⚠️ No reanalysis function available')
+    }
+    
+    // Restore scroll position after analysis
+    setTimeout(() => {
+      restoreScrollPosition()
+    }, 500)
+  }, [onReanalyzeRisks, saveScrollPosition, restoreScrollPosition])
+
   // Save current scroll position
   const saveScrollPosition = () => {
-    const scrollContainer = contentRef.current || editorRef.current
+    // Save scroll position from the parent scrollable container
+    const scrollContainer = contentRef.current?.parentElement || editorRef.current?.parentElement
     if (scrollContainer) {
       const currentScroll = scrollContainer.scrollTop
       setScrollPosition(currentScroll)
@@ -790,23 +832,28 @@ export default function InteractiveContractEditor({
   // Restore saved scroll position
   const restoreScrollPosition = () => {
     setTimeout(() => {
-      const scrollContainer = contentRef.current || editorRef.current
+      // Restore scroll position to the parent scrollable container
+      const scrollContainer = contentRef.current?.parentElement || editorRef.current?.parentElement
       if (scrollContainer && scrollPosition > 0) {
         scrollContainer.scrollTop = scrollPosition
         console.log('🎯 Restored scroll position:', scrollPosition)
       }
-    }, 100) // Small delay to ensure DOM is ready
+    }, 200) // Increased delay to ensure DOM is ready and content is rendered
   }
 
   // Toggle between view and edit modes
   const toggleEditMode = () => {
-    // Save current scroll position before switching modes
-    saveScrollPosition()
-    
-    setIsEditing(!isEditing)
-    
-    // Focus and restore scroll position when entering edit mode
-    if (!isEditing) {
+    if (isEditing) {
+      // User clicked "Done Editing" - trigger analysis relaunch
+      handleDoneEditing()
+    } else {
+      // User clicked "Edit Contract" - enter edit mode
+      // Save current scroll position before switching modes
+      saveScrollPosition()
+      
+      setIsEditing(true)
+      
+      // Focus and restore scroll position when entering edit mode
       setTimeout(() => {
         // Focus the appropriate element (contentEditable or textarea)
         if (riskHighlights.length > 0) {
@@ -816,9 +863,6 @@ export default function InteractiveContractEditor({
         }
         restoreScrollPosition()
       }, 150)
-    } else {
-      // Restore scroll position when returning to view mode
-      restoreScrollPosition()
     }
   }
 
@@ -951,13 +995,13 @@ export default function InteractiveContractEditor({
           </div>
         )}
         
-        {isEditing && riskHighlights.length > 0 && (
+        {isEditing && (
           <div className={styles.riskInfo}>
             <span className={styles.riskCount}>
-              Editing mode with risk highlighting preserved
+              Editing mode - formatted content preserved
             </span>
             <span className={styles.selectionHint}>
-              Risks remain highlighted while editing
+              Click "Done Editing" to refresh risk analysis
             </span>
           </div>
         )}
@@ -966,36 +1010,26 @@ export default function InteractiveContractEditor({
       {/* Content area */}
       <div className={styles.content}>
         {isEditing ? (
-          // Edit mode: Use contentEditable if we have risks to highlight, otherwise plain textarea
-          riskHighlights.length > 0 ? (
-            <div
-              ref={contentRef}
-              className={`${styles.viewer} ${styles.editableViewer}`}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                const newContent = e.currentTarget.textContent || ''
-                handleContentChange(newContent)
-              }}
-              onPaste={(e) => {
-                e.preventDefault()
-                const paste = e.clipboardData?.getData('text/plain') || ''
-                document.execCommand('insertText', false, paste)
-              }}
-            >
-              <div className={styles.highlightedContent}>
-                {renderHighlightedContent()}
-              </div>
-            </div>
-          ) : (
-            <textarea
-              ref={editorRef}
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              className={styles.editor}
-              placeholder="Enter contract content..."
-            />
-          )
+          // Edit mode: Always use textarea for consistent editing experience
+          <textarea
+            ref={editorRef}
+            value={getEditingContent()}
+            onChange={(e) => {
+              // Extract plain text and update content
+              const plainText = e.target.value
+              setContent(plainText)
+              onContentChange(plainText)
+            }}
+            className={styles.editor}
+            placeholder="Enter contract content..."
+            style={{
+              fontFamily: '"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word'
+            }}
+          />
         ) : (
           // View mode: Highlighted content
           <div 
