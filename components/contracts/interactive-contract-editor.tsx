@@ -133,6 +133,7 @@ export default function InteractiveContractEditor({
   const contentRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const downloadRef = useRef<HTMLDivElement>(null)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Update content when contract changes
   useEffect(() => {
@@ -783,11 +784,37 @@ export default function InteractiveContractEditor({
     }
   }, [showDownloadDropdown])
 
-  // Handle content editing
+  // Handle content editing (immediate local state update)
   const handleContentChange = (newContent: string) => {
     setContent(newContent)
-    onContentChange(newContent)
+    // Don't save immediately - use debounced save instead
+    debouncedSave(newContent)
   }
+
+  // Debounced save function - only saves after user stops typing for 2 seconds
+  const debouncedSave = useCallback((newContent: string) => {
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+    
+    // Set new timeout to save after 2 seconds of no typing
+    saveTimeoutRef.current = setTimeout(() => {
+      console.log('💾 Auto-saving contract after 2 seconds of no typing...')
+      onContentChange(newContent)
+      saveTimeoutRef.current = null
+    }, 2000) // 2 seconds delay
+  }, [onContentChange])
+
+  // Force save when switching modes or component unmounts
+  const forceSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      console.log('💾 Force saving contract...')
+      onContentChange(content)
+      saveTimeoutRef.current = null
+    }
+  }, [content, onContentChange])
 
   // Save current scroll position
   const saveScrollPosition = useCallback(() => {
@@ -816,6 +843,9 @@ export default function InteractiveContractEditor({
   const handleDoneEditing = useCallback(async () => {
     console.log('🔄 Done editing - triggering analysis relaunch')
     
+    // Force save any pending changes before exiting edit mode
+    forceSave()
+    
     // Save current scroll position
     saveScrollPosition()
     
@@ -839,7 +869,7 @@ export default function InteractiveContractEditor({
     setTimeout(() => {
       restoreScrollPosition()
     }, 500)
-  }, [onReanalyzeRisks, saveScrollPosition, restoreScrollPosition])
+  }, [onReanalyzeRisks, saveScrollPosition, restoreScrollPosition, forceSave])
 
   // Toggle between view and edit modes
   const toggleEditMode = useCallback(() => {
@@ -865,6 +895,15 @@ export default function InteractiveContractEditor({
       }, 150)
     }
   }, [isEditing, handleDoneEditing, saveScrollPosition, restoreScrollPosition, riskHighlights.length])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Handle download actions
   const handleDownload = async (format: 'docx' | 'pdf') => {
@@ -1015,10 +1054,9 @@ export default function InteractiveContractEditor({
             ref={editorRef}
             value={getEditingContent()}
             onChange={(e) => {
-              // Extract plain text and update content
+              // Extract plain text and update content (local state only)
               const plainText = e.target.value
-              setContent(plainText)
-              onContentChange(plainText)
+              handleContentChange(plainText)
             }}
             className={styles.editor}
             placeholder="Enter contract content..."
