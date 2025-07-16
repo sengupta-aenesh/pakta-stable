@@ -136,6 +136,45 @@ export default function InteractiveContractEditor({
   const downloadRef = useRef<HTMLDivElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Document beautification function - moved up to prevent hoisting issues
+  const beautifyContent = useCallback((rawContent: string): string => {
+    if (!rawContent) return ''
+    
+    let beautified = rawContent
+    
+    // Clean up excessive whitespace
+    beautified = beautified.replace(/\s+/g, ' ').trim()
+    
+    // Add proper paragraph breaks for legal sections
+    beautified = beautified.replace(/\.\s+([A-Z])/g, '.\n\n$1')
+    
+    // Format WHEREAS clauses
+    beautified = beautified.replace(/\b(WHEREAS\b.*?)(?=WHEREAS|NOW THEREFORE|$)/gi, (match) => {
+      return match.trim() + '\n\n'
+    })
+    
+    // Format NOW THEREFORE clause
+    beautified = beautified.replace(/\b(NOW,?\s*THEREFORE\b.*?)(?=IN WITNESS|$)/gi, (match) => {
+      return '\n' + match.trim() + '\n\n'
+    })
+    
+    // Format numbered/lettered sections
+    beautified = beautified.replace(/\b(\d+\.|\([a-z]\)|\([A-Z]\)|\([0-9]+\))\s*/g, '\n\n$1 ')
+    
+    // Format signature section
+    beautified = beautified.replace(/\b(IN WITNESS WHEREOF\b.*?)$/gi, '\n\n$1')
+    
+    // Clean up multiple line breaks
+    beautified = beautified.replace(/\n{3,}/g, '\n\n')
+    
+    // Ensure proper title formatting (all caps titles)
+    beautified = beautified.replace(/^([A-Z\s]{10,})$/gm, (match) => {
+      return '\n' + match.trim() + '\n'
+    })
+    
+    return beautified.trim()
+  }, [])
+
   // Update content when contract changes
   useEffect(() => {
     if (contract) {
@@ -299,45 +338,6 @@ export default function InteractiveContractEditor({
   //   // that caused browser crashes. Now using simple text search instead.
   //   return []
   // }, [])
-
-  // Document beautification function
-  const beautifyContent = useCallback((rawContent: string): string => {
-    if (!rawContent) return ''
-    
-    let beautified = rawContent
-    
-    // Clean up excessive whitespace
-    beautified = beautified.replace(/\s+/g, ' ').trim()
-    
-    // Add proper paragraph breaks for legal sections
-    beautified = beautified.replace(/\.\s+([A-Z])/g, '.\n\n$1')
-    
-    // Format WHEREAS clauses
-    beautified = beautified.replace(/\b(WHEREAS\b.*?)(?=WHEREAS|NOW THEREFORE|$)/gi, (match) => {
-      return match.trim() + '\n\n'
-    })
-    
-    // Format NOW THEREFORE clause
-    beautified = beautified.replace(/\b(NOW,?\s*THEREFORE\b.*?)(?=IN WITNESS|$)/gi, (match) => {
-      return '\n' + match.trim() + '\n\n'
-    })
-    
-    // Format numbered/lettered sections
-    beautified = beautified.replace(/\b(\d+\.|\([a-z]\)|\([A-Z]\)|\([0-9]+\))\s*/g, '\n\n$1 ')
-    
-    // Format signature section
-    beautified = beautified.replace(/\b(IN WITNESS WHEREOF\b.*?)$/gi, '\n\n$1')
-    
-    // Clean up multiple line breaks
-    beautified = beautified.replace(/\n{3,}/g, '\n\n')
-    
-    // Ensure proper title formatting (all caps titles)
-    beautified = beautified.replace(/^([A-Z\s]{10,})$/gm, (match) => {
-      return '\n' + match.trim() + '\n'
-    })
-    
-    return beautified.trim()
-  }, [])
 
   // Get editing content - preserve formatting for better editing experience
   const getEditingContent = useCallback(() => {
