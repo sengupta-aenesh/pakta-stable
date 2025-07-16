@@ -789,6 +789,29 @@ export default function InteractiveContractEditor({
     onContentChange(newContent)
   }
 
+  // Save current scroll position
+  const saveScrollPosition = useCallback(() => {
+    // Save scroll position from the parent scrollable container
+    const scrollContainer = contentRef.current?.parentElement || editorRef.current?.parentElement
+    if (scrollContainer) {
+      const currentScroll = scrollContainer.scrollTop
+      setScrollPosition(currentScroll)
+      console.log('📍 Saved scroll position:', currentScroll)
+    }
+  }, [])
+
+  // Restore saved scroll position
+  const restoreScrollPosition = useCallback(() => {
+    setTimeout(() => {
+      // Restore scroll position to the parent scrollable container
+      const scrollContainer = contentRef.current?.parentElement || editorRef.current?.parentElement
+      if (scrollContainer && scrollPosition > 0) {
+        scrollContainer.scrollTop = scrollPosition
+        console.log('🎯 Restored scroll position:', scrollPosition)
+      }
+    }, 200) // Increased delay to ensure DOM is ready and content is rendered
+  }, [scrollPosition])
+
   // Handle done editing - trigger analysis relaunch
   const handleDoneEditing = useCallback(async () => {
     console.log('🔄 Done editing - triggering analysis relaunch')
@@ -818,31 +841,8 @@ export default function InteractiveContractEditor({
     }, 500)
   }, [onReanalyzeRisks, saveScrollPosition, restoreScrollPosition])
 
-  // Save current scroll position
-  const saveScrollPosition = () => {
-    // Save scroll position from the parent scrollable container
-    const scrollContainer = contentRef.current?.parentElement || editorRef.current?.parentElement
-    if (scrollContainer) {
-      const currentScroll = scrollContainer.scrollTop
-      setScrollPosition(currentScroll)
-      console.log('📍 Saved scroll position:', currentScroll)
-    }
-  }
-
-  // Restore saved scroll position
-  const restoreScrollPosition = () => {
-    setTimeout(() => {
-      // Restore scroll position to the parent scrollable container
-      const scrollContainer = contentRef.current?.parentElement || editorRef.current?.parentElement
-      if (scrollContainer && scrollPosition > 0) {
-        scrollContainer.scrollTop = scrollPosition
-        console.log('🎯 Restored scroll position:', scrollPosition)
-      }
-    }, 200) // Increased delay to ensure DOM is ready and content is rendered
-  }
-
   // Toggle between view and edit modes
-  const toggleEditMode = () => {
+  const toggleEditMode = useCallback(() => {
     if (isEditing) {
       // User clicked "Done Editing" - trigger analysis relaunch
       handleDoneEditing()
@@ -864,7 +864,7 @@ export default function InteractiveContractEditor({
         restoreScrollPosition()
       }, 150)
     }
-  }
+  }, [isEditing, handleDoneEditing, saveScrollPosition, restoreScrollPosition, riskHighlights.length])
 
   // Handle download actions
   const handleDownload = async (format: 'docx' | 'pdf') => {
