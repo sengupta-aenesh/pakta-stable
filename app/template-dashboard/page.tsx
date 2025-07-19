@@ -239,41 +239,63 @@ function TemplateDashboardContent() {
 
         {/* Main Content Area */}
         <div className={styles.mainContent}>
-          {/* Editor Panel */}
-          <div className={`${styles.editorPanel} ${mobileView === 'editor' ? styles.mobileVisible : styles.mobileHidden}`}>
-            {/* DEBUG: Show current selectedTemplate state */}
-            {console.log('🚨 DEBUG: Main content render - selectedTemplate:', {
-              exists: !!selectedTemplate,
-              id: selectedTemplate?.id,
-              title: selectedTemplate?.title
-            })}
-            <InteractiveTemplateEditor
-              template={selectedTemplate}
-              onTemplateUpdate={(updatedTemplate) => {
-                setSelectedTemplate(updatedTemplate)
-                // Update the template in the list
-                setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
-              }}
-              onRegisterUpdateFunction={handleRegisterUpdateFunction}
-              onRegisterReanalysisFunction={handleRegisterReanalysisFunction}
-              onRisksUpdate={handleRisksUpdate}
-              onToast={toast}
-            />
-          </div>
+          {selectedTemplate ? (
+            <>
+              {/* Editor Panel */}
+              <div className={`${styles.editorPanel} ${mobileView === 'editor' ? styles.mobileVisible : styles.mobileHidden}`}>
+                {/* DEBUG: Show current selectedTemplate state */}
+                {console.log('🚨 DEBUG: Main content render - selectedTemplate:', {
+                  exists: !!selectedTemplate,
+                  id: selectedTemplate?.id,
+                  title: selectedTemplate?.title
+                })}
+                <InteractiveTemplateEditor
+                  template={selectedTemplate}
+                  onTemplateUpdate={(updatedTemplate) => {
+                    setSelectedTemplate(updatedTemplate)
+                    // Update the template in the list
+                    setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
+                  }}
+                  onRegisterUpdateFunction={handleRegisterUpdateFunction}
+                  onRegisterReanalysisFunction={handleRegisterReanalysisFunction}
+                  onRisksUpdate={handleRisksUpdate}
+                  onToast={toast}
+                />
+              </div>
 
-          {/* Analysis Panel */}
-          <div className={`${styles.analysisPanel} ${mobileView === 'analysis' ? styles.mobileVisible : styles.mobileHidden}`}>
-            <TemplateAnalysis
-              template={selectedTemplate}
-              risks={templateRisks}
-              onRisksUpdate={handleRisksUpdate}
-              onTemplateUpdate={(updatedTemplate) => {
-                setSelectedTemplate(updatedTemplate)
-                setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
-              }}
-              onToast={toast}
-            />
-          </div>
+              {/* Analysis Panel */}
+              <div className={`${styles.analysisPanel} ${mobileView === 'analysis' ? styles.mobileVisible : styles.mobileHidden}`}>
+                <TemplateAnalysis
+                  template={selectedTemplate}
+                  risks={templateRisks}
+                  onRisksUpdate={handleRisksUpdate}
+                  onTemplateUpdate={(updatedTemplate) => {
+                    setSelectedTemplate(updatedTemplate)
+                    setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
+                  }}
+                  onToast={toast}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={styles.welcomeScreen}>
+              <div className={styles.welcomeContent}>
+                <div className={styles.welcomeIcon}>
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                  </svg>
+                </div>
+                <h2>Welcome to Template Manager</h2>
+                <p>Select a template from the sidebar to begin analysis and version management.</p>
+                
+                {templates.length === 0 && (
+                  <div className={styles.emptyState}>
+                    <p>No templates found. Upload your first template from the sidebar.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
