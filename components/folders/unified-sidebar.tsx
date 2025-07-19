@@ -603,11 +603,14 @@ export default function UnifiedSidebar({
         onToast?.('Template uploaded successfully! Analysis failed to start - you can manually analyze it.', 'success')
       }
       
+      // Refresh template list first, then select the new template
       onTemplatesUpdate()
       
-      // Automatically select and load the newly uploaded template
-      console.log('🎯 Template Upload - Auto-selecting newly uploaded template')
-      onTemplateClick(newTemplate)
+      // Small delay to ensure the template list is updated before selection
+      setTimeout(() => {
+        console.log('🎯 Template Upload - Auto-selecting newly uploaded template')
+        onTemplateClick(newTemplate)
+      }, 200)
       
       // Reset file input
       event.target.value = ''
@@ -696,11 +699,14 @@ export default function UnifiedSidebar({
       console.log('✅ File Upload - Contract uploaded successfully')
       onToast?.('Contract uploaded successfully! Click "Analyze" to start AI analysis.', 'success')
       
+      // Refresh contract list first, then select the new contract
       onContractsUpdate()
       
-      // Automatically select and load the newly uploaded contract
-      console.log('🎯 File Upload - Auto-selecting newly uploaded contract')
-      onContractClick(newContract)
+      // Small delay to ensure the contract list is updated before selection
+      setTimeout(() => {
+        console.log('🎯 File Upload - Auto-selecting newly uploaded contract')
+        onContractClick(newContract)
+      }, 200)
       
       // Reset file input
       event.target.value = ''
@@ -1235,8 +1241,9 @@ export default function UnifiedSidebar({
             <span>{creatingTemplateFolder ? 'Creating...' : 'New Template Folder'}</span>
           </button>
 
-          {/* Upload Contract Button */}
+          {/* Upload Buttons - Both Always Visible */}
           <div className={styles.uploadSection}>
+            {/* Hidden File Inputs */}
             <input
               type="file"
               id="contract-upload"
@@ -1244,7 +1251,6 @@ export default function UnifiedSidebar({
               onChange={handleFileUpload}
               className={styles.hiddenInput}
               disabled={uploading || isDragging}
-              style={{ display: viewMode === 'contracts' ? 'block' : 'none' }}
             />
             <input
               type="file"
@@ -1253,36 +1259,35 @@ export default function UnifiedSidebar({
               onChange={handleFileUpload}
               className={styles.hiddenInput}
               disabled={uploadingTemplate || isTemplateDragging}
-              style={{ display: viewMode === 'templates' ? 'block' : 'none' }}
             />
-            <label 
-              htmlFor={viewMode === 'templates' ? 'template-upload' : 'contract-upload'}
-              className={styles.uploadButton}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: 'rotate(180deg)' }}>
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
+            
+            {/* Upload Contract Button */}
+            <label htmlFor="contract-upload" className={`${styles.uploadButton} ${styles.contractUpload}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
-              <span>
-                {viewMode === 'templates' 
-                  ? (uploadingTemplate ? 'Uploading Template...' : 'Upload Template (docx)')
-                  : (uploading ? 'Uploading...' : 'Upload Contract (docx)')
-                }
-              </span>
+              <span>{uploading ? 'Uploading Contract...' : 'Upload Contract'}</span>
+            </label>
+            
+            {/* Upload Template Button */}
+            <label htmlFor="template-upload" className={`${styles.uploadButton} ${styles.templateUpload}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span>{uploadingTemplate ? 'Uploading Template...' : 'Upload Template'}</span>
             </label>
             
             {/* Upload Progress Status */}
             {(uploading || uploadingTemplate) && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: '8px' }}>
                 <UploadFlowStatus
-                  currentStep={viewMode === 'templates' ? templateUploadStep : uploadStep}
-                  progress={
-                    viewMode === 'templates' 
-                      ? templateUploadProgress?.progress || 0
-                      : uploadProgress?.progress || 0
-                  }
-                  error={viewMode === 'templates' ? templateUploadError : uploadError}
+                  currentStep={uploadingTemplate ? templateUploadStep : uploadStep}
+                  progress={uploadingTemplate ? (templateUploadProgress?.progress || 0) : (uploadProgress?.progress || 0)}
+                  error={uploadingTemplate ? templateUploadError : uploadError}
                 />
               </div>
             )}

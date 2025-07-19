@@ -194,7 +194,6 @@ export default function FoldersPage() {
             onContractClick={handleContractClick}
             onContractsUpdate={() => loadContracts(user.id)}
             onUploadToFolder={handleUploadToFolder}
-            onUploadTemplateToFolder={handleUploadTemplateToFolder}
             onFolderClick={setSelectedFolder}
             onBackToAll={() => setSelectedFolder(null)}
             onNewFolder={handleNewFolder}
