@@ -43,6 +43,14 @@ function TemplateDashboardContent() {
 
   // Template selection handler - optimized to prevent cascading re-renders
   const handleTemplateSelect = useCallback(async (template: Template, fromURL = false) => {
+    console.log('🚨 DEBUG: handleTemplateSelect called with:', {
+      templateId: template.id,
+      templateTitle: template.title,
+      fromURL,
+      currentSelectedId: selectedTemplate?.id,
+      templateContent: template.content?.substring(0, 100) + '...'
+    })
+    
     // Prevent unnecessary re-selection of the same template
     if (selectedTemplate?.id === template.id) {
       console.log('✅ Template already selected, skipping re-selection:', template.id)
@@ -216,6 +224,14 @@ function TemplateDashboardContent() {
           onTemplateClick={handleTemplateSelect}
           // Common props
           user={user}
+          // DEBUG: Log templates array
+          {...(() => {
+            console.log('🚨 DEBUG: UnifiedSidebar render - templates:', {
+              count: templates.length,
+              templateIds: templates.map(t => ({ id: t.id, title: t.title }))
+            })
+            return {}
+          })()}
           showUserSection={true}
           onSignOut={handleSignOut}
           onToast={toast}
@@ -227,6 +243,12 @@ function TemplateDashboardContent() {
 
       {/* Main Content Area */}
       <div className={`${styles.mainContent} ${mobileView === 'list' ? styles.hiddenMobile : ''}`}>
+        {/* DEBUG: Show current selectedTemplate state */}
+        {console.log('🚨 DEBUG: Main content render - selectedTemplate:', {
+          exists: !!selectedTemplate,
+          id: selectedTemplate?.id,
+          title: selectedTemplate?.title
+        })}
         {selectedTemplate ? (
           <>
             {/* Template Editor */}

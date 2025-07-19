@@ -509,26 +509,6 @@ export default function UnifiedSidebar({
     }
   }
 
-  async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    // Determine if this is a template or contract upload based on current view mode
-    const isTemplateUpload = viewMode === 'templates'
-
-    // Prevent multiple simultaneous uploads
-    if ((isTemplateUpload && uploadingTemplate) || (!isTemplateUpload && uploading)) {
-      onToast?.('Please wait for the current upload to complete before uploading another file.', 'warning')
-      event.target.value = '' // Clear the input
-      return
-    }
-
-    if (isTemplateUpload) {
-      await handleTemplateUpload(event)
-    } else {
-      await handleContractUpload(event)
-    }
-  }
 
   // Template upload function
   async function handleTemplateUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -878,6 +858,11 @@ export default function UnifiedSidebar({
             e.stopPropagation()
             return
           }
+          console.log('🚨 DEBUG: Template clicked in sidebar:', {
+            templateId: template.id,
+            templateTitle: template.title,
+            onTemplateClickExists: !!onTemplateClick
+          })
           onTemplateClick(template)
         }}
         title={isBeingDragged ? `Dragging: ${template.title}` : template.title}
@@ -1248,7 +1233,7 @@ export default function UnifiedSidebar({
               type="file"
               id="contract-upload"
               accept=".docx"
-              onChange={handleFileUpload}
+              onChange={handleContractUpload}
               className={styles.hiddenInput}
               disabled={uploading || isDragging}
             />
@@ -1256,7 +1241,7 @@ export default function UnifiedSidebar({
               type="file"
               id="template-upload"
               accept=".docx"
-              onChange={handleFileUpload}
+              onChange={handleTemplateUpload}
               className={styles.hiddenInput}
               disabled={uploadingTemplate || isTemplateDragging}
             />
