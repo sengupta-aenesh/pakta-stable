@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, ConfirmationDialog } from '@/components/ui'
 import { foldersApi, Folder } from '@/lib/folders-api'
-import { Contract, contractsApi } from '@/lib/supabase-client'
+import { Contract, contractsApi, Template, templatesApi, TemplateFolder, templateFoldersApi } from '@/lib/supabase-client'
 import { getCurrentUser } from '@/lib/auth-client'
 import mammoth from 'mammoth'
 import styles from '@/app/folders/folders.module.css'
@@ -19,15 +19,33 @@ interface UnifiedSidebarProps {
   onFoldersUpdate: () => void
   onContractsUpdate: () => void
   onContractClick: (contract: Contract) => void
+  // Template props
+  templateFolders?: TemplateFolder[]
+  templates?: Template[]
+  selectedTemplateFolder?: string | null
+  onSelectTemplateFolder?: (folderId: string | null) => void
+  onTemplateFoldersUpdate?: () => void
+  onTemplatesUpdate?: () => void
+  onTemplateClick?: (template: Template) => void
+  // Common props
   user: any
   showUserSection?: boolean
   onSignOut?: () => void
   onToast?: (message: string, type: 'success' | 'error' | 'info') => void
+  // View mode
+  viewMode?: 'contracts' | 'templates'
+  onViewModeChange?: (mode: 'contracts' | 'templates') => void
 }
 
 interface FolderTreeItem extends Folder {
   children: FolderTreeItem[]
   contractCount: number
+  isExpanded: boolean
+}
+
+interface TemplateFolderTreeItem extends TemplateFolder {
+  children: TemplateFolderTreeItem[]
+  templateCount: number
   isExpanded: boolean
 }
 
@@ -39,10 +57,22 @@ export default function UnifiedSidebar({
   onFoldersUpdate,
   onContractsUpdate,
   onContractClick,
+  // Template props
+  templateFolders = [],
+  templates = [],
+  selectedTemplateFolder = null,
+  onSelectTemplateFolder = () => {},
+  onTemplateFoldersUpdate = () => {},
+  onTemplatesUpdate = () => {},
+  onTemplateClick = () => {},
+  // Common props
   user,
   showUserSection = false,
   onSignOut,
-  onToast
+  onToast,
+  // View mode
+  viewMode = 'contracts',
+  onViewModeChange = () => {}
 }: UnifiedSidebarProps) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
@@ -58,6 +88,20 @@ export default function UnifiedSidebar({
   const [uploadProgress, setUploadProgress] = useState<{step: string, progress: number} | null>(null)
   const [uploadStep, setUploadStep] = useState<string>('')
   const [uploadError, setUploadError] = useState<string>('')
+  
+  // Template-specific state (mirroring contract state)
+  const [expandedTemplateFolders, setExpandedTemplateFolders] = useState<Set<string>>(new Set())
+  const [editingTemplateFolder, setEditingTemplateFolder] = useState<string | null>(null)
+  const [editingTemplateName, setEditingTemplateName] = useState('')
+  const [creatingTemplateFolder, setCreatingTemplateFolder] = useState(false)
+  const [newTemplateFolderName, setNewTemplateFolderName] = useState('')
+  const [draggedTemplate, setDraggedTemplate] = useState<Template | null>(null)
+  const [dragOverTemplateFolder, setDragOverTemplateFolder] = useState<string | null>(null)
+  const [isTemplateDragging, setIsTemplateDragging] = useState(false)
+  const [uploadingTemplate, setUploadingTemplate] = useState(false)
+  const [templateUploadProgress, setTemplateUploadProgress] = useState<{step: string, progress: number} | null>(null)
+  const [templateUploadStep, setTemplateUploadStep] = useState<string>('')
+  const [templateUploadError, setTemplateUploadError] = useState<string>('')
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -124,6 +168,35 @@ export default function UnifiedSidebar({
     return rootFolders
   }
 
+  // Build template folder tree
+  const buildTemplateFolderTree = (): TemplateFolderTreeItem[] => {
+    const folderMap = new Map<string, TemplateFolderTreeItem>()
+    
+    // Initialize all template folders
+    templateFolders.forEach(folder => {
+      const templateCount = templates.filter(template => template.folder_id === folder.id).length
+      folderMap.set(folder.id, {
+        ...folder,
+        children: [],
+        templateCount,
+        isExpanded: expandedTemplateFolders.has(folder.id)
+      })
+    })
+
+    // Build tree structure
+    const rootFolders: TemplateFolderTreeItem[] = []
+    templateFolders.forEach(folder => {
+      const folderItem = folderMap.get(folder.id)!
+      if (folder.parent_id && folderMap.has(folder.parent_id)) {
+        folderMap.get(folder.parent_id)!.children.push(folderItem)
+      } else {
+        rootFolders.push(folderItem)
+      }
+    })
+
+    return rootFolders
+  }
+
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders)
     if (newExpanded.has(folderId)) {
@@ -132,6 +205,16 @@ export default function UnifiedSidebar({
       newExpanded.add(folderId)
     }
     setExpandedFolders(newExpanded)
+  }
+
+  const toggleTemplateFolder = (folderId: string) => {
+    const newExpanded = new Set(expandedTemplateFolders)
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId)
+    } else {
+      newExpanded.add(folderId)
+    }
+    setExpandedTemplateFolders(newExpanded)
   }
 
   const handleCreateFolder = async () => {
@@ -393,12 +476,121 @@ export default function UnifiedSidebar({
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Determine if this is a template or contract upload based on current view mode
+    const isTemplateUpload = viewMode === 'templates'
+
     // Prevent multiple simultaneous uploads
-    if (uploading) {
+    if ((isTemplateUpload && uploadingTemplate) || (!isTemplateUpload && uploading)) {
       onToast?.('Please wait for the current upload to complete before uploading another file.', 'warning')
       event.target.value = '' // Clear the input
       return
     }
+
+    if (isTemplateUpload) {
+      await handleTemplateUpload(event)
+    } else {
+      await handleContractUpload(event)
+    }
+  }
+
+  // Template upload function
+  async function handleTemplateUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploadingTemplate(true)
+      setTemplateUploadError('')
+      setTemplateUploadStep('extract')
+      setTemplateUploadProgress({step: 'Extracting text from document...', progress: 20})
+      
+      console.log('📄 Template Upload - Extracting text from docx file')
+      // Extract text from docx
+      const extractedText = await extractTextFromDocx(file)
+      console.log('✅ Template Upload - Text extraction successful, length:', extractedText.length)
+      setTemplateUploadStep('save')
+      setTemplateUploadProgress({step: 'Processing template...', progress: 40})
+      
+      // Extract title from filename
+      const title = file.name.replace('.docx', '')
+      console.log('📝 Template Upload - Extracted title:', title)
+      
+      // Get current user
+      console.log('👤 Template Upload - Getting current user')
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        console.error('❌ Template Upload - User not authenticated')
+        throw new Error('User not authenticated')
+      }
+      console.log('✅ Template Upload - User authenticated:', currentUser.email)
+      
+      setTemplateUploadProgress({step: 'Saving template to database...', progress: 60})
+      console.log('💾 Template Upload - Saving to database')
+      // Save to database with folder assignment
+      const newTemplate = await templatesApi.create({
+        user_id: currentUser.id,
+        title,
+        content: extractedText,
+        upload_url: null,
+        file_key: null,
+        folder_id: selectedTemplateFolder,
+        analysis_cache: {},
+        analysis_status: 'pending',
+        analysis_progress: 0,
+        resolved_risks: []
+      })
+      console.log('✅ Template Upload - Database save successful, template ID:', newTemplate.id)
+      setTemplateUploadStep('complete')
+      setTemplateUploadProgress({step: 'Upload complete!', progress: 100})
+      
+      // Template uploaded successfully
+      console.log('✅ Template Upload - Template uploaded successfully')
+      onToast?.('Template uploaded successfully! Click "Analyze Template" to start AI analysis.', 'success')
+      
+      onTemplatesUpdate()
+      
+      // Automatically select and load the newly uploaded template
+      console.log('🎯 Template Upload - Auto-selecting newly uploaded template')
+      onTemplateClick(newTemplate)
+      
+      // Reset file input
+      event.target.value = ''
+      console.log('🎉 Template Upload - Upload process completed successfully')
+    } catch (error) {
+      console.error('❌ Template Upload - Upload failed:', error)
+      console.error('Error details:', {
+        fileName: file.name,
+        errorMessage: error.message || 'Unknown error',
+        errorStack: error.stack || 'No stack trace'
+      })
+      
+      // Provide user-friendly error message based on the error type
+      let userMessage = 'Failed to upload template. Please try again.'
+      if (error.message?.includes('mammoth')) {
+        userMessage = 'Failed to read the document. Please ensure it\'s a valid .docx file.'
+      } else if (error.message?.includes('User not authenticated')) {
+        userMessage = 'You need to be logged in to upload templates.'
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        userMessage = 'Network error. Please check your connection and try again.'
+      }
+      
+      setTemplateUploadError(userMessage)
+      onToast?.(userMessage, 'error')
+    } finally {
+      setUploadingTemplate(false)
+      // Clear progress after a short delay
+      setTimeout(() => {
+        setTemplateUploadProgress(null)
+        setTemplateUploadStep('')
+        setTemplateUploadError('')
+      }, 3000)
+    }
+  }
+
+  // Contract upload function (renamed for clarity)
+  async function handleContractUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
 
     try {
       setUploading(true)
@@ -589,6 +781,120 @@ export default function UnifiedSidebar({
             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
           </svg>
         </button>
+      </div>
+    )
+  }
+
+  // Template render functions (mirroring contract functions)
+  const renderTemplateItem = (template: Template, level: number = 0) => {
+    const truncatedTitle = template.title.length > 20 
+      ? template.title.substring(0, 20) + '...' 
+      : template.title
+
+    const isBeingDragged = draggedTemplate?.id === template.id
+    const isOtherDragging = isTemplateDragging && !isBeingDragged
+
+    return (
+      <div
+        key={template.id}
+        className={`${styles.contractItem} ${isBeingDragged ? styles.dragging : ''}`}
+        style={{ 
+          marginLeft: `${(level + 1) * 20}px`,
+          opacity: isBeingDragged ? 0.5 : isOtherDragging ? 0.7 : 1,
+          transform: isBeingDragged ? 'scale(0.95)' : 'scale(1)',
+          transition: 'all 0.2s ease',
+          cursor: isBeingDragged ? 'grabbing' : 'grab',
+          pointerEvents: 'auto',
+          position: 'relative',
+          border: isBeingDragged ? '2px dashed rgba(17, 24, 39, 0.5)' : '2px solid transparent',
+          borderRadius: '4px',
+          background: isBeingDragged ? 'rgba(17, 24, 39, 0.05)' : ''
+        }}
+        onClick={(e) => {
+          if (isTemplateDragging) {
+            e.preventDefault()
+            e.stopPropagation()
+            return
+          }
+          onTemplateClick(template)
+        }}
+        title={isBeingDragged ? `Dragging: ${template.title}` : template.title}
+      >
+        <div className={styles.expandIcon} style={{ pointerEvents: 'none' }}></div>
+        <svg className={styles.contractIcon} viewBox="0 0 24 24" fill="currentColor" style={{ pointerEvents: 'none' }}>
+          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+        </svg>
+        <span className={styles.contractName} style={{ pointerEvents: 'none' }}>{truncatedTitle}</span>
+        
+        {/* Template Status Badge */}
+        <ContractStatusBadge 
+          status={template.analysis_status as any}
+          progress={template.analysis_progress || 0}
+          size="small"
+        />
+      </div>
+    )
+  }
+
+  const renderTemplateFolderItem = (folder: TemplateFolderTreeItem, level: number = 0) => {
+    const isSelected = selectedTemplateFolder === folder.id
+    const isExpanded = folder.isExpanded
+    const isEditing = editingTemplateFolder === folder.id
+    const folderTemplates = templates.filter(template => template.folder_id === folder.id)
+
+    const isDragOver = dragOverTemplateFolder === folder.id
+    const canDrop = isTemplateDragging && draggedTemplate && draggedTemplate.folder_id !== folder.id
+    const isSameFolder = isTemplateDragging && draggedTemplate && draggedTemplate.folder_id === folder.id
+
+    return (
+      <div key={folder.id}>
+        <div
+          className={`${styles.folderItem} ${isSelected ? styles.selected : ''} ${isDragOver ? styles.dragOver : ''} ${canDrop ? 'drop-target' : ''}`}
+          style={{ 
+            marginLeft: `${level * 20}px`,
+            backgroundColor: (isTemplateDragging && isDragOver && canDrop) ? 'rgba(17, 24, 39, 0.1)' : '',
+            border: (isTemplateDragging && isDragOver && canDrop) ? '2px solid rgba(17, 24, 39, 0.3)' : '2px solid transparent',
+            borderRadius: '6px',
+            transform: (isTemplateDragging && isDragOver && canDrop) ? 'scale(1.02)' : 'scale(1)',
+            transition: 'all 0.2s ease',
+            boxShadow: (isTemplateDragging && isDragOver && canDrop) ? '0 4px 12px rgba(17, 24, 39, 0.2)' : 'none',
+            position: 'relative',
+            opacity: isSameFolder ? 0.5 : 1,
+            cursor: isSameFolder ? 'not-allowed' : (isTemplateDragging && !canDrop) ? 'not-allowed' : 'pointer',
+            pointerEvents: 'auto'
+          }}
+          onClick={() => !isEditing && !isTemplateDragging && onSelectTemplateFolder(folder.id)}
+        >
+          <button
+            className={`${styles.expandIcon} ${isExpanded ? styles.expanded : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!isTemplateDragging) {
+                toggleTemplateFolder(folder.id)
+              }
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ pointerEvents: 'none' }}>
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+          
+          <svg className={styles.folderIcon} viewBox="0 0 24 24" fill="currentColor" style={{ pointerEvents: 'none' }}>
+            <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+          </svg>
+          
+          <span className={styles.folderName} style={{ pointerEvents: 'none' }}>{folder.name}</span>
+          
+          {folder.templateCount > 0 && (
+            <span className={styles.folderCount} style={{ pointerEvents: 'none' }}>({folder.templateCount})</span>
+          )}
+        </div>
+
+        {/* Render template folder children */}
+        {isExpanded && folder.children.map(childFolder => renderTemplateFolderItem(childFolder, level + 1))}
+        
+        {/* Render templates in this folder */}
+        {isExpanded && folderTemplates.map(template => renderTemplateItem(template, level + 1))}
       </div>
     )
   }
@@ -789,20 +1095,33 @@ export default function UnifiedSidebar({
     )
   }
 
+  // Build trees and filter data based on search term and view mode
   const folderTree = buildFolderTree()
-  
-  // Filter folders and contracts based on search term
-  const filteredTree = searchTerm
+  const templateFolderTree = buildTemplateFolderTree()
+
+  const filteredTree = searchTerm && viewMode === 'contracts'
     ? folderTree.filter(folder => 
         folder.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : folderTree
 
-  const filteredContracts = searchTerm
+  const filteredTemplateTree = searchTerm && viewMode === 'templates'
+    ? templateFolderTree.filter(folder => 
+        folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : templateFolderTree
+
+  const filteredContracts = searchTerm && viewMode === 'contracts'
     ? contracts.filter(contract =>
         contract.title.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : contracts
+
+  const filteredTemplates = searchTerm && viewMode === 'templates'
+    ? templates.filter(template =>
+        template.title.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : templates
 
   return (
     <div 
@@ -861,16 +1180,25 @@ export default function UnifiedSidebar({
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>{uploading ? 'Uploading...' : 'Upload (docx)'}</span>
+              <span>
+                {viewMode === 'templates' 
+                  ? (uploadingTemplate ? 'Uploading Template...' : 'Upload Template (docx)')
+                  : (uploading ? 'Uploading...' : 'Upload (docx)')
+                }
+              </span>
             </label>
             
             {/* Upload Progress Status */}
-            {uploading && (
+            {(uploading || uploadingTemplate) && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: '8px' }}>
                 <UploadFlowStatus
-                  currentStep={uploadStep}
-                  progress={uploadProgress?.progress || 0}
-                  error={uploadError}
+                  currentStep={viewMode === 'templates' ? templateUploadStep : uploadStep}
+                  progress={
+                    viewMode === 'templates' 
+                      ? templateUploadProgress?.progress || 0
+                      : uploadProgress?.progress || 0
+                  }
+                  error={viewMode === 'templates' ? templateUploadError : uploadError}
                 />
               </div>
             )}
@@ -880,7 +1208,7 @@ export default function UnifiedSidebar({
         {/* Search Bar */}
         <input
           type="text"
-          placeholder="Search folders and contracts..."
+          placeholder={`Search ${viewMode === 'templates' ? 'folders and templates' : 'folders and contracts'}...`}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className={styles.searchBar}
@@ -930,34 +1258,75 @@ export default function UnifiedSidebar({
         {searchTerm && (
           <div>
             <div className={styles.searchResultsHeader}>
-              Search Results ({filteredTree.length + filteredContracts.length} found)
+              Search Results ({
+                viewMode === 'contracts' 
+                  ? filteredTree.length + filteredContracts.length
+                  : filteredTemplateTree.length + filteredTemplates.length
+              } found)
             </div>
             
-            {/* Matching Folders */}
-            {filteredTree.map(folder => (
-              <div
-                key={`search-folder-${folder.id}`}
-                className={`${styles.folderItem} ${selectedFolder === folder.id ? styles.selected : ''}`}
-                onClick={() => onSelectFolder(folder.id)}
-              >
-                <div className={styles.expandIcon}></div>
-                <svg className={styles.folderIcon} viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                </svg>
-                <span className={styles.folderName}>{folder.name}</span>
-                <span className={styles.folderCount}>({folder.contractCount})</span>
-              </div>
-            ))}
-            
-            {/* Matching Contracts */}
-            {filteredContracts.map(contract => 
-              renderContractItem(contract, 0)
+            {/* Contract Search Results */}
+            {viewMode === 'contracts' && (
+              <>
+                {/* Matching Contract Folders */}
+                {filteredTree.map(folder => (
+                  <div
+                    key={`search-folder-${folder.id}`}
+                    className={`${styles.folderItem} ${selectedFolder === folder.id ? styles.selected : ''}`}
+                    onClick={() => onSelectFolder(folder.id)}
+                  >
+                    <div className={styles.expandIcon}></div>
+                    <svg className={styles.folderIcon} viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                    </svg>
+                    <span className={styles.folderName}>{folder.name}</span>
+                    <span className={styles.folderCount}>({folder.contractCount})</span>
+                  </div>
+                ))}
+                
+                {/* Matching Contracts */}
+                {filteredContracts.map(contract => 
+                  renderContractItem(contract, 0)
+                )}
+                
+                {filteredTree.length === 0 && filteredContracts.length === 0 && (
+                  <div className={styles.noResults}>
+                    No folders or contracts found matching "{searchTerm}"
+                  </div>
+                )}
+              </>
             )}
-            
-            {filteredTree.length === 0 && filteredContracts.length === 0 && (
-              <div className={styles.noResults}>
-                No folders or contracts found matching "{searchTerm}"
-              </div>
+
+            {/* Template Search Results */}
+            {viewMode === 'templates' && (
+              <>
+                {/* Matching Template Folders */}
+                {filteredTemplateTree.map(folder => (
+                  <div
+                    key={`search-template-folder-${folder.id}`}
+                    className={`${styles.folderItem} ${selectedTemplateFolder === folder.id ? styles.selected : ''}`}
+                    onClick={() => onSelectTemplateFolder(folder.id)}
+                  >
+                    <div className={styles.expandIcon}></div>
+                    <svg className={styles.folderIcon} viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                    </svg>
+                    <span className={styles.folderName}>{folder.name}</span>
+                    <span className={styles.folderCount}>({folder.templateCount})</span>
+                  </div>
+                ))}
+                
+                {/* Matching Templates */}
+                {filteredTemplates.map(template => 
+                  renderTemplateItem(template, 0)
+                )}
+                
+                {filteredTemplateTree.length === 0 && filteredTemplates.length === 0 && (
+                  <div className={styles.noResults}>
+                    No folders or templates found matching "{searchTerm}"
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -965,7 +1334,114 @@ export default function UnifiedSidebar({
         {/* Normal Folder Tree (when not searching) */}
         {!searchTerm && (
           <div>
-            {/* All Contracts Item - No drop styling since dropping is disabled */}
+            {/* View Mode Switcher */}
+            <div style={{
+              display: 'flex',
+              marginBottom: '16px',
+              borderRadius: '8px',
+              backgroundColor: '#E5E7EB',
+              padding: '2px'
+            }}>
+              <button
+                onClick={() => onViewModeChange('templates')}
+                style={{
+                  flex: 1,
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: viewMode === 'templates' ? '#FFFFFF' : 'transparent',
+                  color: viewMode === 'templates' ? '#111827' : '#6B7280',
+                  fontSize: '14px',
+                  fontWeight: viewMode === 'templates' ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: viewMode === 'templates' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
+                }}
+              >
+                Templates
+              </button>
+              <button
+                onClick={() => onViewModeChange('contracts')}
+                style={{
+                  flex: 1,
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: viewMode === 'contracts' ? '#FFFFFF' : 'transparent',
+                  color: viewMode === 'contracts' ? '#111827' : '#6B7280',
+                  fontSize: '14px',
+                  fontWeight: viewMode === 'contracts' ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: viewMode === 'contracts' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
+                }}
+              >
+                Contracts
+              </button>
+            </div>
+
+            {/* Templates View */}
+            {viewMode === 'templates' && (
+              <>
+                {/* All Templates Item */}
+                <div
+                  className={`${styles.folderItem} ${selectedTemplateFolder === null ? styles.selected : ''}`}
+                  style={{
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease',
+                    opacity: isTemplateDragging ? 0.6 : 1,
+                    cursor: isTemplateDragging ? 'not-allowed' : 'pointer',
+                    pointerEvents: 'auto'
+                  }}
+                  onClick={() => !isTemplateDragging && onSelectTemplateFolder(null)}
+                >
+                  <button
+                    className={`${styles.expandIcon} ${expandedTemplateFolders.has('all') ? styles.expanded : ''}`}
+                    style={{
+                      pointerEvents: isTemplateDragging ? 'none' : 'auto'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (!isTemplateDragging) {
+                        const newExpanded = new Set(expandedTemplateFolders)
+                        if (newExpanded.has('all')) {
+                          newExpanded.delete('all')
+                        } else {
+                          newExpanded.add('all')
+                        }
+                        setExpandedTemplateFolders(newExpanded)
+                      }
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ pointerEvents: 'none' }}>
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                  <svg className={styles.folderIcon} viewBox="0 0 24 24" fill="currentColor" style={{ pointerEvents: 'none' }}>
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                  </svg>
+                  <span className={styles.folderName} style={{ pointerEvents: 'none' }}>All Templates</span>
+                  <span className={styles.folderCount} style={{ pointerEvents: 'none' }}>({templates.length})</span>
+                </div>
+
+                {/* Show all templates when All Templates is expanded */}
+                {expandedTemplateFolders.has('all') && (
+                  <div>
+                    {templates.map(template => 
+                      renderTemplateItem(template, 0)
+                    )}
+                  </div>
+                )}
+
+                {/* Template Folder Tree */}
+                {buildTemplateFolderTree().map(folder => renderTemplateFolderItem(folder))}
+              </>
+            )}
+
+            {/* Contracts View */}
+            {viewMode === 'contracts' && (
+              <>
+                {/* All Contracts Item - No drop styling since dropping is disabled */}
             <div
               className={`${styles.folderItem} ${selectedFolder === null ? styles.selected : ''}`}
               style={{
@@ -1018,6 +1494,8 @@ export default function UnifiedSidebar({
 
             {/* Folder Tree */}
             {filteredTree.map(folder => renderFolderItem(folder))}
+              </>
+            )}
           </div>
         )}
         

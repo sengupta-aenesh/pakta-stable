@@ -1,0 +1,200 @@
+/* Template Dashboard Layout - mirrors dashboard.module.css */
+
+.dashboardLayout {
+  display: grid;
+  grid-template-columns: 280px 1fr 1fr;
+  grid-template-rows: 64px 1fr;
+  grid-template-areas:
+    "nav nav nav"
+    "sidebar editor analysis";
+  height: 100vh;
+  overflow: hidden;
+  background-color: #FAFAFA;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  border-right: 1px solid #e5e7eb;
+  overflow: hidden;
+  background-color: #F5F5F5;
+}
+
+.mainContent {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+
+.editorSection {
+  grid-column: 1;
+  border-right: 1px solid #e5e7eb;
+  overflow: hidden;
+  background-color: white;
+}
+
+.analysisSection {
+  grid-column: 2;
+  overflow: hidden;
+  background-color: white;
+}
+
+/* Welcome Screen */
+.welcomeScreen {
+  grid-column: 1 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  padding: 2rem;
+}
+
+.welcomeContent {
+  text-align: center;
+  max-width: 500px;
+}
+
+.welcomeIcon {
+  margin-bottom: 1.5rem;
+  color: #6B7280;
+}
+
+.welcomeContent h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.welcomeContent p {
+  color: #6B7280;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.emptyState {
+  padding: 2rem;
+  background-color: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.emptyState p {
+  color: #9CA3AF;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Mobile Navigation */
+.mobileNav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 8px 0;
+  z-index: 50;
+}
+
+.mobileNavBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  color: #6B7280;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.mobileNavBtn:hover {
+  color: #111827;
+}
+
+.mobileNavBtn.active {
+  color: #2563EB;
+}
+
+.mobileNavBtn svg {
+  margin-bottom: 4px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .dashboardLayout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 64px 1fr 60px;
+    grid-template-areas:
+      "nav"
+      "content"
+      "mobile-nav";
+  }
+
+  .sidebar,
+  .mainContent {
+    grid-area: content;
+  }
+
+  .mainContent {
+    grid-template-columns: 1fr;
+  }
+
+  .editorSection,
+  .analysisSection {
+    grid-column: 1;
+  }
+
+  .mobileNav {
+    display: flex;
+    grid-area: mobile-nav;
+  }
+
+  .hiddenMobile {
+    display: none !important;
+  }
+
+  .welcomeScreen {
+    grid-column: 1;
+  }
+
+  .welcomeContent {
+    padding: 1rem;
+  }
+
+  .welcomeContent h2 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Tablet Responsive */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .dashboardLayout {
+    grid-template-columns: 240px 1fr 1fr;
+  }
+
+  .welcomeContent {
+    max-width: 400px;
+  }
+
+  .welcomeContent h2 {
+    font-size: 1.375rem;
+  }
+}
+
+/* Large Screen Responsive */
+@media (min-width: 1440px) {
+  .dashboardLayout {
+    grid-template-columns: 320px 1fr 1fr;
+  }
+
+  .welcomeContent {
+    max-width: 600px;
+  }
+}

@@ -27,6 +27,55 @@ export interface Contract {
   updated_at: string
 }
 
+// Template-specific interfaces
+export interface Template {
+  id: string
+  user_id: string
+  title: string
+  content: string | null
+  upload_url: string | null
+  file_key: string | null
+  folder_id: string | null
+  analysis_cache: {
+    summary?: ContractSummary
+    risks?: RiskAnalysis
+    complete?: {
+      missingInfo: MissingInfoItem[]
+      processingSteps?: any
+      processedContent?: string
+    }
+    lastAnalyzed?: string
+  }
+  analysis_status: string | null
+  analysis_progress: number | null
+  last_analyzed_at: string | null
+  analysis_retry_count: number | null
+  analysis_error: string | null
+  resolved_risks: RiskFactor[]
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateFolder {
+  id: string
+  user_id: string
+  name: string
+  parent_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateVersion {
+  id: string
+  template_id: string
+  version_name: string
+  vendor_name: string
+  version_data: Record<string, any>
+  generated_content: string | null
+  created_at: string
+  created_by: string
+}
+
 export interface ContractSummary {
   overview: string
   contract_type: string

@@ -294,6 +294,141 @@ export interface Database {
           updated_at?: string
         }
       }
+      template_folders: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          parent_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          parent_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          parent_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      templates: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          content: string | null
+          upload_url: string | null
+          file_key: string | null
+          folder_id: string | null
+          analysis_cache: {
+            summary?: any
+            risks?: any
+            complete?: any
+            lastAnalyzed?: string
+            editableFields?: any[]
+            parameters?: Record<string, any>
+          }
+          analysis_status: string | null
+          analysis_progress: number | null
+          last_analyzed_at: string | null
+          analysis_retry_count: number | null
+          analysis_error: string | null
+          resolved_risks: any[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          content?: string | null
+          upload_url?: string | null
+          file_key?: string | null
+          folder_id?: string | null
+          analysis_cache?: {
+            summary?: any
+            risks?: any
+            complete?: any
+            lastAnalyzed?: string
+            editableFields?: any[]
+            parameters?: Record<string, any>
+          }
+          analysis_status?: string | null
+          analysis_progress?: number | null
+          last_analyzed_at?: string | null
+          analysis_retry_count?: number | null
+          analysis_error?: string | null
+          resolved_risks?: any[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          content?: string | null
+          upload_url?: string | null
+          file_key?: string | null
+          folder_id?: string | null
+          analysis_cache?: {
+            summary?: any
+            risks?: any
+            complete?: any
+            lastAnalyzed?: string
+            editableFields?: any[]
+            parameters?: Record<string, any>
+          }
+          analysis_status?: string | null
+          analysis_progress?: number | null
+          last_analyzed_at?: string | null
+          analysis_retry_count?: number | null
+          analysis_error?: string | null
+          resolved_risks?: any[]
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      template_versions: {
+        Row: {
+          id: string
+          template_id: string
+          version_name: string
+          vendor_name: string
+          version_data: Record<string, any>
+          generated_content: string | null
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          version_name: string
+          vendor_name: string
+          version_data?: Record<string, any>
+          generated_content?: string | null
+          created_at?: string
+          created_by: string
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          version_name?: string
+          vendor_name?: string
+          version_data?: Record<string, any>
+          generated_content?: string | null
+          created_at?: string
+          created_by?: string
+        }
+      }
     }
   }
 }
