@@ -560,28 +560,9 @@ export default function UnifiedSidebar({
       setTemplateUploadStep('complete')
       setTemplateUploadProgress({step: 'Upload complete!', progress: 100})
       
-      // Template uploaded successfully
+      // Template uploaded successfully - NO automatic analysis (matches contract flow)
       console.log('✅ Template Upload - Template uploaded successfully')
-      
-      // Trigger automatic analysis
-      try {
-        console.log('🤖 Template Upload - Starting automatic analysis...')
-        const analysisResponse = await fetch('/api/template/auto-analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ templateId: newTemplate.id })
-        })
-        
-        if (!analysisResponse.ok) {
-          console.warn('Template analysis start failed, but template uploaded successfully')
-          onToast?.('Template uploaded successfully! Analysis failed to start - you can manually analyze it.', 'success')
-        } else {
-          onToast?.('Template uploaded successfully! AI analysis is starting...', 'success')
-        }
-      } catch (analysisError) {
-        console.error('Template analysis trigger failed:', analysisError)
-        onToast?.('Template uploaded successfully! Analysis failed to start - you can manually analyze it.', 'success')
-      }
+      onToast?.('Template uploaded successfully! Click "Analyze Template" to start AI analysis.', 'success')
       
       // Refresh template list first, then select the new template
       onTemplatesUpdate()

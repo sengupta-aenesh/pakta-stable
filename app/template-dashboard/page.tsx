@@ -177,15 +177,6 @@ function TemplateDashboardContent() {
     router.push('/auth/login')
   }
 
-  // Mobile view handlers
-  const handleMobileViewChange = (view: MobileView) => {
-    setMobileView(view)
-  }
-
-  const handleBackToList = () => {
-    setMobileView('list')
-  }
-
   // Handle risks update from analysis component
   const handleRisksUpdate = useCallback((risks: any[]) => {
     setTemplateRisks(risks)
@@ -200,155 +191,96 @@ function TemplateDashboardContent() {
   }
 
   return (
-    <div className={styles.dashboardLayout}>
+    <div className={styles.dashboardContainer}>
       {/* iOS-Style Top Navigation */}
       <TopNavigation currentPage="template-dashboard" />
-
-      {/* Left Sidebar - Template Tree */}
-      <div className={`${styles.sidebar} ${mobileView !== 'list' ? styles.hiddenMobile : ''}`}>
-        <UnifiedSidebar
-          folders={[]} // Empty for template dashboard
-          contracts={[]} // Empty for template dashboard
-          selectedFolder={null}
-          onSelectFolder={() => {}}
-          onFoldersUpdate={() => {}}
-          onContractsUpdate={() => {}}
-          onContractClick={() => {}}
-          // Template props
-          templateFolders={templateFolders}
-          templates={templates}
-          selectedTemplateFolder={selectedTemplateFolder}
-          onSelectTemplateFolder={setSelectedTemplateFolder}
-          onTemplateFoldersUpdate={() => loadTemplateFolders(user.id)}
-          onTemplatesUpdate={() => loadTemplates(user.id)}
-          onTemplateClick={handleTemplateSelect}
-          // Common props
-          user={user}
-          // DEBUG: Log templates array
-          {...(() => {
-            console.log('🚨 DEBUG: UnifiedSidebar render - templates:', {
-              count: templates.length,
-              templateIds: templates.map(t => ({ id: t.id, title: t.title }))
-            })
-            return {}
-          })()}
-          showUserSection={true}
-          onSignOut={handleSignOut}
-          onToast={toast}
-          // View mode - force templates
-          viewMode="templates"
-          onViewModeChange={() => {}} // No switching in template dashboard
-        />
-      </div>
-
-      {/* Main Content Area */}
-      <div className={`${styles.mainContent} ${mobileView === 'list' ? styles.hiddenMobile : ''}`}>
-        {/* DEBUG: Show current selectedTemplate state */}
-        {console.log('🚨 DEBUG: Main content render - selectedTemplate:', {
-          exists: !!selectedTemplate,
-          id: selectedTemplate?.id,
-          title: selectedTemplate?.title
-        })}
-        {selectedTemplate ? (
-          <>
-            {/* Template Editor */}
-            <div className={`${styles.editorSection} ${mobileView === 'analysis' ? styles.hiddenMobile : ''}`}>
-              <InteractiveTemplateEditor
-                template={selectedTemplate}
-                onTemplateUpdate={(updatedTemplate) => {
-                  setSelectedTemplate(updatedTemplate)
-                  // Update the template in the list
-                  setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
-                }}
-                onRegisterUpdateFunction={handleRegisterUpdateFunction}
-                onRegisterReanalysisFunction={handleRegisterReanalysisFunction}
-                onRisksUpdate={handleRisksUpdate}
-                onToast={toast}
-              />
-            </div>
-
-            {/* Template Analysis */}
-            <div className={`${styles.analysisSection} ${mobileView === 'editor' ? styles.hiddenMobile : ''}`}>
-              <TemplateAnalysis
-                template={selectedTemplate}
-                risks={templateRisks}
-                onRisksUpdate={handleRisksUpdate}
-                onTemplateUpdate={(updatedTemplate) => {
-                  setSelectedTemplate(updatedTemplate)
-                  setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
-                }}
-                onToast={toast}
-              />
-            </div>
-          </>
-        ) : (
-          <div className={styles.welcomeScreen}>
-            <div className={styles.welcomeContent}>
-              <div className={styles.welcomeIcon}>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                </svg>
-              </div>
-              <h2>Welcome to Template Manager</h2>
-              <p>Select a template from the sidebar to begin analysis and version management.</p>
-              
-              {templates.length === 0 && (
-                <div className={styles.emptyState}>
-                  <p>No templates found. Upload your first template from the sidebar.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile Navigation */}
-      <div className={styles.mobileNav}>
-        <button
-          className={`${styles.mobileNavBtn} ${mobileView === 'list' ? styles.active : ''}`}
-          onClick={() => handleMobileViewChange('list')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          </svg>
-          Templates
-        </button>
-        
-        {selectedTemplate && (
-          <>
-            <button
-              className={`${styles.mobileNavBtn} ${mobileView === 'editor' ? styles.active : ''}`}
-              onClick={() => handleMobileViewChange('editor')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-              Editor
-            </button>
-            
-            <button
-              className={`${styles.mobileNavBtn} ${mobileView === 'analysis' ? styles.active : ''}`}
-              onClick={() => handleMobileViewChange('analysis')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4"></path>
-                <path d="M9 7v10"></path>
-                <path d="M13 7h2a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              Analysis
-            </button>
-          </>
-        )}
-      </div>
 
       {/* Trial Status */}
       <TrialStatus />
 
+      {/* Main Container with Sidebar and Content */}
+      <div className={styles.mainContainer}>
+        {/* Left Sidebar */}
+        <div className={mobileView === 'list' ? styles.mobileVisible : styles.mobileHidden}>
+          <UnifiedSidebar
+            folders={[]} // Empty for template dashboard
+            contracts={[]} // Empty for template dashboard
+            selectedFolder={null}
+            onSelectFolder={() => {}}
+            onFoldersUpdate={() => {}}
+            onContractsUpdate={() => {}}
+            onContractClick={() => {}}
+            // Template props
+            templateFolders={templateFolders}
+            templates={templates}
+            selectedTemplateFolder={selectedTemplateFolder}
+            onSelectTemplateFolder={setSelectedTemplateFolder}
+            onTemplateFoldersUpdate={() => loadTemplateFolders(user.id)}
+            onTemplatesUpdate={() => loadTemplates(user.id)}
+            onTemplateClick={handleTemplateSelect}
+            // Common props
+            user={user}
+            // DEBUG: Log templates array
+            {...(() => {
+              console.log('🚨 DEBUG: UnifiedSidebar render - templates:', {
+                count: templates.length,
+                templateIds: templates.map(t => ({ id: t.id, title: t.title }))
+              })
+              return {}
+            })()}
+            showUserSection={true}
+            onSignOut={handleSignOut}
+            onToast={toast}
+            // View mode - force templates
+            viewMode="templates"
+            onViewModeChange={() => {}} // No switching in template dashboard
+          />
+        </div>
+
+        {/* Main Content Area */}
+        <div className={styles.mainContent}>
+          {/* Editor Panel */}
+          <div className={`${styles.editorPanel} ${mobileView === 'editor' ? styles.mobileVisible : styles.mobileHidden}`}>
+            {/* DEBUG: Show current selectedTemplate state */}
+            {console.log('🚨 DEBUG: Main content render - selectedTemplate:', {
+              exists: !!selectedTemplate,
+              id: selectedTemplate?.id,
+              title: selectedTemplate?.title
+            })}
+            <InteractiveTemplateEditor
+              template={selectedTemplate}
+              onTemplateUpdate={(updatedTemplate) => {
+                setSelectedTemplate(updatedTemplate)
+                // Update the template in the list
+                setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
+              }}
+              onRegisterUpdateFunction={handleRegisterUpdateFunction}
+              onRegisterReanalysisFunction={handleRegisterReanalysisFunction}
+              onRisksUpdate={handleRisksUpdate}
+              onToast={toast}
+            />
+          </div>
+
+          {/* Analysis Panel */}
+          <div className={`${styles.analysisPanel} ${mobileView === 'analysis' ? styles.mobileVisible : styles.mobileHidden}`}>
+            <TemplateAnalysis
+              template={selectedTemplate}
+              risks={templateRisks}
+              onRisksUpdate={handleRisksUpdate}
+              onTemplateUpdate={(updatedTemplate) => {
+                setSelectedTemplate(updatedTemplate)
+                setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
+              }}
+              onToast={toast}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Render toasts */}
-      {toasts.map(toast => (
+      {toasts.map((toast, index) => (
         <Toast
-          key={toast.id}
+          key={`${toast.id}-${index}`}
           message={toast.message}
           type={toast.type}
           onClose={() => removeToast(toast.id)}
