@@ -194,6 +194,7 @@ export default function FoldersPage() {
             onContractClick={handleContractClick}
             onContractsUpdate={() => loadContracts(user.id)}
             onUploadToFolder={handleUploadToFolder}
+            onUploadTemplateToFolder={handleUploadTemplateToFolder}
             onFolderClick={setSelectedFolder}
             onBackToAll={() => setSelectedFolder(null)}
             onNewFolder={handleNewFolder}
@@ -205,7 +206,6 @@ export default function FoldersPage() {
             templateFolders={templateFolders}
             onTemplateClick={handleTemplateClick}
             onTemplatesUpdate={() => loadTemplates(user.id)}
-            onUploadToFolder={handleUploadTemplateToFolder}
             onFolderClick={setSelectedTemplateFolder}
             onBackToAll={() => setSelectedTemplateFolder(null)}
             onNewTemplateFolder={handleNewTemplateFolder}

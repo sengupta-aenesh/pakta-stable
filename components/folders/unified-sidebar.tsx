@@ -582,7 +582,26 @@ export default function UnifiedSidebar({
       
       // Template uploaded successfully
       console.log('✅ Template Upload - Template uploaded successfully')
-      onToast?.('Template uploaded successfully! Click "Analyze Template" to start AI analysis.', 'success')
+      
+      // Trigger automatic analysis
+      try {
+        console.log('🤖 Template Upload - Starting automatic analysis...')
+        const analysisResponse = await fetch('/api/template/auto-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templateId: newTemplate.id })
+        })
+        
+        if (!analysisResponse.ok) {
+          console.warn('Template analysis start failed, but template uploaded successfully')
+          onToast?.('Template uploaded successfully! Analysis failed to start - you can manually analyze it.', 'success')
+        } else {
+          onToast?.('Template uploaded successfully! AI analysis is starting...', 'success')
+        }
+      } catch (analysisError) {
+        console.error('Template analysis trigger failed:', analysisError)
+        onToast?.('Template uploaded successfully! Analysis failed to start - you can manually analyze it.', 'success')
+      }
       
       onTemplatesUpdate()
       

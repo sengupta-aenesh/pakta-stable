@@ -820,8 +820,22 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
   flex-shrink: 0;
+}
+
+.uploadSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.actionButton {
+  gap: var(--spacing-sm) !important;
+}
+
+.actionButton span {
+  margin-left: 2px;
 }
 
 .backButton {
