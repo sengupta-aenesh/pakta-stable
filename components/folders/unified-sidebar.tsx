@@ -322,128 +322,6 @@ export default function UnifiedSidebar({
     }
   }
 
-  // File Upload Handlers
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !user) return
-    
-    const file = e.target.files[0]
-    if (!file.name.toLowerCase().endsWith('.docx')) {
-      onToast?.('Please select a DOCX file', 'error')
-      return
-    }
-
-    try {
-      setUploading(true)
-      setUploadStep('Extracting text...')
-      setUploadProgress({ step: 'Extracting text...', progress: 25 })
-
-      // Extract text using mammoth
-      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })
-      const extractedText = result.value
-
-      if (!extractedText.trim()) {
-        throw new Error('No text content found in the document')
-      }
-
-      setUploadStep('Saving contract...')
-      setUploadProgress({ step: 'Saving contract...', progress: 50 })
-
-      // Create contract
-      const contract = await contractsApi.create({
-        user_id: user.id,
-        title: file.name.replace('.docx', ''),
-        content: extractedText,
-        folder_id: selectedFolder,
-        analysis_status: 'pending',
-        analysis_progress: 0
-      })
-
-      setUploadStep('Starting analysis...')
-      setUploadProgress({ step: 'Starting analysis...', progress: 75 })
-
-      // Trigger auto-analysis
-      fetch('/api/contract/auto-analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractId: contract.id })
-      })
-
-      setUploadProgress({ step: 'Complete', progress: 100 })
-      onContractsUpdate()
-      onToast?.('Contract uploaded successfully!', 'success')
-
-    } catch (error) {
-      console.error('Upload failed:', error)
-      setUploadError(error instanceof Error ? error.message : 'Upload failed')
-      onToast?.('Failed to upload contract', 'error')
-    } finally {
-      setUploading(false)
-      setUploadStep('')
-      setUploadProgress(null)
-      e.target.value = ''
-    }
-  }
-
-  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !user) return
-    
-    const file = e.target.files[0]
-    if (!file.name.toLowerCase().endsWith('.docx')) {
-      onToast?.('Please select a DOCX file', 'error')
-      return
-    }
-
-    try {
-      setUploadingTemplate(true)
-      setTemplateUploadStep('Extracting text...')
-      setTemplateUploadProgress({ step: 'Extracting text...', progress: 25 })
-
-      // Extract text using mammoth
-      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })
-      const extractedText = result.value
-
-      if (!extractedText.trim()) {
-        throw new Error('No text content found in the document')
-      }
-
-      setTemplateUploadStep('Saving template...')
-      setTemplateUploadProgress({ step: 'Saving template...', progress: 50 })
-
-      // Create template
-      const template = await templatesApi.create({
-        user_id: user.id,
-        title: file.name.replace('.docx', ''),
-        content: extractedText,
-        folder_id: selectedTemplateFolder,
-        analysis_status: 'pending',
-        analysis_progress: 0
-      })
-
-      setTemplateUploadStep('Starting analysis...')
-      setTemplateUploadProgress({ step: 'Starting analysis...', progress: 75 })
-
-      // Trigger auto-analysis
-      fetch('/api/template/auto-analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId: template.id })
-      })
-
-      setTemplateUploadProgress({ step: 'Complete', progress: 100 })
-      if (onTemplatesUpdate) onTemplatesUpdate()
-      onToast?.('Template uploaded successfully!', 'success')
-
-    } catch (error) {
-      console.error('Template upload failed:', error)
-      setTemplateUploadError(error instanceof Error ? error.message : 'Upload failed')
-      onToast?.('Failed to upload template', 'error')
-    } finally {
-      setUploadingTemplate(false)
-      setTemplateUploadStep('')
-      setTemplateUploadProgress(null)
-      e.target.value = ''
-    }
-  }
 
   // Simple drag and drop handlers
   const handleContractDragStart = (e: React.DragEvent, contract: Contract) => {
@@ -1353,7 +1231,7 @@ export default function UnifiedSidebar({
               type="file"
               id="template-upload"
               accept=".docx"
-              onChange={handleTemplateUpload}
+              onChange={handleFileUpload}
               className={styles.hiddenInput}
               disabled={uploadingTemplate || isTemplateDragging}
               style={{ display: viewMode === 'templates' ? 'block' : 'none' }}
