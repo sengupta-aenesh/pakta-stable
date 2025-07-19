@@ -1,6 +1,7 @@
 'use client'
 
 import { Template, TemplateFolder } from '@/lib/supabase-client'
+import { Button } from '@/components/ui'
 import styles from '@/app/folders/folders.module.css'
 
 interface TemplateGridProps {
@@ -12,6 +13,7 @@ interface TemplateGridProps {
   onUploadToFolder?: (folderId: string | null) => void
   onFolderClick?: (folderId: string) => void
   onBackToAll?: () => void
+  onNewTemplateFolder?: () => void
 }
 
 export default function TemplateGrid({
@@ -22,7 +24,8 @@ export default function TemplateGrid({
   onTemplatesUpdate,
   onUploadToFolder,
   onFolderClick,
-  onBackToAll
+  onBackToAll,
+  onNewTemplateFolder
 }: TemplateGridProps) {
   
   const formatDate = (dateString: string) => {
@@ -58,90 +61,220 @@ export default function TemplateGrid({
     return '#6B7280'
   }
 
+  const getDisplaySubtitle = () => {
+    const templateCount = templates.length
+    const folderCount = selectedTemplateFolder ? 0 : templateFolders.length
+    
+    if (selectedTemplateFolder) {
+      return `${templateCount} ${templateCount === 1 ? 'template' : 'templates'} in this folder`
+    }
+    
+    const totalItems = templateCount + folderCount
+    if (totalItems === 0) return 'No items'
+    
+    const parts = []
+    if (folderCount > 0) parts.push(`${folderCount} ${folderCount === 1 ? 'folder' : 'folders'}`)
+    if (templateCount > 0) parts.push(`${templateCount} ${templateCount === 1 ? 'template' : 'templates'}`)
+    
+    return parts.join(', ')
+  }
+  
+  const getFolderForTemplate = (template: Template) => {
+    if (!template.folder_id) return null
+    return templateFolders.find(f => f.id === template.folder_id)
+  }
+
   return (
-    <div className={styles.gridContainer}>
+    <div className="h-full flex flex-col">
       {/* Header */}
       <div className={styles.gridHeader}>
-        <div className={styles.gridTitle}>
-          <h2>{getDisplayTitle()}</h2>
-          <span className={styles.itemCount}>({templates.length} templates)</span>
-        </div>
-        
-        {selectedTemplateFolder && (
-          <button
-            onClick={onBackToAll}
-            className={styles.backButton}
-          >
-            ← Back to All Templates
-          </button>
-        )}
-      </div>
-
-      {/* Templates Grid */}
-      <div className={styles.grid}>
-        {templates.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+        {selectedTemplateFolder && onBackToAll ? (
+          <div className={styles.headerWithBack}>
+            <button 
+              className={styles.backButton}
+              onClick={onBackToAll}
+              title="Back to All Templates"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
+            </button>
+            <div className={styles.headerContent}>
+              <h1 className={styles.gridTitle}>{getDisplayTitle()}</h1>
+              <p className={styles.gridSubtitle}>{getDisplaySubtitle()}</p>
             </div>
-            <h3>No templates found</h3>
-            <p>
-              {selectedTemplateFolder 
-                ? 'This folder is empty. Upload some templates to get started.' 
-                : 'Upload your first template to begin building your template library.'}
-            </p>
           </div>
         ) : (
-          templates.map((template) => (
-            <div
-              key={template.id}
-              className={styles.gridItem}
-              onClick={() => onTemplateClick(template)}
-            >
-              <div className={styles.itemHeader}>
-                <div className={styles.itemIcon}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                  </svg>
-                </div>
-                <div className={styles.itemInfo}>
-                  <h3 className={styles.itemTitle}>{template.title}</h3>
-                  <p className={styles.itemDate}>Created {formatDate(template.created_at)}</p>
-                </div>
-              </div>
-
-              <div className={styles.itemMeta}>
-                <div className={styles.analysisStatus}>
-                  <div 
-                    className={styles.statusDot}
-                    style={{ backgroundColor: getAnalysisStatusColor(template.analysis_status) }}
-                  ></div>
-                  <span style={{ color: getAnalysisStatusColor(template.analysis_status) }}>
-                    {getAnalysisStatusText(template.analysis_status, template.analysis_progress)}
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.itemActions}>
-                <button
-                  className={styles.actionButton}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onTemplateClick(template)
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                  View Template
-                </button>
-              </div>
-            </div>
-          ))
+          <div className={styles.headerContent}>
+            <h1 className={styles.gridTitle}>{getDisplayTitle()}</h1>
+            <p className={styles.gridSubtitle}>{getDisplaySubtitle()}</p>
+          </div>
         )}
+        
+        {/* Header Actions */}
+        <div className={styles.headerActions}>
+          {onNewTemplateFolder && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNewTemplateFolder}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                <path d="M12 11v6m3-3h-6"/>
+              </svg>
+              New Folder
+            </Button>
+          )}
+          {onUploadToFolder && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => onUploadToFolder(selectedTemplateFolder)}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Upload Template
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Template Grid */}
+      <div className="flex-1 overflow-y-auto">
+        <div className={styles.contractGrid}>
+        {templates.length === 0 && (selectedTemplateFolder || templateFolders.length === 0) ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateContent}>
+              <svg 
+                className={styles.emptyStateIcon}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                />
+              </svg>
+              <h3 className={styles.emptyStateTitle}>
+                {selectedTemplateFolder ? 'No templates in this folder' : 'No templates yet'}
+              </h3>
+              <p className={styles.emptyStateDescription}>
+                {selectedTemplateFolder 
+                  ? 'Upload templates directly to this folder or drag existing templates here from other folders.'
+                  : 'Upload your first template to get started with AI-powered analysis and organization.'
+                }
+              </p>
+              {onUploadToFolder && (
+                <button
+                  onClick={() => onUploadToFolder(selectedTemplateFolder)}
+                  className={styles.emptyStateButton}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: 'rotate(180deg)' }}>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  Upload Template
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Show template folders in All Templates view - OS Style */}
+            {!selectedTemplateFolder && templateFolders.map((folder) => {
+              const folderTemplateCount = templates.filter(t => t.folder_id === folder.id).length
+              return (
+                <div
+                  key={`folder-${folder.id}`}
+                  className={styles.osFileItem}
+                  onClick={() => onFolderClick && onFolderClick(folder.id)}
+                >
+                  {/* Minimalist Folder Icon */}
+                  <div className={styles.osIconContainer}>
+                    <div className={styles.iconBackground}>
+                      <svg 
+                        className={styles.osFolder}
+                        viewBox="0 0 24 24" 
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Folder Name */}
+                  <div className={styles.osFileName}>
+                    {folder.name}
+                  </div>
+                  
+                  {/* Folder Meta Info */}
+                  <div className={styles.osFileMeta}>
+                    {folderTemplateCount} {folderTemplateCount === 1 ? 'item' : 'items'}
+                  </div>
+                </div>
+              )
+            })}
+            
+            {/* Show templates - OS Style */}
+            {templates.map((template) => {
+              const templateFolder = getFolderForTemplate(template)
+              return (
+                <div
+                  key={template.id}
+                  className={styles.osFileItem}
+                  onClick={() => onTemplateClick(template)}
+                >
+                  {/* Minimalist Document Icon */}
+                  <div className={styles.osIconContainer}>
+                    <div className={styles.iconBackground}>
+                      <svg 
+                        className={styles.osDocument}
+                        viewBox="0 0 24 24" 
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10,9 9,9 8,9"/>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Template Name */}
+                  <div className={styles.osFileName}>
+                    {template.title}
+                  </div>
+                  
+                  {/* Template Meta Info */}
+                  <div className={styles.osFileMeta}>
+                    {templateFolder ? (
+                      <span>{templateFolder.name}</span>
+                    ) : (
+                      <span className={styles.uncategorizedLabel}>
+                        <span className={styles.redDot}></span>
+                        Uncategorized
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        )}
+        </div>
       </div>
     </div>
   )

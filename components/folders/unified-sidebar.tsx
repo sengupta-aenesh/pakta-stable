@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useImperativeHandle, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, ConfirmationDialog } from '@/components/ui'
 import { foldersApi, Folder } from '@/lib/folders-api'
@@ -223,6 +223,12 @@ export default function UnifiedSidebar({
     setNewFolderName('New Folder')
   }
 
+  const handleCreateTemplateFolder = async () => {
+    if (!user) return
+    setCreatingTemplateFolder(true)
+    setNewTemplateFolderName('New Template Folder')
+  }
+
   const handleCreateFolderSubmit = async () => {
     if (!user || !newFolderName.trim()) {
       setCreatingFolder(false)
@@ -248,6 +254,31 @@ export default function UnifiedSidebar({
     }
   }
 
+  const handleCreateTemplateFolderSubmit = async () => {
+    if (!user || !newTemplateFolderName.trim()) {
+      setCreatingTemplateFolder(false)
+      setNewTemplateFolderName('')
+      return
+    }
+    
+    try {
+      await templateFoldersApi.create({
+        user_id: user.id,
+        name: newTemplateFolderName.trim(),
+        parent_id: selectedTemplateFolder || null
+      })
+      setCreatingTemplateFolder(false)
+      setNewTemplateFolderName('')
+      if (onTemplateFoldersUpdate) onTemplateFoldersUpdate()
+      onToast?.('Template folder created successfully!', 'success')
+    } catch (error) {
+      console.error('Failed to create template folder:', error)
+      onToast?.('Failed to create template folder. Please try again.', 'error')
+      setCreatingTemplateFolder(false)
+      setNewTemplateFolderName('')
+    }
+  }
+
   const handleEditFolder = (folder: FolderTreeItem) => {
     setEditingFolder(folder.id)
     setEditingName(folder.name)
@@ -268,10 +299,12 @@ export default function UnifiedSidebar({
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent, action: 'create' | 'edit') => {
+  const handleKeyPress = (e: React.KeyboardEvent, action: 'create' | 'edit' | 'create-template') => {
     if (e.key === 'Enter') {
       if (action === 'create') {
         handleCreateFolderSubmit()
+      } else if (action === 'create-template') {
+        handleCreateTemplateFolderSubmit()
       } else {
         handleSaveEdit()
       }
@@ -279,10 +312,136 @@ export default function UnifiedSidebar({
       if (action === 'create') {
         setCreatingFolder(false)
         setNewFolderName('')
+      } else if (action === 'create-template') {
+        setCreatingTemplateFolder(false)
+        setNewTemplateFolderName('')
       } else {
         setEditingFolder(null)
         setEditingName('')
       }
+    }
+  }
+
+  // File Upload Handlers
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !user) return
+    
+    const file = e.target.files[0]
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      onToast?.('Please select a DOCX file', 'error')
+      return
+    }
+
+    try {
+      setUploading(true)
+      setUploadStep('Extracting text...')
+      setUploadProgress({ step: 'Extracting text...', progress: 25 })
+
+      // Extract text using mammoth
+      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })
+      const extractedText = result.value
+
+      if (!extractedText.trim()) {
+        throw new Error('No text content found in the document')
+      }
+
+      setUploadStep('Saving contract...')
+      setUploadProgress({ step: 'Saving contract...', progress: 50 })
+
+      // Create contract
+      const contract = await contractsApi.create({
+        user_id: user.id,
+        title: file.name.replace('.docx', ''),
+        content: extractedText,
+        folder_id: selectedFolder,
+        analysis_status: 'pending',
+        analysis_progress: 0
+      })
+
+      setUploadStep('Starting analysis...')
+      setUploadProgress({ step: 'Starting analysis...', progress: 75 })
+
+      // Trigger auto-analysis
+      fetch('/api/contract/auto-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: contract.id })
+      })
+
+      setUploadProgress({ step: 'Complete', progress: 100 })
+      onContractsUpdate()
+      onToast?.('Contract uploaded successfully!', 'success')
+
+    } catch (error) {
+      console.error('Upload failed:', error)
+      setUploadError(error instanceof Error ? error.message : 'Upload failed')
+      onToast?.('Failed to upload contract', 'error')
+    } finally {
+      setUploading(false)
+      setUploadStep('')
+      setUploadProgress(null)
+      e.target.value = ''
+    }
+  }
+
+  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !user) return
+    
+    const file = e.target.files[0]
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      onToast?.('Please select a DOCX file', 'error')
+      return
+    }
+
+    try {
+      setUploadingTemplate(true)
+      setTemplateUploadStep('Extracting text...')
+      setTemplateUploadProgress({ step: 'Extracting text...', progress: 25 })
+
+      // Extract text using mammoth
+      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })
+      const extractedText = result.value
+
+      if (!extractedText.trim()) {
+        throw new Error('No text content found in the document')
+      }
+
+      setTemplateUploadStep('Saving template...')
+      setTemplateUploadProgress({ step: 'Saving template...', progress: 50 })
+
+      // Create template
+      const template = await templatesApi.create({
+        user_id: user.id,
+        title: file.name.replace('.docx', ''),
+        content: extractedText,
+        folder_id: selectedTemplateFolder,
+        analysis_status: 'pending',
+        analysis_progress: 0
+      })
+
+      setTemplateUploadStep('Starting analysis...')
+      setTemplateUploadProgress({ step: 'Starting analysis...', progress: 75 })
+
+      // Trigger auto-analysis
+      fetch('/api/template/auto-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: template.id })
+      })
+
+      setTemplateUploadProgress({ step: 'Complete', progress: 100 })
+      if (onTemplatesUpdate) onTemplatesUpdate()
+      onToast?.('Template uploaded successfully!', 'success')
+
+    } catch (error) {
+      console.error('Template upload failed:', error)
+      setTemplateUploadError(error instanceof Error ? error.message : 'Upload failed')
+      onToast?.('Failed to upload template', 'error')
+    } finally {
+      setUploadingTemplate(false)
+      setTemplateUploadStep('')
+      setTemplateUploadProgress(null)
+      e.target.value = ''
     }
   }
 
@@ -1152,6 +1311,8 @@ export default function UnifiedSidebar({
             className={styles.createFolderButton}
             onClick={handleCreateFolder}
             disabled={creatingFolder || isDragging}
+            data-create-folder={viewMode === 'contracts' ? 'true' : 'false'}
+            style={{ display: viewMode === 'contracts' ? 'flex' : 'none' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -1161,18 +1322,44 @@ export default function UnifiedSidebar({
             <span>{creatingFolder ? 'Creating...' : 'New Folder'}</span>
           </button>
 
+          {/* Create Template Folder Button */}
+          <button
+            className={styles.createFolderButton}
+            onClick={handleCreateTemplateFolder}
+            disabled={creatingTemplateFolder || isTemplateDragging}
+            data-create-template-folder={viewMode === 'templates' ? 'true' : 'false'}
+            style={{ display: viewMode === 'templates' ? 'flex' : 'none' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <line x1="9" y1="14" x2="15" y2="14"></line>
+            </svg>
+            <span>{creatingTemplateFolder ? 'Creating...' : 'New Template Folder'}</span>
+          </button>
+
           {/* Upload Contract Button */}
           <div className={styles.uploadSection}>
             <input
               type="file"
-              id="contract-upload-compact"
+              id="contract-upload"
               accept=".docx"
               onChange={handleFileUpload}
               className={styles.hiddenInput}
               disabled={uploading || isDragging}
+              style={{ display: viewMode === 'contracts' ? 'block' : 'none' }}
+            />
+            <input
+              type="file"
+              id="template-upload"
+              accept=".docx"
+              onChange={handleTemplateUpload}
+              className={styles.hiddenInput}
+              disabled={uploadingTemplate || isTemplateDragging}
+              style={{ display: viewMode === 'templates' ? 'block' : 'none' }}
             />
             <label 
-              htmlFor="contract-upload-compact" 
+              htmlFor={viewMode === 'templates' ? 'template-upload' : 'contract-upload'}
               className={styles.uploadButton}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: 'rotate(180deg)' }}>
@@ -1183,7 +1370,7 @@ export default function UnifiedSidebar({
               <span>
                 {viewMode === 'templates' 
                   ? (uploadingTemplate ? 'Uploading Template...' : 'Upload Template (docx)')
-                  : (uploading ? 'Uploading...' : 'Upload (docx)')
+                  : (uploading ? 'Uploading...' : 'Upload Contract (docx)')
                 }
               </span>
             </label>
@@ -1512,6 +1699,25 @@ export default function UnifiedSidebar({
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => handleKeyPress(e, 'create')}
               onBlur={handleCreateFolderSubmit}
+              className={styles.folderNameInput}
+              autoFocus
+            />
+          </div>
+        )}
+
+        {/* New Template Folder Creation */}
+        {creatingTemplateFolder && (
+          <div className={styles.folderItem} style={{ marginLeft: '0px' }}>
+            <div className={styles.expandIcon}></div>
+            <svg className={styles.folderIcon} viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+            </svg>
+            <input
+              type="text"
+              value={newTemplateFolderName}
+              onChange={(e) => setNewTemplateFolderName(e.target.value)}
+              onKeyDown={(e) => handleKeyPress(e, 'create-template')}
+              onBlur={handleCreateTemplateFolderSubmit}
               className={styles.folderNameInput}
               autoFocus
             />

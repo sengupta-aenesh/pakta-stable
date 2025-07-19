@@ -108,6 +108,30 @@ export default function FoldersPage() {
     }
   }
 
+  function handleUploadTemplateToFolder(folderId: string | null) {
+    // Trigger the template upload input in the sidebar
+    const uploadInput = document.getElementById('template-upload') as HTMLInputElement
+    if (uploadInput) {
+      uploadInput.click()
+    }
+  }
+
+  function handleNewFolder() {
+    // Trigger the new folder creation in the sidebar
+    const createButton = document.querySelector('button[data-create-folder]') as HTMLButtonElement
+    if (createButton && !createButton.disabled) {
+      createButton.click()
+    }
+  }
+
+  function handleNewTemplateFolder() {
+    // Trigger the new template folder creation in the sidebar
+    const createButton = document.querySelector('button[data-create-template-folder]') as HTMLButtonElement
+    if (createButton && !createButton.disabled) {
+      createButton.click()
+    }
+  }
+
 
   // Filter data based on current view mode and selected folder
   const filteredContracts = selectedFolder 
@@ -132,7 +156,7 @@ export default function FoldersPage() {
       <TopNavigation currentPage="folders" />
 
       {/* Left Sidebar - Folder Tree */}
-      <div>
+      <div data-sidebar-ref>
         <UnifiedSidebar
           folders={folders}
           contracts={contracts}
@@ -172,6 +196,7 @@ export default function FoldersPage() {
             onUploadToFolder={handleUploadToFolder}
             onFolderClick={setSelectedFolder}
             onBackToAll={() => setSelectedFolder(null)}
+            onNewFolder={handleNewFolder}
           />
         ) : (
           <TemplateGrid
@@ -180,12 +205,10 @@ export default function FoldersPage() {
             templateFolders={templateFolders}
             onTemplateClick={handleTemplateClick}
             onTemplatesUpdate={() => loadTemplates(user.id)}
-            onUploadToFolder={(folderId) => {
-              // Handle template upload to folder - for future implementation
-              console.log('Template upload to folder:', folderId)
-            }}
+            onUploadToFolder={handleUploadTemplateToFolder}
             onFolderClick={setSelectedTemplateFolder}
             onBackToAll={() => setSelectedTemplateFolder(null)}
+            onNewTemplateFolder={handleNewTemplateFolder}
           />
         )}
       </div>

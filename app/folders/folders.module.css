@@ -800,16 +800,28 @@
 .gridHeader {
   padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md);
   background-color: var(--color-white);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
 }
 
 .headerWithBack {
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-md);
+  flex: 1;
 }
 
 .headerContent {
   flex: 1;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
 .backButton {
