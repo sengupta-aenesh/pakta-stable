@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Template } from '@/lib/supabase-client'
+import { Template, MissingInfoItem } from '@/lib/supabase-client'
 import { Button } from '@/components/ui'
 import TemplateVersionList from './template-version-list'
 import styles from './template-analysis.module.css'
@@ -21,9 +21,59 @@ export default function TemplateAnalysis({
   onTemplateUpdate,
   onToast
 }: TemplateAnalysisProps) {
-  const [activeTab, setActiveTab] = useState<'summary' | 'risks'>('summary')
+  const [activeTab, setActiveTab] = useState<'summary' | 'variables' | 'risks'>('summary')
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisProgress, setAnalysisProgress] = useState(0)
+  const [templateVariables, setTemplateVariables] = useState<MissingInfoItem[]>([])
+  const [isCreatingVersion, setIsCreatingVersion] = useState(false)
+  const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
+  const [showOccurrencesList, setShowOccurrencesList] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+
+  // Progress checking function for template analysis
+  const checkAnalysisProgress = async () => {
+    if (!template?.id) return
+    
+    try {
+      const response = await fetch(`/api/template/analysis-status?templateId=${template.id}`)
+      if (response.ok) {
+        const statusData = await response.json()
+        
+        // Update progress
+        setAnalysisProgress(statusData.progress || 0)
+        
+        // Check if analysis is still running
+        const isAnalysisRunning = statusData.status === 'in_progress' || 
+                                 statusData.status === 'pending' || 
+                                 statusData.status === 'summary_complete' || 
+                                 statusData.status === 'risks_complete'
+        
+        if (isAnalysisRunning && template?.id === statusData.templateId) {
+          // Continue checking progress
+          setTimeout(() => {
+            if (template?.id === statusData.templateId) {
+              checkAnalysisProgress()
+            }
+          }, 2000)
+        } else if (statusData.status === 'complete') {
+          console.log('🎉 Template analysis completed!')
+          setAnalysisProgress(100)
+          setAnalyzing(false)
+          
+          // Update template with new analysis results
+          const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
+          onTemplateUpdate(updatedTemplate)
+          onToast('Template analysis completed successfully!', 'success')
+        } else if (statusData.status === 'failed') {
+          setAnalyzing(false)
+          setAnalysisProgress(0)
+          onToast('Template analysis failed. Please try again.', 'error')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check analysis progress:', error)
+    }
+  }
 
   // Handle analysis triggering
   const handleAnalyzeTemplate = async () => {
@@ -52,17 +102,14 @@ export default function TemplateAnalysis({
       const result = await response.json()
       
       if (result.success) {
-        onToast('Template analysis completed successfully!', 'success')
-        // Update template with new analysis results
-        const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
-        onTemplateUpdate(updatedTemplate)
+        // Start polling for progress
+        setTimeout(() => checkAnalysisProgress(), 1000)
       } else {
         throw new Error(result.message || 'Analysis failed')
       }
     } catch (error) {
       console.error('Template analysis error:', error)
       onToast('Template analysis failed. Please try again.', 'error')
-    } finally {
       setAnalyzing(false)
       setAnalysisProgress(0)
     }
@@ -120,6 +167,136 @@ export default function TemplateAnalysis({
       (window as any).scrollToTemplateRiskCard = scrollToRiskCard
     }
   }, [scrollToRiskCard, template])
+
+  // Handle variable input changes
+  const handleVariableChange = (id: string, value: string) => {
+    setTemplateVariables(prev => 
+      prev.map(variable => 
+        variable.id === id ? { ...variable, userInput: value } : variable
+      )
+    )
+  }
+
+  // Handle viewing variable occurrences
+  const handleViewOccurrences = (variable: MissingInfoItem) => {
+    setSelectedVariable(variable)
+    setShowOccurrencesList(true)
+  }
+
+  // Handle scrolling to specific occurrence
+  const handleScrollToOccurrence = (variable: MissingInfoItem, occurrenceIndex: number) => {
+    const occurrence = variable.occurrences[occurrenceIndex]
+    if (!occurrence) return
+
+    // Create a unique identifier for this occurrence
+    const occurrenceId = `${variable.id}-occurrence-${occurrenceIndex}`
+    
+    // Use the global scroll function if available
+    if (typeof window !== 'undefined' && (window as any).scrollToTemplateRisk) {
+      (window as any).scrollToTemplateRisk(occurrenceId)
+    }
+    
+    onToast(`Scrolled to occurrence ${occurrenceIndex + 1} of "${variable.label}"`, 'success')
+  }
+
+  // Handle adding new variable from selected text
+  const handleAddVariable = (selectedText: string, position: { start: number; end: number }) => {
+    if (!selectedText.trim()) {
+      onToast('Please select some text to create a variable', 'error')
+      return
+    }
+
+    // Create a new variable
+    const newVariable: MissingInfoItem = {
+      id: `var-${Date.now()}`,
+      label: `Variable: ${selectedText.substring(0, 20)}${selectedText.length > 20 ? '...' : ''}`,
+      description: `Custom variable for "${selectedText}"`,
+      placeholder: `Enter value for ${selectedText}`,
+      fieldType: 'text',
+      userInput: '',
+      occurrences: [{
+        text: selectedText,
+        position: position
+      }]
+    }
+
+    setTemplateVariables(prev => [...prev, newVariable])
+    onToast(`Variable "${newVariable.label}" added successfully`, 'success')
+  }
+
+  // Toggle edit mode
+  const handleToggleEditMode = () => {
+    setIsEditMode(!isEditMode)
+    onToast(isEditMode ? 'Edit mode disabled' : 'Edit mode enabled - select text in the template to add variables', 'info')
+    
+    // Expose the add variable function globally for the template editor
+    if (!isEditMode && typeof window !== 'undefined') {
+      (window as any).addTemplateVariable = handleAddVariable
+    } else if (typeof window !== 'undefined') {
+      delete (window as any).addTemplateVariable
+    }
+  }
+
+  // Handle creating template version
+  const handleCreateVersion = async () => {
+    if (!template?.id) return
+    
+    setIsCreatingVersion(true)
+    
+    try {
+      // Prepare version data
+      const versionData = {
+        templateId: template.id,
+        variables: templateVariables
+          .filter(variable => variable.userInput.trim())
+          .map(variable => ({
+            id: variable.id,
+            label: variable.label,
+            value: variable.userInput,
+            fieldType: variable.fieldType
+          })),
+        createdAt: new Date().toISOString()
+      }
+
+      // Create the version
+      const response = await fetch('/api/template/create-version', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(versionData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create template version')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        onToast('Template version created successfully!', 'success')
+        
+        // Clear variable inputs after successful creation
+        setTemplateVariables(prev => 
+          prev.map(variable => ({ ...variable, userInput: '' }))
+        )
+      } else {
+        throw new Error(result.message || 'Failed to create version')
+      }
+    } catch (error) {
+      console.error('Error creating template version:', error)
+      onToast('Failed to create template version. Please try again.', 'error')
+    } finally {
+      setIsCreatingVersion(false)
+    }
+  }
+
+  // Load template variables from analysis cache
+  useEffect(() => {
+    if (template?.analysis_cache?.complete?.missingInfo) {
+      setTemplateVariables(template.analysis_cache.complete.missingInfo)
+    }
+  }, [template?.analysis_cache])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {
@@ -219,6 +396,21 @@ export default function TemplateAnalysis({
         </div>
       </div>
 
+      {/* Progress Bar */}
+      {analyzing && (
+        <div className={styles.progressContainer}>
+          <div className={styles.progressBar}>
+            <div 
+              className={styles.progressFill}
+              style={{ width: `${analysisProgress}%` }}
+            />
+          </div>
+          <div className={styles.progressText}>
+            {analysisProgress}% complete
+          </div>
+        </div>
+      )}
+
       {/* Navigation Tabs */}
       <div className={styles.tabNav}>
         <button
@@ -226,6 +418,12 @@ export default function TemplateAnalysis({
           onClick={() => setActiveTab('summary')}
         >
           Summary
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'variables' ? styles.active : ''}`}
+          onClick={() => setActiveTab('variables')}
+        >
+          Variables
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'risks' ? styles.active : ''}`}
@@ -286,6 +484,116 @@ export default function TemplateAnalysis({
             ) : (
               <div className={styles.emptyState}>
                 <p>No analysis available. Click "Analyze Template" to begin.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'variables' && (
+          <div className={styles.variablesTab}>
+            <div className={styles.variablesHeader}>
+              <h3>Template Variables</h3>
+              <div className={styles.variablesActions}>
+                <button
+                  className={`${styles.editModeButton} ${isEditMode ? styles.active : ''}`}
+                  onClick={handleToggleEditMode}
+                  title={isEditMode ? 'Exit edit mode' : 'Enter edit mode to add variables by selecting text'}
+                >
+                  {isEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Mode'}
+                </button>
+              </div>
+            </div>
+            {analyzing ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '250px', color: '#6b7280' }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <div className={styles.processingSteps}>
+                    <div className={styles.processingStep}>
+                      <span className={styles.stepNumber}>1</span>
+                      <span>Identifying template variables...</span>
+                    </div>
+                    <div className={styles.processingStep}>
+                      <span className={styles.stepNumber}>2</span>
+                      <span>Mapping variable occurrences...</span>
+                    </div>
+                    <div className={styles.processingStep}>
+                      <span className={styles.stepNumber}>3</span>
+                      <span>Creating variable definitions...</span>
+                    </div>
+                  </div>
+                </div>
+                <span>Processing template variables...</span>
+              </div>
+            ) : templateVariables.length > 0 ? (
+              <>
+                <p style={{ marginBottom: '20px', color: '#6b7280' }}>
+                  Define values for template variables below. You can create versions of the template with different variable values.
+                </p>
+                
+                {templateVariables.map((variable, index) => (
+                  <div key={variable.id} className={styles.variableItem}>
+                    <div className={styles.variableHeader}>
+                      <label className={styles.variableLabel}>
+                        {variable.label}
+                      </label>
+                      <span className={styles.occurrenceCount}>
+                        {variable.occurrences.length} occurrence{variable.occurrences.length !== 1 ? 's' : ''}
+                      </span>
+                      <button
+                        className={styles.viewOccurrencesButton}
+                        onClick={() => handleViewOccurrences(variable)}
+                        title="View all occurrences of this variable in the template"
+                      >
+                        View Occurrences
+                      </button>
+                    </div>
+                    <p className={styles.variableDescription}>{variable.description}</p>
+                    {variable.context && (
+                      <div className={styles.contextInfo}>
+                        <span className={styles.contextLabel}>Context:</span>
+                        <code className={styles.contextText}>{variable.context}</code>
+                      </div>
+                    )}
+                    <input
+                      type={variable.fieldType === 'date' ? 'date' : variable.fieldType === 'number' ? 'number' : variable.fieldType === 'email' ? 'email' : 'text'}
+                      className={styles.variableInput}
+                      placeholder={variable.placeholder}
+                      value={variable.userInput}
+                      onChange={(e) => handleVariableChange(variable.id, e.target.value)}
+                    />
+                    {variable.userInput && (
+                      <div className={styles.previewContainer}>
+                        <div className={styles.previewNote}>
+                          ✓ Will replace: {variable.occurrences.map(occ => `"${occ.text}"`).join(', ')}
+                        </div>
+                        {variable.context && (
+                          <div className={styles.previewResult}>
+                            <span className={styles.previewLabel}>Preview:</span>
+                            <code className={styles.previewText}>
+                              {variable.context.replace(
+                                variable.occurrences[0]?.text || '', 
+                                variable.userInput
+                              )}
+                            </code>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '20px' }}>
+                  <button 
+                    className={styles.createVersionButton}
+                    onClick={handleCreateVersion}
+                    disabled={!templateVariables.some(variable => variable.userInput.trim()) || isCreatingVersion}
+                  >
+                    {isCreatingVersion ? 'Creating Version...' : 'Create Template Version'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1', minHeight: '250px', color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
+                <p>No template variables detected. Run analysis to identify template variables automatically.</p>
               </div>
             )}
           </div>
@@ -422,6 +730,71 @@ export default function TemplateAnalysis({
         )}
 
       </div>
+
+      {/* Variable Occurrences Modal */}
+      {showOccurrencesList && selectedVariable && (
+        <div className={styles.modal} onClick={() => setShowOccurrencesList(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Variable Occurrences: {selectedVariable.label}</h3>
+              <button
+                className={styles.closeButton}
+                onClick={() => setShowOccurrencesList(false)}
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <p className={styles.modalDescription}>
+                Found {selectedVariable.occurrences.length} occurrence{selectedVariable.occurrences.length !== 1 ? 's' : ''} of this variable in the template.
+                Click on any occurrence to scroll to it in the template.
+              </p>
+              
+              <div className={styles.occurrencesList}>
+                {selectedVariable.occurrences.map((occurrence, index) => (
+                  <div
+                    key={index}
+                    className={styles.occurrenceItem}
+                    onClick={() => handleScrollToOccurrence(selectedVariable, index)}
+                  >
+                    <div className={styles.occurrenceHeader}>
+                      <span className={styles.occurrenceNumber}>#{index + 1}</span>
+                      <span className={styles.occurrenceText}>"{occurrence.text}"</span>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={styles.scrollToIcon}
+                      >
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </div>
+                    {occurrence.position && (
+                      <div className={styles.occurrencePosition}>
+                        Position: {occurrence.position.start} - {occurrence.position.end}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.modalCloseButton}
+                onClick={() => setShowOccurrencesList(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

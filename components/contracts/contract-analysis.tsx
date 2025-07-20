@@ -649,130 +649,76 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
 
   return (
     <div className={styles.container}>
-      {/* Collapsible Header */}
-      <div className={`${styles.header} ${isHeaderCollapsed ? styles.headerCollapsed : ''}`}>
-        <div className={styles.headerToggle}>
-          <button 
-            className={styles.collapseButton}
-            onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
-            title={isHeaderCollapsed ? "Show controls" : "Hide controls"}
-          >
-            <svg 
-              width="16" 
-              height="16" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2"
-              style={{ transform: isHeaderCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
-            >
-              <path d="M18 15l-6-6-6 6"/>
-            </svg>
-          </button>
+      {/* Header - Updated to match template dashboard style */}
+      <div className={styles.header}>
+        <div className={styles.titleSection}>
+          <h2>Contract Analysis</h2>
+          <div className={styles.status} style={{ color: analysisProgress ? '#F59E0B' : '#10B981' }}>
+            {analysisProgress ? `Analyzing... ${analysisProgress.progress}%` : contract ? 'Ready for analysis' : 'No contract selected'}
+          </div>
         </div>
 
-        {!isHeaderCollapsed && (
-          <div className={styles.headerContent}>
-            {/* Prominent Progress Display */}
-            {analysisProgress && (
-              <div className={styles.prominentProgress}>
-                <div className={styles.progressHeader}>
-                  <h4>AI Analysis in Progress</h4>
-                  <span>{analysisProgress.progress}%</span>
-                </div>
-                <div className={styles.progressBar}>
-                  <div 
-                    className={styles.progressFill}
-                    style={{ width: `${analysisProgress.progress}%` }}
-                  />
-                </div>
-                <p className={styles.progressDescription}>
-                  {getProgressDescription(analysisProgress.progress)}
-                </p>
-              </div>
-            )}
-            
-            {/* Single Analyze Button */}
-            {!analysisProgress && (
-              <button 
-                type="button"
-                className={`${styles.refreshButton} ${styles.analyzeButton}`}
-                onClick={async () => {
-                  if (!contract?.id) return
-                  
-                  console.log('🔄 Starting analysis for contract:', contract.id)
-                  
-                  try {
-                    // Clear current data first
-                    setSummary(null)
-                    setRisks([])
-                    setMissingInfo([])
-                    setChatMessages([])
-                    
-                    const response = await fetch('/api/contract/refresh-analysis', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ contractId: contract.id })
-                    })
-                    
-                    if (response.ok) {
-                      const responseData = await response.json()
-                      console.log('✅ Analysis started successfully')
-                      
-                      setAnalysisProgress({ status: 'in_progress', progress: 0 })
-                      setIsAnalyzing(true)
-                      
-                      // Start checking progress immediately
-                      checkAnalysisProgress()
-                    } else {
-                      const errorData = await response.json()
-                      console.error('❌ Analysis API failed:', errorData)
-                      throw new Error(errorData.error || 'Failed to start analysis')
-                    }
-                  } catch (error) {
-                    console.error('❌ Failed to start analysis:', error)
-                    alert(`Failed to start analysis: ${error.message}. Please try again.`)
-                  }
-                }}
-                disabled={isAnalyzing}
-                title="Analyze contract - includes summary, risk analysis, and completeness check"
-              >
-                {isAnalyzing ? 'Analyzing...' : 'Analyze Contract'}
-              </button>
-            )}
-            
-            {/* Mobile Navigation Buttons */}
-            {onMobileViewChange && (
-              <div className={styles.mobileButtonsContainer}>
-                <button 
-                  className={styles.mobileToggleButton}
-                  onClick={() => onMobileViewChange('list')}
-                  title="Back to List"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M15 18l-6-6 6-6"/>
-                  </svg>
-                  List
-                </button>
+        <div className={styles.headerActions}>
+          <button 
+            type="button"
+            className={`${styles.refreshButton} ${styles.analyzeButton}`}
+            onClick={async () => {
+              if (!contract?.id) return
+              
+              console.log('🔄 Starting analysis for contract:', contract.id)
+              
+              try {
+                // Clear current data first
+                setSummary(null)
+                setRisks([])
+                setMissingInfo([])
+                setChatMessages([])
                 
-                {contract && (
-                  <button 
-                    className={styles.mobileEditButton}
-                    onClick={() => onMobileViewChange('editor')}
-                    title="Edit Contract"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Edit
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                const response = await fetch('/api/contract/refresh-analysis', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contractId: contract.id })
+                })
+                
+                if (response.ok) {
+                  const responseData = await response.json()
+                  console.log('✅ Analysis started successfully')
+                  
+                  setAnalysisProgress({ status: 'in_progress', progress: 0 })
+                  setIsAnalyzing(true)
+                  
+                  // Start checking progress immediately
+                  checkAnalysisProgress()
+                } else {
+                  const errorData = await response.json()
+                  console.error('❌ Analysis API failed:', errorData)
+                  throw new Error(errorData.error || 'Failed to start analysis')
+                }
+              } catch (error) {
+                console.error('❌ Failed to start analysis:', error)
+                alert(`Failed to start analysis: ${error.message}. Please try again.`)
+              }
+            }}
+          >
+            {analysisProgress ? 'Analyzing...' : 'Analyze Contract'}
+          </button>
+        </div>
       </div>
+
+      {/* Progress Bar - Add below header like template dashboard */}
+      {analysisProgress && (
+        <div className={styles.progressContainer}>
+          <div className={styles.progressBar}>
+            <div 
+              className={styles.progressFill}
+              style={{ width: `${analysisProgress.progress}%` }}
+            />
+          </div>
+          <div className={styles.progressText}>
+            {analysisProgress.progress}% complete - {getProgressDescription(analysisProgress.progress)}
+          </div>
+        </div>
+      )}
 
       <div className={styles.tabs}>
         <button 

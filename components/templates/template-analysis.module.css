@@ -34,6 +34,36 @@
   align-items: center;
 }
 
+/* Progress Bar */
+.progressContainer {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FAFAFA;
+}
+
+.progressBar {
+  width: 100%;
+  height: 4px;
+  background-color: #E5E7EB;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3B82F6, #1D4ED8);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: 0.75rem;
+  color: #6B7280;
+  text-align: center;
+  font-weight: 500;
+}
+
 .tabNav {
   display: flex;
   border-bottom: 1px solid #E5E7EB;
@@ -73,6 +103,392 @@
 /* Summary Tab */
 .summaryTab {
   height: 100%;
+}
+
+/* Variables Tab */
+.variablesTab {
+  height: 100%;
+}
+
+.variablesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.variablesHeader h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.variablesActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editModeButton {
+  padding: 0.5rem 1rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.editModeButton:hover {
+  border-color: #2563EB;
+  color: #2563EB;
+}
+
+.editModeButton.active {
+  background: #2563EB;
+  color: white;
+  border-color: #2563EB;
+}
+
+.variableItem {
+  background: #F9FAFB;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #E5E7EB;
+}
+
+.variableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.variableLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.occurrenceCount {
+  font-size: 0.75rem;
+  color: #6B7280;
+  background: #E5E7EB;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.viewOccurrencesButton {
+  font-size: 0.75rem;
+  color: #2563EB;
+  background: #EBF5FF;
+  border: 1px solid #BFDBFE;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewOccurrencesButton:hover {
+  background: #DBEAFE;
+  border-color: #93C5FD;
+}
+
+.variableDescription {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.contextInfo {
+  margin-bottom: 0.5rem;
+}
+
+.contextLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  margin-right: 0.5rem;
+}
+
+.contextText {
+  font-size: 0.75rem;
+  color: #6B7280;
+  background: #F3F4F6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.variableInput {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+  margin-bottom: 0.5rem;
+}
+
+.variableInput:focus {
+  outline: none;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.previewContainer {
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.previewNote {
+  font-size: 0.75rem;
+  color: #0369A1;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.previewResult {
+  margin-bottom: 0.5rem;
+}
+
+.previewResult:last-child {
+  margin-bottom: 0;
+}
+
+.previewLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  margin-right: 0.5rem;
+}
+
+.previewText {
+  font-size: 0.75rem;
+  color: #1F2937;
+  background: #FFFFFF;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #E5E7EB;
+}
+
+.createVersionButton {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.75rem 1.5rem;
+  background: #2563EB;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin: 0 auto;
+}
+
+.createVersionButton:hover:not(:disabled) {
+  background: #1D4ED8;
+}
+
+.createVersionButton:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.processingSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.processingStep {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #6B7280;
+}
+
+.stepNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: #E5E7EB;
+  color: #374151;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6B7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.closeButton:hover {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.modalBody {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modalDescription {
+  color: #6B7280;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.occurrencesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.occurrenceItem {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.occurrenceItem:hover {
+  background: #F3F4F6;
+  border-color: #2563EB;
+  transform: translateY(-1px);
+}
+
+.occurrenceHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.occurrenceNumber {
+  background: #2563EB;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.occurrenceText {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #111827;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #E5E7EB;
+}
+
+.scrollToIcon {
+  color: #2563EB;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.occurrenceItem:hover .scrollToIcon {
+  opacity: 1;
+}
+
+.occurrencePosition {
+  font-size: 0.75rem;
+  color: #6B7280;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  margin-left: 2.75rem;
+}
+
+.modalFooter {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modalCloseButton {
+  padding: 0.5rem 1rem;
+  background: #6B7280;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modalCloseButton:hover {
+  background: #4B5563;
 }
 
 .summaryContent h3 {
