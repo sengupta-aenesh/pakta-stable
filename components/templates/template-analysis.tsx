@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Template, MissingInfoItem } from '@/lib/supabase-client'
-import { Button } from '@/components/ui'
+// Removed Button import to match contract analysis styling
 import TemplateVersionList from './template-version-list'
 import styles from './template-analysis.module.css'
 
@@ -29,6 +29,12 @@ export default function TemplateAnalysis({
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
   const [showOccurrencesList, setShowOccurrencesList] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
+  const [showCustomVariableModal, setShowCustomVariableModal] = useState(false)
+  const [customVariableForm, setCustomVariableForm] = useState({
+    label: '',
+    description: '',
+    fieldType: 'text' as 'text' | 'email' | 'number' | 'date'
+  })
 
   // Progress checking function for template analysis
   const checkAnalysisProgress = async () => {
@@ -354,6 +360,39 @@ export default function TemplateAnalysis({
     }
   }
 
+  // Handle custom variable creation
+  const handleCreateCustomVariable = () => {
+    if (!customVariableForm.label.trim()) {
+      onToast('Variable label is required', 'error')
+      return
+    }
+
+    const newVariable: MissingInfoItem = {
+      id: `custom-var-${Date.now()}`,
+      label: customVariableForm.label.trim(),
+      description: customVariableForm.description.trim() || `Custom ${customVariableForm.fieldType} variable`,
+      fieldType: customVariableForm.fieldType,
+      userInput: '',
+      occurrences: [{
+        text: `[${customVariableForm.label.trim()}]`,
+        context: 'Custom variable - manually created',
+        position: { start: 0, end: customVariableForm.label.length + 2 }
+      }]
+    }
+
+    setTemplateVariables(prev => [...prev, newVariable])
+    
+    // Reset form and close modal
+    setCustomVariableForm({
+      label: '',
+      description: '',
+      fieldType: 'text'
+    })
+    setShowCustomVariableModal(false)
+    
+    onToast(`Custom variable "${newVariable.label}" created successfully`, 'success')
+  }
+
   // Handle creating template version
   const handleCreateVersion = async () => {
     if (!template?.id) return
@@ -361,7 +400,7 @@ export default function TemplateAnalysis({
     setIsCreatingVersion(true)
     
     try {
-      // Prepare version data
+      // Prepare version data - matching API schema
       const versionData = {
         templateId: template.id,
         variables: templateVariables
@@ -372,6 +411,7 @@ export default function TemplateAnalysis({
             value: variable.userInput,
             fieldType: variable.fieldType
           })),
+        vendorName: template.title || 'Template Version', // Add vendor name
         createdAt: new Date().toISOString()
       }
 
@@ -502,14 +542,14 @@ export default function TemplateAnalysis({
         </div>
 
         <div className={styles.headerActions}>
-          <Button
+          <button 
+            type="button"
+            className={`${styles.refreshButton} ${styles.analyzeButton}`}
             onClick={handleAnalyzeTemplate}
             disabled={analyzing}
-            variant="primary"
-            size="sm"
           >
             {analyzing ? `Analyzing... ${analysisProgress}%` : 'Analyze Template'}
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -546,7 +586,7 @@ export default function TemplateAnalysis({
           className={`${styles.tab} ${activeTab === 'risks' ? styles.active : ''}`}
           onClick={() => setActiveTab('risks')}
         >
-          Risk Analysis ({risks.length})
+          Risk Analysis
         </button>
       </div>
 
@@ -611,6 +651,17 @@ export default function TemplateAnalysis({
             <div className={styles.variablesHeader}>
               <h3>Template Variables</h3>
               <div className={styles.variablesActions}>
+                <button
+                  className={styles.editModeButton}
+                  onClick={() => setShowCustomVariableModal(true)}
+                  title="Create a custom variable manually"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                  </svg>
+                  Add Custom Variable
+                </button>
                 <button
                   className={`${styles.editModeButton} ${isEditMode ? styles.active : ''}`}
                   onClick={handleToggleEditMode}
@@ -1024,6 +1075,130 @@ export default function TemplateAnalysis({
                   onClick={() => setShowOccurrencesList(false)}
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Variable Creation Modal */}
+      {showCustomVariableModal && (
+        <div className={styles.modal} onClick={() => setShowCustomVariableModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Create Custom Variable</h3>
+              <button
+                className={styles.closeButton}
+                onClick={() => setShowCustomVariableModal(false)}
+                title="Close modal"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <p className={styles.modalDescription}>
+                Create a custom variable that can be used throughout your template. You can manually define variables that weren't automatically detected by the AI.
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '6px' 
+                  }}>
+                    Variable Label *
+                  </label>
+                  <input
+                    type="text"
+                    value={customVariableForm.label}
+                    onChange={(e) => setCustomVariableForm(prev => ({ ...prev, label: e.target.value }))}
+                    className={styles.variableInput}
+                    placeholder="e.g., Company Name, Date, Amount"
+                    style={{ marginBottom: '0' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '6px' 
+                  }}>
+                    Description (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={customVariableForm.description}
+                    onChange={(e) => setCustomVariableForm(prev => ({ ...prev, description: e.target.value }))}
+                    className={styles.variableInput}
+                    placeholder="Brief description of this variable"
+                    style={{ marginBottom: '0' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '6px' 
+                  }}>
+                    Variable Type
+                  </label>
+                  <select
+                    value={customVariableForm.fieldType}
+                    onChange={(e) => setCustomVariableForm(prev => ({ 
+                      ...prev, 
+                      fieldType: e.target.value as 'text' | 'email' | 'number' | 'date' 
+                    }))}
+                    className={styles.variableInput}
+                    style={{ marginBottom: '0' }}
+                  >
+                    <option value="text">Text</option>
+                    <option value="email">Email</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className={styles.modalFooter}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'flex-end', 
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%'
+              }}>
+                <button
+                  className={styles.modalCloseButton}
+                  onClick={() => setShowCustomVariableModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={styles.createVersionButton}
+                  onClick={handleCreateCustomVariable}
+                  disabled={!customVariableForm.label.trim()}
+                  style={{ 
+                    maxWidth: 'none',
+                    padding: '8px 16px',
+                    fontSize: '14px'
+                  }}
+                >
+                  Create Variable
                 </button>
               </div>
             </div>

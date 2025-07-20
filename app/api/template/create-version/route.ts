@@ -10,7 +10,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
   }
 
   try {
-    const { templateId, variables, createdAt } = await request.json()
+    const { templateId, variables, createdAt, vendorName } = await request.json()
 
     if (!templateId || !variables || !Array.isArray(variables)) {
       return NextResponse.json({ 
@@ -29,14 +29,16 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
       .single()
 
     if (templateError || !template) {
+      console.error('Template lookup error:', templateError)
       return NextResponse.json({ error: 'Template not found' }, { status: 404 })
     }
 
-    // Create template version with variables
+    // Create template version with variables - matching database schema
     const versionData = {
       template_id: templateId,
       version_name: `Version ${new Date().toLocaleString()}`,
-      variables_data: variables,
+      vendor_name: vendorName || 'Default Vendor', // Required field in schema
+      version_data: variables, // Correct field name from schema
       created_at: createdAt || new Date().toISOString(),
       created_by: user.id
     }

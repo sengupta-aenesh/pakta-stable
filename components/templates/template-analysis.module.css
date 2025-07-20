@@ -1255,3 +1255,32 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Analyze Button - Matches contract analysis styling exactly */
+.refreshButton {
+  width: 100%;
+  max-width: 320px;
+  padding: 12px 24px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.refreshButton:hover {
+  background: #111;
+}
+
+.refreshButton:disabled {
+  background: #6b7280;
+  cursor: not-allowed;
+}
+
+.analyzeButton {
+  /* Additional styling for analyze button if needed */
+}
