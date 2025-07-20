@@ -110,12 +110,17 @@ interface InteractiveTemplateEditorProps {
   onReanalyzeRisks?: (() => Promise<void>) | null
   onRegisterUpdateFunction?: (updateFunction: (content: string | null) => void) => void
   className?: string
-  templateVariables?: Array<{
-    id: string
-    label: string
-    userInput: string
-    fieldType: string
-  }>
+  isVersionMode?: boolean
+  versionData?: {
+    variables: Array<{
+      id: string
+      label: string
+      value: string
+      fieldType: string
+    }>
+    versionName: string
+  }
+  onBackToOriginal?: () => void
 }
 
 export default function InteractiveTemplateEditor({
@@ -128,7 +133,9 @@ export default function InteractiveTemplateEditor({
   onReanalyzeRisks,
   onRegisterUpdateFunction,
   className,
-  templateVariables = []
+  isVersionMode = false,
+  versionData,
+  onBackToOriginal
 }: InteractiveTemplateEditorProps) {
   const [content, setContent] = useState('')
   const [editingContent, setEditingContent] = useState('') // Separate state for editing
@@ -382,13 +389,17 @@ export default function InteractiveTemplateEditor({
     }
   }, [content, risks, findSimpleTextPosition])
 
-  // Apply variable replacement to content
+  // Apply variable replacement to content (only in version mode)
   const applyVariableReplacement = useCallback((baseContent: string) => {
+    if (!isVersionMode || !versionData?.variables) {
+      return baseContent
+    }
+    
     let processedContent = baseContent
     
     // Apply variable replacements for variables that have values
-    templateVariables.forEach(variable => {
-      if (variable.userInput && variable.userInput.trim()) {
+    versionData.variables.forEach(variable => {
+      if (variable.value && variable.value.trim()) {
         // Try multiple replacement patterns to be thorough
         const patterns = [
           new RegExp(`\\[${variable.label}\\]`, 'gi'),
@@ -399,7 +410,7 @@ export default function InteractiveTemplateEditor({
         ]
         
         patterns.forEach(pattern => {
-          processedContent = processedContent.replace(pattern, variable.userInput)
+          processedContent = processedContent.replace(pattern, variable.value)
         })
         
         // Also replace with variable ID patterns for custom variables
@@ -409,16 +420,16 @@ export default function InteractiveTemplateEditor({
             new RegExp(`\\{\\{${variable.id}\\}\\}`, 'gi')
           ]
           idPatterns.forEach(pattern => {
-            processedContent = processedContent.replace(pattern, variable.userInput)
+            processedContent = processedContent.replace(pattern, variable.value)
           })
         }
       }
     })
     
     return processedContent
-  }, [templateVariables])
+  }, [isVersionMode, versionData])
 
-  // Get formatted content for display with variable replacement
+  // Get formatted content for display with conditional variable replacement
   const getFormattedContent = useCallback(() => {
     const baseContent = beautifyContent(content)
     return applyVariableReplacement(baseContent)
@@ -952,53 +963,76 @@ export default function InteractiveTemplateEditor({
             )}
           </button>
 
-          {/* Download Button - replaces reanalyze button */}
-          <div className={styles.downloadContainer} ref={downloadRef}>
-            <button 
-              className={styles.downloadButton}
-              onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
-              disabled={!content.trim()}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15" />
-                <path d="M7 10l5 5 5-5" />
-                <path d="M12 15V3" />
-              </svg>
-              Download Version
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.chevron}>
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </button>
-            
-            {showDownloadDropdown && (
-              <div className={styles.downloadDropdown}>
-                <button 
-                  className={styles.downloadOption}
-                  onClick={() => handleDownload('docx')}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="21"/>
-                    <line x1="8" y1="13" x2="16" y2="21"/>
-                  </svg>
-                  Download as DOCX
-                </button>
-                <button 
-                  className={styles.downloadOption}
-                  onClick={() => handleDownload('pdf')}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="9" y1="15" x2="15" y2="15"/>
-                    <line x1="12" y1="12" x2="12" y2="18"/>
-                  </svg>
-                  Download as PDF
-                </button>
+          {/* Version Mode Actions - only show when in version mode */}
+          {isVersionMode && (
+            <>
+              <div className={styles.versionIndicator}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                </svg>
+                {versionData?.versionName || 'Template Version'}
               </div>
-            )}
-          </div>
+              <button 
+                className={styles.backButton}
+                onClick={onBackToOriginal}
+                title="Return to original template"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 12H5"/>
+                  <polyline points="12,19 5,12 12,5"/>
+                </svg>
+                Back to Original
+              </button>
+              
+              <div className={styles.downloadContainer} ref={downloadRef}>
+                <button 
+                  className={styles.downloadButton}
+                  onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+                  disabled={!content.trim()}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15" />
+                    <path d="M7 10l5 5 5-5" />
+                    <path d="M12 15V3" />
+                  </svg>
+                  Download Version
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.chevron}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                
+                {showDownloadDropdown && (
+                  <div className={styles.downloadDropdown}>
+                    <button 
+                      className={styles.downloadOption}
+                      onClick={() => handleDownload('docx')}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="21"/>
+                        <line x1="8" y1="13" x2="16" y2="21"/>
+                      </svg>
+                      Download as DOCX
+                    </button>
+                    <button 
+                      className={styles.downloadOption}
+                      onClick={() => handleDownload('pdf')}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                        <line x1="12" y1="12" x2="12" y2="18"/>
+                      </svg>
+                      Download as PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
         
         {!isEditing && (

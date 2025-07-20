@@ -17,6 +17,7 @@ interface TemplateAnalysisProps {
     userInput: string
     fieldType: string
   }>) => void
+  onVersionCreate?: (variables: Array<{ id: string; label: string; value: string; fieldType: string }>, versionName: string) => void
   onToast: (message: string, type: 'success' | 'error' | 'info') => void
 }
 
@@ -26,6 +27,7 @@ export default function TemplateAnalysis({
   onRisksUpdate,
   onTemplateUpdate,
   onVariablesUpdate,
+  onVersionCreate,
   onToast
 }: TemplateAnalysisProps) {
   const [activeTab, setActiveTab] = useState<'summary' | 'variables' | 'risks'>('summary')
@@ -428,59 +430,33 @@ export default function TemplateAnalysis({
     onToast(`Custom variable "${newVariable.label}" created successfully`, 'success')
   }
 
-  // Handle creating template version
+  // Handle creating template version - switch to version mode
   const handleCreateVersion = async () => {
-    if (!template?.id) return
+    if (!template?.id || !onVersionCreate) return
     
-    setIsCreatingVersion(true)
+    // Prepare variables with values
+    const variablesWithValues = templateVariables
+      .filter(variable => variable.userInput.trim())
+      .map(variable => ({
+        id: variable.id,
+        label: variable.label,
+        value: variable.userInput,
+        fieldType: variable.fieldType
+      }))
     
-    try {
-      // Prepare version data - matching API schema
-      const versionData = {
-        templateId: template.id,
-        variables: templateVariables
-          .filter(variable => variable.userInput.trim())
-          .map(variable => ({
-            id: variable.id,
-            label: variable.label,
-            value: variable.userInput,
-            fieldType: variable.fieldType
-          })),
-        vendorName: template.title || 'Template Version', // Add vendor name
-        createdAt: new Date().toISOString()
-      }
-
-      // Create the version
-      const response = await fetch('/api/template/create-version', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(versionData),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create template version')
-      }
-
-      const result = await response.json()
-      
-      if (result.success) {
-        onToast('Template version created successfully!', 'success')
-        
-        // Clear variable inputs after successful creation
-        setTemplateVariables(prev => 
-          prev.map(variable => ({ ...variable, userInput: '' }))
-        )
-      } else {
-        throw new Error(result.message || 'Failed to create version')
-      }
-    } catch (error) {
-      console.error('Error creating template version:', error)
-      onToast('Failed to create template version. Please try again.', 'error')
-    } finally {
-      setIsCreatingVersion(false)
+    if (variablesWithValues.length === 0) {
+      onToast('Please fill in at least one variable value to create a version.', 'info')
+      return
     }
+    
+    const versionName = `Version ${new Date().toLocaleString()}`
+    
+    console.log('🎯 Creating template version with variables:', variablesWithValues)
+    
+    // Trigger version mode in parent component
+    onVersionCreate(variablesWithValues, versionName)
+    
+    onToast(`Template version "${versionName}" created! View the filled template above.`, 'success')
   }
 
   // Load template variables from analysis cache
@@ -832,9 +808,9 @@ export default function TemplateAnalysis({
                   <button 
                     className={styles.createVersionButton}
                     onClick={handleCreateVersion}
-                    disabled={!templateVariables.some(variable => variable.userInput.trim()) || isCreatingVersion}
+                    disabled={!templateVariables.some(variable => variable.userInput.trim())}
                   >
-                    {isCreatingVersion ? 'Creating Version...' : 'Create Template Version'}
+                    Create Template Version
                   </button>
                 </div>
               </>

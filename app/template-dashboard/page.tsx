@@ -28,6 +28,16 @@ function TemplateDashboardContent() {
     userInput: string
     fieldType: string
   }>>([])
+  const [isVersionMode, setIsVersionMode] = useState(false)
+  const [versionData, setVersionData] = useState<{
+    variables: Array<{
+      id: string
+      label: string
+      value: string
+      fieldType: string
+    }>
+    versionName: string
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [mobileView, setMobileView] = useState<MobileView>('list')
@@ -186,6 +196,20 @@ function TemplateDashboardContent() {
   // Handle risks update from analysis component
   const handleRisksUpdate = useCallback((risks: any[]) => {
     setTemplateRisks(risks)
+  }, [])
+
+  // Handle version creation - switch to version mode
+  const handleVersionCreate = useCallback((variables: Array<{ id: string; label: string; value: string; fieldType: string }>, versionName: string) => {
+    console.log('🔄 Switching to version mode with variables:', variables)
+    setVersionData({ variables, versionName })
+    setIsVersionMode(true)
+  }, [])
+
+  // Handle back to original - switch back to template mode
+  const handleBackToOriginal = useCallback(() => {
+    console.log('🔄 Switching back to original template mode')
+    setIsVersionMode(false)
+    setVersionData(null)
   }, [])
 
   // Handle template content changes
@@ -378,6 +402,9 @@ function TemplateDashboardContent() {
                   template={selectedTemplate}
                   risks={templateRisks}
                   templateVariables={templateVariables}
+                  isVersionMode={isVersionMode}
+                  versionData={versionData}
+                  onBackToOriginal={handleBackToOriginal}
                   onContentChange={handleTemplateContentChange}
                   onRiskClick={(riskId) => {
                     // Switch to analysis view on mobile when risk is clicked
@@ -419,6 +446,7 @@ function TemplateDashboardContent() {
                     setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
                   }}
                   onVariablesUpdate={setTemplateVariables}
+                  onVersionCreate={handleVersionCreate}
                   onToast={toast}
                 />
               </div>
