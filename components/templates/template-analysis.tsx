@@ -63,7 +63,17 @@ export default function TemplateAnalysis({
           // Update template with new analysis results
           const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
           onTemplateUpdate(updatedTemplate)
-          onToast('Template analysis completed successfully!', 'success')
+          
+          // Check if smart filtering was applied and show appropriate message
+          const riskData = statusData.riskData || template.analysis_cache?.risks
+          const duplicatesFiltered = riskData?.duplicatesFiltered || 0
+          const smartFilteringApplied = riskData?.smartFilteringApplied || false
+          
+          if (smartFilteringApplied && duplicatesFiltered > 0) {
+            onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
+          } else {
+            onToast('Template analysis completed successfully!', 'success')
+          }
         } else if (statusData.status === 'failed') {
           setAnalyzing(false)
           setAnalysisProgress(0)
@@ -184,20 +194,127 @@ export default function TemplateAnalysis({
   }
 
   // Handle scrolling to specific occurrence
-  const handleScrollToOccurrence = (variable: MissingInfoItem, occurrenceIndex: number) => {
+  const handleScrollToOccurrence = useCallback((variable: MissingInfoItem, occurrenceIndex: number) => {
     const occurrence = variable.occurrences[occurrenceIndex]
     if (!occurrence) return
 
-    // Create a unique identifier for this occurrence
-    const occurrenceId = `${variable.id}-occurrence-${occurrenceIndex}`
+    // Close the overlay immediately for better UX
+    setShowOccurrencesList(false)
+    setSelectedVariable(null)
     
-    // Use the global scroll function if available
-    if (typeof window !== 'undefined' && (window as any).scrollToTemplateRisk) {
-      (window as any).scrollToTemplateRisk(occurrenceId)
-    }
+    // Find the text in the template editor and scroll to it
+    setTimeout(() => {
+      // Get the template editor content area
+      const templateEditor = document.querySelector('[data-template-editor]')
+      if (!templateEditor) {
+        onToast('Template editor not found', 'error')
+        return
+      }
+      
+      // Create a temporary highlight element for this occurrence
+      const walker = document.createTreeWalker(
+        templateEditor,
+        NodeFilter.SHOW_TEXT,
+        null
+      )
+      
+      let currentNode: Node | null
+      let currentPosition = 0
+      let targetNode: Node | null = null
+      let targetOffset = 0
+      
+      // Walk through text nodes to find the occurrence position
+      while (currentNode = walker.nextNode()) {
+        const nodeText = currentNode.textContent || ''
+        const nodeLength = nodeText.length
+        
+        // Check if our target position falls within this text node
+        if (occurrence.position && 
+            occurrence.position.start >= currentPosition && 
+            occurrence.position.start < currentPosition + nodeLength) {
+          targetNode = currentNode
+          targetOffset = occurrence.position.start - currentPosition
+          break
+        }
+        
+        currentPosition += nodeLength
+      }
+      
+      if (targetNode) {
+        // Create a range to highlight the text
+        const range = document.createRange()
+        const endOffset = Math.min(
+          targetOffset + (occurrence.text?.length || 0),
+          (targetNode.textContent || '').length
+        )
+        
+        try {
+          range.setStart(targetNode, targetOffset)
+          range.setEnd(targetNode, endOffset)
+          
+          // Create a temporary highlight span
+          const highlightSpan = document.createElement('span')
+          highlightSpan.style.cssText = `
+            background: linear-gradient(135deg, #fef3c7, #fcd34d);
+            color: #92400e;
+            padding: 2px 4px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+            font-weight: 600;
+            animation: variableHighlight 3s ease-in-out;
+          `
+          highlightSpan.setAttribute('data-temp-highlight', 'true')
+          
+          // Add CSS animation if not already present
+          if (!document.querySelector('#variableHighlightStyle')) {
+            const style = document.createElement('style')
+            style.id = 'variableHighlightStyle'
+            style.textContent = `
+              @keyframes variableHighlight {
+                0%, 100% { transform: scale(1); background: linear-gradient(135deg, #fef3c7, #fcd34d); }
+                25% { transform: scale(1.05); background: linear-gradient(135deg, #fde68a, #f59e0b); }
+                50% { transform: scale(1.02); background: linear-gradient(135deg, #fbbf24, #d97706); }
+                75% { transform: scale(1.05); background: linear-gradient(135deg, #fde68a, #f59e0b); }
+              }
+            `
+            document.head.appendChild(style)
+          }
+          
+          // Wrap the text in the highlight span
+          range.surroundContents(highlightSpan)
+          
+          // Scroll to the highlighted element
+          highlightSpan.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          })
+          
+          // Remove the highlight after 4 seconds
+          setTimeout(() => {
+            if (highlightSpan.parentNode) {
+              const parent = highlightSpan.parentNode
+              while (highlightSpan.firstChild) {
+                parent.insertBefore(highlightSpan.firstChild, highlightSpan)
+              }
+              parent.removeChild(highlightSpan)
+            }
+          }, 4000)
+          
+          onToast(`Found occurrence ${occurrenceIndex + 1} of "${variable.label}"`, 'success')
+          
+        } catch (error) {
+          console.warn('Could not highlight occurrence:', error)
+          // Fallback: just scroll to the general area
+          templateEditor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          onToast(`Scrolled to template area for "${variable.label}"`, 'info')
+        }
+      } else {
+        onToast(`Could not locate occurrence ${occurrenceIndex + 1} of "${variable.label}"`, 'error')
+      }
+    }, 300) // Small delay to allow modal to close
     
-    onToast(`Scrolled to occurrence ${occurrenceIndex + 1} of "${variable.label}"`, 'success')
-  }
+  }, [onToast])
 
   // Handle adding new variable from selected text
   const handleAddVariable = (selectedText: string, position: { start: number; end: number }) => {
@@ -497,10 +614,38 @@ export default function TemplateAnalysis({
                 <button
                   className={`${styles.editModeButton} ${isEditMode ? styles.active : ''}`}
                   onClick={handleToggleEditMode}
-                  title={isEditMode ? 'Exit edit mode' : 'Enter edit mode to add variables by selecting text'}
+                  title={isEditMode ? 'Exit variable creation mode' : 'Enter variable creation mode to add variables by selecting text'}
                 >
-                  {isEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Mode'}
+                  {isEditMode ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Exit Variable Mode
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                        <path d="M12 4v16m8-8H4"/>
+                      </svg>
+                      Create Variables
+                    </>
+                  )}
                 </button>
+                {templateVariables.length > 0 && (
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#6b7280', 
+                    padding: '4px 8px',
+                    background: '#f3f4f6',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>{templateVariables.length} variable{templateVariables.length !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
               </div>
             </div>
             {analyzing ? (
@@ -543,6 +688,10 @@ export default function TemplateAnalysis({
                         onClick={() => handleViewOccurrences(variable)}
                         title="View all occurrences of this variable in the template"
                       >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
                         View Occurrences
                       </button>
                     </div>
@@ -603,6 +752,28 @@ export default function TemplateAnalysis({
           <div className={styles.risks}>
             <div className={styles.riskAnalysisHeader}>
               <h3 className={styles.riskAnalysisTitle}>Template Risk Analysis</h3>
+              
+              {/* Smart Filtering Notification */}
+              {template.analysis_cache?.risks?.smartFilteringApplied && (
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                  border: '1px solid #0ea5e9',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2">
+                    <path d="M9 12l2 2 4-4"></path>
+                    <circle cx="12" cy="12" r="10"></circle>
+                  </svg>
+                  <div style={{ fontSize: '13px', color: '#075985' }}>
+                    <strong>🎯 Smart Risk Detection:</strong> {template.analysis_cache.risks.duplicatesFiltered || 0} duplicate risk{(template.analysis_cache.risks.duplicatesFiltered || 0) !== 1 ? 's' : ''} filtered from {template.analysis_cache.risks.originalRisksFound || 0} originally detected.
+                  </div>
+                </div>
+              )}
               
               <div className={styles.overallRiskScore}>
                 <span className={styles.overallScoreLabel}>Overall Risk Score</span>
@@ -701,8 +872,29 @@ export default function TemplateAnalysis({
                 ))}
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1', minHeight: '250px', color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
-                <p>No active risks found. {hasAnalysis ? 'All risks have been resolved.' : 'Run analysis to identify potential template risks.'}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: '1', minHeight: '250px', color: '#6b7280', textAlign: 'center', gap: '16px' }}>
+                {hasAnalysis ? (
+                  <>
+                    <div style={{ fontSize: '48px' }}>✅</div>
+                    <div>
+                      <p style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#374151' }}>No Active Risks Found</p>
+                      <p style={{ fontSize: '14px', fontStyle: 'italic', margin: '0', lineHeight: '1.5' }}>
+                        {template.analysis_cache?.risks?.smartFilteringApplied 
+                          ? `All risks have been resolved or filtered as duplicates. ${template.analysis_cache.risks.duplicatesFiltered || 0} duplicate${(template.analysis_cache.risks.duplicatesFiltered || 0) !== 1 ? 's' : ''} were automatically filtered.`
+                          : 'All risks have been resolved or no risks were detected in this template.'
+                        }
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '48px' }}>🔍</div>
+                    <div>
+                      <p style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#374151' }}>No Risk Analysis Yet</p>
+                      <p style={{ fontSize: '14px', fontStyle: 'italic', margin: '0', lineHeight: '1.5' }}>Run analysis to identify potential template risks and get AI-powered insights.</p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -731,26 +923,49 @@ export default function TemplateAnalysis({
 
       </div>
 
-      {/* Variable Occurrences Modal */}
+      {/* Variable Occurrences Overlay - Enhanced UX */}
       {showOccurrencesList && selectedVariable && (
         <div className={styles.modal} onClick={() => setShowOccurrencesList(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>Variable Occurrences: {selectedVariable.label}</h3>
+              <div>
+                <h3>Variable Occurrences: {selectedVariable.label}</h3>
+                <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+                  Click any occurrence to scroll to it in the template
+                </div>
+              </div>
               <button
                 className={styles.closeButton}
                 onClick={() => setShowOccurrencesList(false)}
-                title="Close"
+                title="Close overlay"
               >
-                ×
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
             
             <div className={styles.modalBody}>
-              <p className={styles.modalDescription}>
-                Found {selectedVariable.occurrences.length} occurrence{selectedVariable.occurrences.length !== 1 ? 's' : ''} of this variable in the template.
-                Click on any occurrence to scroll to it in the template.
-              </p>
+              <div style={{
+                padding: '12px 16px',
+                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                border: '1px solid #0ea5e9',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="12 6v6l4 2"></path>
+                </svg>
+                <div style={{ fontSize: '13px', color: '#075985' }}>
+                  Found <strong>{selectedVariable.occurrences.length}</strong> occurrence{selectedVariable.occurrences.length !== 1 ? 's' : ''} of this variable. 
+                  The overlay will close automatically when you click to scroll.
+                </div>
+              </div>
               
               <div className={styles.occurrencesList}>
                 {selectedVariable.occurrences.map((occurrence, index) => (
@@ -758,39 +973,59 @@ export default function TemplateAnalysis({
                     key={index}
                     className={styles.occurrenceItem}
                     onClick={() => handleScrollToOccurrence(selectedVariable, index)}
+                    title={`Click to scroll to occurrence ${index + 1}`}
                   >
                     <div className={styles.occurrenceHeader}>
                       <span className={styles.occurrenceNumber}>#{index + 1}</span>
                       <span className={styles.occurrenceText}>"{occurrence.text}"</span>
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className={styles.scrollToIcon}
-                      >
-                        <path d="M9 18l6-6-6-6"/>
-                      </svg>
-                    </div>
-                    {occurrence.position && (
-                      <div className={styles.occurrencePosition}>
-                        Position: {occurrence.position.start} - {occurrence.position.end}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {occurrence.position && (
+                          <span style={{ 
+                            fontSize: '11px', 
+                            color: '#6b7280', 
+                            background: '#f3f4f6',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontFamily: 'monospace'
+                          }}>
+                            pos: {occurrence.position.start}-{occurrence.position.end}
+                          </span>
+                        )}
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className={styles.scrollToIcon}
+                        >
+                          <path d="M9 18l6-6-6-6"/>
+                        </svg>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
             
             <div className={styles.modalFooter}>
-              <button
-                className={styles.modalCloseButton}
-                onClick={() => setShowOccurrencesList(false)}
-              >
-                Close
-              </button>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                width: '100%'
+              }}>
+                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                  💡 Tip: The overlay closes automatically when you scroll to an occurrence
+                </div>
+                <button
+                  className={styles.modalCloseButton}
+                  onClick={() => setShowOccurrencesList(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

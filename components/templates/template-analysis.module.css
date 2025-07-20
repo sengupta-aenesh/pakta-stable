@@ -52,7 +52,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #3B82F6, #1D4ED8);
+  background: linear-gradient(90deg, #111827, #374151);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -89,9 +89,9 @@
 }
 
 .tab.active {
-  color: #2563EB;
+  color: #111827;
   background: white;
-  border-bottom-color: #2563EB;
+  border-bottom-color: #111827;
 }
 
 .tabContent {
@@ -142,14 +142,14 @@
 }
 
 .editModeButton:hover {
-  border-color: #2563EB;
-  color: #2563EB;
+  border-color: #111827;
+  color: #111827;
 }
 
 .editModeButton.active {
-  background: #2563EB;
+  background: #111827;
   color: white;
-  border-color: #2563EB;
+  border-color: #111827;
 }
 
 .variableItem {
@@ -185,9 +185,9 @@
 
 .viewOccurrencesButton {
   font-size: 0.75rem;
-  color: #2563EB;
-  background: #EBF5FF;
-  border: 1px solid #BFDBFE;
+  color: #111827;
+  background: #F3F4F6;
+  border: 1px solid #D1D5DB;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   cursor: pointer;
@@ -195,8 +195,8 @@
 }
 
 .viewOccurrencesButton:hover {
-  background: #DBEAFE;
-  border-color: #93C5FD;
+  background: #E5E7EB;
+  border-color: #9CA3AF;
 }
 
 .variableDescription {
@@ -237,13 +237,13 @@
 
 .variableInput:focus {
   outline: none;
-  border-color: #2563EB;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
 }
 
 .previewContainer {
-  background: #F0F9FF;
-  border: 1px solid #BAE6FD;
+  background: #F9FAFB;
+  border: 1px solid #D1D5DB;
   border-radius: 6px;
   padding: 0.75rem;
   margin-top: 0.5rem;
@@ -251,7 +251,7 @@
 
 .previewNote {
   font-size: 0.75rem;
-  color: #0369A1;
+  color: #374151;
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
@@ -284,7 +284,7 @@
   width: 100%;
   max-width: 320px;
   padding: 0.75rem 1.5rem;
-  background: #2563EB;
+  background: #111827;
   color: white;
   border: none;
   border-radius: 8px;
@@ -296,7 +296,7 @@
 }
 
 .createVersionButton:hover:not(:disabled) {
-  background: #1D4ED8;
+  background: #374151;
 }
 
 .createVersionButton:disabled {
@@ -418,7 +418,7 @@
 
 .occurrenceItem:hover {
   background: #F3F4F6;
-  border-color: #2563EB;
+  border-color: #111827;
   transform: translateY(-1px);
 }
 
@@ -430,7 +430,7 @@
 }
 
 .occurrenceNumber {
-  background: #2563EB;
+  background: #111827;
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
@@ -452,7 +452,7 @@
 }
 
 .scrollToIcon {
-  color: #2563EB;
+  color: #111827;
   opacity: 0.7;
   transition: opacity 0.2s;
 }
@@ -1182,4 +1182,76 @@
     padding: 0;
     margin: 0 16px 16px 16px;
   }
+}
+
+/* Enhanced Variable Occurrence Scrolling */
+.occurrenceItem {
+  position: relative;
+  overflow: hidden;
+}
+
+.occurrenceItem::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(17, 24, 39, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.occurrenceItem:hover::before {
+  left: 100%;
+}
+
+/* Variable highlight animation for scrolling */
+@keyframes variableHighlight {
+  0%, 100% { 
+    transform: scale(1); 
+    background: linear-gradient(135deg, #fef3c7, #fcd34d);
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+  }
+  25% { 
+    transform: scale(1.05); 
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+  }
+  50% { 
+    transform: scale(1.02); 
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+  }
+  75% { 
+    transform: scale(1.05); 
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+  }
+}
+
+/* Enhanced modal close button */
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.closeButton:hover {
+  transform: scale(1.1);
+}
+
+/* Enhanced view occurrences button */
+.viewOccurrencesButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.viewOccurrencesButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

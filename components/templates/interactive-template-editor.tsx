@@ -131,6 +131,8 @@ export default function InteractiveTemplateEditor({
   const [showToolbar, setShowToolbar] = useState(false)
   const [scrollPosition, setScrollPosition] = useState(0)
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false)
+  const [isVariableMode, setIsVariableMode] = useState(false)
+  const [variableSelectionEnabled, setVariableSelectionEnabled] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const downloadRef = useRef<HTMLDivElement>(null)
@@ -413,9 +415,59 @@ export default function InteractiveTemplateEditor({
     }
   }, [scrollToRisk, template])
 
+  // Handle variable creation from selected text
+  const handleCreateVariable = useCallback((selectedText: string, position: { start: number; end: number }) => {
+    if (!selectedText.trim()) return
+    
+    // Check if global variable creation function is available from analysis component
+    if (typeof window !== 'undefined' && (window as any).addTemplateVariable) {
+      (window as any).addTemplateVariable(selectedText, position)
+      
+      // Replace selected text with variable placeholder
+      const variableId = `var-${Date.now()}`
+      const placeholder = `{{${selectedText.substring(0, 20).replace(/\s+/g, '_').toUpperCase()}}}`
+      
+      // Update content with variable placeholder
+      const beforeText = content.substring(0, position.start)
+      const afterText = content.substring(position.end)
+      const newContent = beforeText + placeholder + afterText
+      
+      setContent(newContent)
+      setEditingContent(newContent)
+      onContentChange(newContent)
+      
+      // Clear selection
+      setShowToolbar(false)
+      setTextSelection(null)
+      window.getSelection()?.removeAllRanges()
+    }
+  }, [content, onContentChange])
+
+  // Listen for variable mode changes from analysis component
+  useEffect(() => {
+    const handleVariableModeChange = (event: CustomEvent) => {
+      const { enabled } = event.detail
+      setVariableSelectionEnabled(enabled)
+      console.log('Variable selection mode changed:', enabled)
+      
+      if (enabled) {
+        setShowToolbar(false)
+        setTextSelection(null)
+      }
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('templateVariableModeChange', handleVariableModeChange as EventListener)
+      
+      return () => {
+        window.removeEventListener('templateVariableModeChange', handleVariableModeChange as EventListener)
+      }
+    }
+  }, [])
+
   // Handle text selection in the viewer
   const handleTextSelection = useCallback(() => {
-    if (isEditing) return // Don't handle selection in edit mode
+    if (isEditing && !variableSelectionEnabled) return // Don't handle selection in edit mode unless variable mode is on
     
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) {
@@ -425,7 +477,7 @@ export default function InteractiveTemplateEditor({
     }
 
     const selectedText = selection.toString().trim()
-    console.log('Template text selection detected:', selectedText)
+    console.log('Template text selection detected:', selectedText, 'Variable mode:', variableSelectionEnabled)
     
     if (selectedText.length === 0) {
       setShowToolbar(false)
@@ -444,6 +496,23 @@ export default function InteractiveTemplateEditor({
       return
     }
 
+    // If in variable selection mode, handle variable creation immediately
+    if (variableSelectionEnabled) {
+      // Calculate text position for variable creation
+      const contentElement = contentRef.current
+      if (contentElement) {
+        const contentText = contentElement.textContent || ''
+        const startOffset = range.startOffset
+        const endOffset = range.endOffset
+        
+        handleCreateVariable(selectedText, { start: startOffset, end: endOffset })
+        
+        // Clear selection after variable creation
+        selection.removeAllRanges()
+        return
+      }
+    }
+
     const rect = range.getBoundingClientRect()
     
     // Calculate toolbar position
@@ -460,7 +529,7 @@ export default function InteractiveTemplateEditor({
       range
     })
     setShowToolbar(true)
-  }, [isEditing])
+  }, [isEditing, variableSelectionEnabled, handleCreateVariable])
 
   // Add event listeners for text selection
   useEffect(() => {
@@ -475,9 +544,10 @@ export default function InteractiveTemplateEditor({
       }
     }
 
-    console.log('Setting up template editor event listeners, isEditing:', isEditing)
+    console.log('Setting up template editor event listeners, isEditing:', isEditing, 'variableMode:', variableSelectionEnabled)
 
-    if (!isEditing) {
+    // Enable selection in both view mode and when variable selection is enabled in edit mode
+    if (!isEditing || variableSelectionEnabled) {
       document.addEventListener('mouseup', handleMouseUp)
       document.addEventListener('keyup', handleKeyUp)
       
@@ -487,7 +557,7 @@ export default function InteractiveTemplateEditor({
         document.removeEventListener('keyup', handleKeyUp)
       }
     }
-  }, [handleTextSelection, isEditing])
+  }, [handleTextSelection, isEditing, variableSelectionEnabled])
 
   // Close toolbar when switching to edit mode
   useEffect(() => {
@@ -789,11 +859,19 @@ export default function InteractiveTemplateEditor({
               </span>
             )}
             <span className={styles.selectionHint}>
-              Select any text to explain or improve with AI
+              {variableSelectionEnabled 
+                ? 'Variable mode: Select text to create template variables'
+                : 'Select any text to explain or improve with AI'
+              }
             </span>
             {showToolbar && (
               <span className={styles.toolbarStatus}>
                 ✓ Toolbar active
+              </span>
+            )}
+            {variableSelectionEnabled && (
+              <span className={styles.toolbarStatus} style={{ color: '#10b981', fontWeight: '600' }}>
+                ✓ Variable creation mode active
               </span>
             )}
           </div>
@@ -802,11 +880,22 @@ export default function InteractiveTemplateEditor({
         {isEditing && (
           <div className={styles.riskInfo}>
             <span className={styles.riskCount}>
-              Editing mode - formatted content preserved
+              {variableSelectionEnabled 
+                ? 'Edit mode + Variable creation active'
+                : 'Editing mode - formatted content preserved'
+              }
             </span>
             <span className={styles.selectionHint}>
-              Click "Done Editing" to refresh risk analysis
+              {variableSelectionEnabled 
+                ? 'Select text in the template below to create variables'
+                : 'Click "Done Editing" to refresh risk analysis'
+              }
             </span>
+            {variableSelectionEnabled && (
+              <span className={styles.toolbarStatus} style={{ color: '#10b981', fontWeight: '600' }}>
+                ✓ Variable creation mode active
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -840,6 +929,7 @@ export default function InteractiveTemplateEditor({
           <div 
             ref={contentRef}
             className={styles.viewer}
+            data-template-editor="true"
           >
             <div className={styles.highlightedContent}>
               {content ? renderHighlightedContent() : (

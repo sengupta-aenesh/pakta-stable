@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { apiErrorHandler } from '@/lib/api-error-handler'
 import { captureContractError, addSentryBreadcrumb, setSentryUser } from '@/lib/sentry-utils'
-import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields } from '@/lib/openai'
+import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields, compareTemplateRisks } from '@/lib/openai'
 import { templatesApi } from '@/lib/supabase'
 
 export const POST = apiErrorHandler(async (request: NextRequest) => {
@@ -117,19 +117,63 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       templateId
     )
 
-    // Cache risk result - store complete RiskAnalysis object
+    // Get current template to check for resolved risks
+    const currentTemplate = await templatesApi.getById(templateId)
+    const resolvedRisks = currentTemplate?.resolved_risks || []
+    
+    // Smart risk comparison: filter out risks that match previously resolved ones
+    let finalRisks = riskResult.risks || []
+    let duplicatesFiltered = 0
+    
+    if (resolvedRisks.length > 0 && finalRisks.length > 0) {
+      addSentryBreadcrumb('Starting smart risk comparison', 'template', 'info', { 
+        templateId,
+        newRisksCount: finalRisks.length,
+        resolvedRisksCount: resolvedRisks.length
+      })
+      
+      await updateAnalysisStatus(templateId, 'in_progress', 50, null, 'Comparing risks with resolved history...')
+      
+      try {
+        const comparisonResult = await compareTemplateRisks(finalRisks, resolvedRisks)
+        finalRisks = comparisonResult.uniqueRisks
+        duplicatesFiltered = comparisonResult.duplicateRiskIds.length
+        
+        console.log('🎯 Smart risk filtering completed:', {
+          originalRisks: riskResult.risks?.length || 0,
+          duplicatesFiltered,
+          finalUniqueRisks: finalRisks.length
+        })
+        
+        addSentryBreadcrumb('Smart risk comparison completed', 'template', 'info', {
+          templateId,
+          duplicatesFiltered,
+          uniqueRisksRemaining: finalRisks.length
+        })
+        
+      } catch (error) {
+        console.warn('⚠️ Risk comparison failed, keeping all risks:', error)
+        // Keep all risks if comparison fails
+        finalRisks = riskResult.risks || []
+      }
+    }
+
+    // Cache risk result - store complete RiskAnalysis object with smart filtering applied
     const riskAnalysisData: any = {
       overallRiskScore: riskResult.overallRiskScore || 0,
-      totalRisksFound: riskResult.risks?.length || 0,
-      highRiskCount: riskResult.risks?.filter(r => r.riskLevel === 'high').length || 0,
-      mediumRiskCount: riskResult.risks?.filter(r => r.riskLevel === 'medium').length || 0,
-      lowRiskCount: riskResult.risks?.filter(r => r.riskLevel === 'low').length || 0,
-      risks: riskResult.risks || [],
+      totalRisksFound: finalRisks.length,
+      duplicatesFiltered: duplicatesFiltered,
+      originalRisksFound: riskResult.risks?.length || 0,
+      highRiskCount: finalRisks.filter(r => r.riskLevel === 'high').length || 0,
+      mediumRiskCount: finalRisks.filter(r => r.riskLevel === 'medium').length || 0,
+      lowRiskCount: finalRisks.filter(r => r.riskLevel === 'low').length || 0,
+      risks: finalRisks,
       recommendations: riskResult.recommendations || [],
-      executiveSummary: riskResult.executiveSummary || 'Template risk analysis completed'
+      executiveSummary: riskResult.executiveSummary || 'Template risk analysis completed',
+      smartFilteringApplied: resolvedRisks.length > 0
     }
     await templatesApi.updateAnalysisCache(templateId, 'risks', riskAnalysisData)
-    await updateAnalysisStatus(templateId, 'risks_complete', 66, null, 'Risk analysis complete')
+    await updateAnalysisStatus(templateId, 'risks_complete', 66, null, `Risk analysis complete${duplicatesFiltered > 0 ? ` (${duplicatesFiltered} duplicates filtered)` : ''}`)
 
     // Step 3: Template Field Analysis (Progress: 66% -> 100%)
     addSentryBreadcrumb('Starting template field analysis', 'template', 'info', { templateId })
@@ -159,10 +203,15 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       success: true,
       progress: 100,
       status: 'complete',
-      message: 'Template analysis completed successfully - template fields, risks, and version control analyzed',
+      message: `Template analysis completed successfully - template fields, risks${duplicatesFiltered > 0 ? ` (${duplicatesFiltered} duplicates filtered)` : ''}, and version control analyzed`,
       results: {
         summary: summaryResult,
-        risks: riskResult,
+        risks: {
+          ...riskResult,
+          risks: finalRisks,
+          smartFilteringApplied: resolvedRisks.length > 0,
+          duplicatesFiltered: duplicatesFiltered
+        },
         complete: completeResult
       }
     }

@@ -2263,3 +2263,131 @@ BE COMPREHENSIVE - Don't miss any blanks! Every underscore pattern should be ide
     throw new Error(`Missing info extraction failed: ${error.message}`)
   }
 }
+
+// Template-specific AI function to compare newly identified risks with previously resolved risks
+export async function compareTemplateRisks(
+  newRisks: any[], 
+  resolvedRisks: any[]
+): Promise<{ duplicateRiskIds: string[], uniqueRisks: any[] }> {
+  if (\!newRisks || newRisks.length === 0) {
+    return { duplicateRiskIds: [], uniqueRisks: [] }
+  }
+  
+  if (\!resolvedRisks || resolvedRisks.length === 0) {
+    return { duplicateRiskIds: [], uniqueRisks: newRisks }
+  }
+
+  try {
+    console.log("🔍 Comparing template risks:", {
+      newRisksCount: newRisks.length,
+      resolvedRisksCount: resolvedRisks.length
+    })
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert AI assistant specialized in comparing template contract risks. Your task is to determine if newly identified risks are the same as previously resolved risks.
+
+IMPORTANT INSTRUCTIONS:
+- Compare risks by their MEANING and INTENT, not exact wording
+- Consider risks the same if they address the identical legal concern or template flaw
+- Even if wording is different, risks about the same clause/section should be considered duplicates
+- Be strict but reasonable - only mark as duplicates if they truly represent the same underlying risk
+
+You will receive:
+1. A list of newly identified risks from template analysis
+2. A list of previously resolved risks that the user has already addressed
+
+For each new risk, determine if it matches any resolved risk. Return a JSON object with:
+{
+  "comparisons": [
+    {
+      "newRiskId": "string",
+      "newRiskSummary": "brief description of the new risk",
+      "isDuplicate": boolean,
+      "matchedResolvedRisk": "description of matched resolved risk"  < /dev/null |  null,
+      "reasoning": "explanation of why this is/isn't a duplicate"
+    }
+  ],
+  "summary": {
+    "totalNewRisks": number,
+    "duplicatesFound": number,
+    "uniqueNewRisks": number
+  }
+}
+
+Be thorough but efficient in your analysis.`
+        },
+        {
+          role: "user",
+          content: `Please compare these newly identified template risks with previously resolved risks:
+
+NEWLY IDENTIFIED RISKS:
+${JSON.stringify(newRisks.map((risk, index) => ({
+  id: risk.id || `new-risk-${index}`,
+  category: risk.category || "General",
+  clause: risk.clause || "",
+  explanation: risk.explanation || "",
+  riskLevel: risk.riskLevel || "medium",
+  suggestion: risk.suggestion || ""
+})), null, 2)}
+
+PREVIOUSLY RESOLVED RISKS:
+${JSON.stringify(resolvedRisks.map((risk, index) => ({
+  id: risk.id || `resolved-risk-${index}`,
+  category: risk.category || "General", 
+  clause: risk.clause || "",
+  explanation: risk.explanation || "",
+  riskLevel: risk.riskLevel || "medium",
+  resolvedAt: risk.resolvedAt || "unknown"
+})), null, 2)}
+
+Analyze each new risk and determine if it's a duplicate of any resolved risk. Return the comparison results in the specified JSON format.`
+        }
+      ],
+      max_completion_tokens: 4000,
+      temperature: 0.1
+    })
+
+    const result = JSON.parse(response.choices[0].message.content || "{}")
+    
+    // Extract duplicate risk IDs and unique risks
+    const duplicateRiskIds: string[] = []
+    const uniqueRisks: any[] = []
+    
+    result.comparisons?.forEach((comparison: any) => {
+      if (comparison.isDuplicate) {
+        duplicateRiskIds.push(comparison.newRiskId)
+      } else {
+        // Find the original risk object for unique risks
+        const originalRisk = newRisks.find(risk => 
+          (risk.id || `new-risk-${newRisks.indexOf(risk)}`) === comparison.newRiskId
+        )
+        if (originalRisk) {
+          uniqueRisks.push(originalRisk)
+        }
+      }
+    })
+
+    console.log("✅ Template risk comparison completed:", {
+      duplicatesFound: duplicateRiskIds.length,
+      uniqueRisks: uniqueRisks.length,
+      totalProcessed: result.comparisons?.length || 0
+    })
+
+    return {
+      duplicateRiskIds,
+      uniqueRisks
+    }
+
+  } catch (error) {
+    console.error("❌ Template risk comparison failed:", error)
+    // On error, return all risks as unique to avoid hiding potentially important risks
+    return {
+      duplicateRiskIds: [],
+      uniqueRisks: newRisks
+    }
+  }
+}
