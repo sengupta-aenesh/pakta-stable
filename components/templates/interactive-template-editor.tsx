@@ -294,8 +294,38 @@ export default function InteractiveTemplateEditor({
       }
     }
     
+    // Strategy 6: Try finding the clause in smaller chunks (for template-specific text)
+    const clauseWords = clause.split(/\s+/).filter(w => w.length > 2)
+    if (clauseWords.length >= 2) {
+      // Find the most distinctive phrase (longest words)
+      const distinctivePhrase = clauseWords
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 3)
+        .join(' ')
+      
+      const distinctiveIndex = lowerText.indexOf(distinctivePhrase.toLowerCase())
+      if (distinctiveIndex !== -1) {
+        const approximateStart = Math.max(0, distinctiveIndex - 50)
+        const approximateEnd = Math.min(text.length, distinctiveIndex + clause.length + 50)
+        console.log(`📍 Template fallback: Found distinctive phrase "${distinctivePhrase}" at position ${distinctiveIndex}`)
+        return { start: approximateStart, end: approximateEnd }
+      }
+    }
+    
+    // Strategy 7: Last resort - find any significant word from the clause
+    const significantWords = clauseWords.filter(w => w.length > 4)
+    if (significantWords.length > 0) {
+      const firstSignificantWord = significantWords[0]
+      const wordIndex = lowerText.indexOf(firstSignificantWord.toLowerCase())
+      if (wordIndex !== -1) {
+        console.log(`📍 Template last resort: Found significant word "${firstSignificantWord}" at position ${wordIndex}`)
+        return { start: wordIndex, end: Math.min(wordIndex + clause.length, text.length) }
+      }
+    }
+    
     // If no match found, return position at start (graceful degradation)
-    return { start: 0, end: clause.length }
+    console.warn(`❌ Template highlighting: No match found for clause: "${clause.substring(0, 50)}..."`)
+    return { start: 0, end: Math.min(clause.length, text.length) }
   }, [])
 
   // Load pre-mapped risks from backend
@@ -309,21 +339,33 @@ export default function InteractiveTemplateEditor({
     
     if (content && risks.length > 0) {
       console.log('📍 Using cached template risk data...')
-      const cachedHighlights: RiskHighlight[] = risks.map((risk, index) => ({
-        id: risk.id || `template-risk-${index}`,
-        clause: risk.clause || '',
-        clauseLocation: risk.clauseLocation || '',
-        riskLevel: risk.riskLevel || 'medium',
-        riskScore: risk.riskScore || 5,
-        category: risk.category || 'General',
-        explanation: risk.explanation || '',
-        suggestion: risk.suggestion || '',
-        legalPrecedent: risk.legalPrecedent,
-        affectedParty: risk.affectedParty || '',
-        // Use simple text search for position
-        textPosition: findSimpleTextPosition(content, risk.clause || ''),
-        elementId: `template-risk-highlight-${risk.id || index}`
-      }))
+      const cachedHighlights: RiskHighlight[] = risks.map((risk, index) => {
+        const clause = risk.clause || ''
+        const position = findSimpleTextPosition(content, clause)
+        
+        // Debug logging for template highlighting
+        console.log(`🔍 Template Risk ${index + 1}:`, {
+          clause: clause.substring(0, 100) + (clause.length > 100 ? '...' : ''),
+          position,
+          found: position.start !== 0 || position.end !== clause.length
+        })
+        
+        return {
+          id: risk.id || `template-risk-${index}`,
+          clause: clause,
+          clauseLocation: risk.clauseLocation || '',
+          riskLevel: risk.riskLevel || 'medium',
+          riskScore: risk.riskScore || 5,
+          category: risk.category || 'General',
+          explanation: risk.explanation || '',
+          suggestion: risk.suggestion || '',
+          legalPrecedent: risk.legalPrecedent,
+          affectedParty: risk.affectedParty || '',
+          // Use robust text search for position
+          textPosition: position,
+          elementId: `template-risk-highlight-${risk.id || index}`
+        }
+      })
       
       console.log('✅ Setting template risk highlights:', cachedHighlights.length, 'highlights loaded')
       setRiskHighlights(cachedHighlights)

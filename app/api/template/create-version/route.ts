@@ -33,12 +33,45 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 })
     }
 
+    // Generate template content with variables replaced
+    let generatedContent = template.content || ''
+    
+    // Replace variables in template content
+    variables.forEach((variable: any) => {
+      if (variable.value && variable.value.trim()) {
+        // Try multiple replacement patterns to be thorough
+        const patterns = [
+          new RegExp(`\\[${variable.label}\\]`, 'gi'),
+          new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
+          new RegExp(`<${variable.label}>`, 'gi'),
+          new RegExp(`_${variable.label}_`, 'gi'),
+          new RegExp(`\\$\\{${variable.label}\\}`, 'gi')
+        ]
+        
+        patterns.forEach(pattern => {
+          generatedContent = generatedContent.replace(pattern, variable.value)
+        })
+        
+        // Also replace with variable ID patterns for custom variables
+        if (variable.id) {
+          const idPatterns = [
+            new RegExp(`\\[${variable.id}\\]`, 'gi'),
+            new RegExp(`\\{\\{${variable.id}\\}\\}`, 'gi')
+          ]
+          idPatterns.forEach(pattern => {
+            generatedContent = generatedContent.replace(pattern, variable.value)
+          })
+        }
+      }
+    })
+
     // Create template version with variables - matching database schema
     const versionData = {
       template_id: templateId,
       version_name: `Version ${new Date().toLocaleString()}`,
       vendor_name: vendorName || 'Default Vendor', // Required field in schema
-      version_data: variables, // Correct field name from schema
+      version_data: variables, // Variable definitions
+      generated_content: generatedContent, // Actual template with variables replaced
       created_at: createdAt || new Date().toISOString(),
       created_by: user.id
     }
