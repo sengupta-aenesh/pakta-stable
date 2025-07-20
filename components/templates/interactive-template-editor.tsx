@@ -110,6 +110,12 @@ interface InteractiveTemplateEditorProps {
   onReanalyzeRisks?: (() => Promise<void>) | null
   onRegisterUpdateFunction?: (updateFunction: (content: string | null) => void) => void
   className?: string
+  templateVariables?: Array<{
+    id: string
+    label: string
+    userInput: string
+    fieldType: string
+  }>
 }
 
 export default function InteractiveTemplateEditor({
@@ -121,7 +127,8 @@ export default function InteractiveTemplateEditor({
   onComment,
   onReanalyzeRisks,
   onRegisterUpdateFunction,
-  className
+  className,
+  templateVariables = []
 }: InteractiveTemplateEditorProps) {
   const [content, setContent] = useState('')
   const [editingContent, setEditingContent] = useState('') // Separate state for editing
@@ -375,10 +382,47 @@ export default function InteractiveTemplateEditor({
     }
   }, [content, risks, findSimpleTextPosition])
 
-  // Get formatted content for display
+  // Apply variable replacement to content
+  const applyVariableReplacement = useCallback((baseContent: string) => {
+    let processedContent = baseContent
+    
+    // Apply variable replacements for variables that have values
+    templateVariables.forEach(variable => {
+      if (variable.userInput && variable.userInput.trim()) {
+        // Try multiple replacement patterns to be thorough
+        const patterns = [
+          new RegExp(`\\[${variable.label}\\]`, 'gi'),
+          new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
+          new RegExp(`<${variable.label}>`, 'gi'),
+          new RegExp(`_${variable.label}_`, 'gi'),
+          new RegExp(`\\$\\{${variable.label}\\}`, 'gi')
+        ]
+        
+        patterns.forEach(pattern => {
+          processedContent = processedContent.replace(pattern, variable.userInput)
+        })
+        
+        // Also replace with variable ID patterns for custom variables
+        if (variable.id) {
+          const idPatterns = [
+            new RegExp(`\\[${variable.id}\\]`, 'gi'),
+            new RegExp(`\\{\\{${variable.id}\\}\\}`, 'gi')
+          ]
+          idPatterns.forEach(pattern => {
+            processedContent = processedContent.replace(pattern, variable.userInput)
+          })
+        }
+      }
+    })
+    
+    return processedContent
+  }, [templateVariables])
+
+  // Get formatted content for display with variable replacement
   const getFormattedContent = useCallback(() => {
-    return beautifyContent(content)
-  }, [content, beautifyContent])
+    const baseContent = beautifyContent(content)
+    return applyVariableReplacement(baseContent)
+  }, [content, beautifyContent, applyVariableReplacement])
 
   // Function to render content with risk highlights
   const renderHighlightedContent = useCallback(() => {

@@ -11,6 +11,12 @@ interface TemplateAnalysisProps {
   risks: any[]
   onRisksUpdate: (risks: any[]) => void
   onTemplateUpdate: (template: Template) => void
+  onVariablesUpdate?: (variables: Array<{
+    id: string
+    label: string
+    userInput: string
+    fieldType: string
+  }>) => void
   onToast: (message: string, type: 'success' | 'error' | 'info') => void
 }
 
@@ -19,6 +25,7 @@ export default function TemplateAnalysis({
   risks,
   onRisksUpdate,
   onTemplateUpdate,
+  onVariablesUpdate,
   onToast
 }: TemplateAnalysisProps) {
   const [activeTab, setActiveTab] = useState<'summary' | 'variables' | 'risks'>('summary')
@@ -186,11 +193,24 @@ export default function TemplateAnalysis({
 
   // Handle variable input changes
   const handleVariableChange = (id: string, value: string) => {
-    setTemplateVariables(prev => 
-      prev.map(variable => 
+    setTemplateVariables(prev => {
+      const updated = prev.map(variable => 
         variable.id === id ? { ...variable, userInput: value } : variable
       )
-    )
+      
+      // Notify parent component of variable changes
+      if (onVariablesUpdate) {
+        const formattedVariables = updated.map(v => ({
+          id: v.id,
+          label: v.label,
+          userInput: v.userInput,
+          fieldType: v.fieldType
+        }))
+        onVariablesUpdate(formattedVariables)
+      }
+      
+      return updated
+    })
   }
 
   // Handle viewing variable occurrences
@@ -380,7 +400,22 @@ export default function TemplateAnalysis({
       }]
     }
 
-    setTemplateVariables(prev => [...prev, newVariable])
+    setTemplateVariables(prev => {
+      const updated = [...prev, newVariable]
+      
+      // Notify parent component of variable changes
+      if (onVariablesUpdate) {
+        const formattedVariables = updated.map(v => ({
+          id: v.id,
+          label: v.label,
+          userInput: v.userInput,
+          fieldType: v.fieldType
+        }))
+        onVariablesUpdate(formattedVariables)
+      }
+      
+      return updated
+    })
     
     // Reset form and close modal
     setCustomVariableForm({
@@ -451,9 +486,21 @@ export default function TemplateAnalysis({
   // Load template variables from analysis cache
   useEffect(() => {
     if (template?.analysis_cache?.complete?.missingInfo) {
-      setTemplateVariables(template.analysis_cache.complete.missingInfo)
+      const variables = template.analysis_cache.complete.missingInfo
+      setTemplateVariables(variables)
+      
+      // Notify parent component of initial variable load
+      if (onVariablesUpdate) {
+        const formattedVariables = variables.map(v => ({
+          id: v.id,
+          label: v.label,
+          userInput: v.userInput || '',
+          fieldType: v.fieldType
+        }))
+        onVariablesUpdate(formattedVariables)
+      }
     }
-  }, [template?.analysis_cache])
+  }, [template?.analysis_cache, onVariablesUpdate])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {

@@ -22,6 +22,12 @@ function TemplateDashboardContent() {
   const [selectedTemplateFolder, setSelectedTemplateFolder] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [templateRisks, setTemplateRisks] = useState<any[]>([])
+  const [templateVariables, setTemplateVariables] = useState<Array<{
+    id: string
+    label: string
+    userInput: string
+    fieldType: string
+  }>>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [mobileView, setMobileView] = useState<MobileView>('list')
@@ -371,6 +377,7 @@ function TemplateDashboardContent() {
                 <InteractiveTemplateEditor
                   template={selectedTemplate}
                   risks={templateRisks}
+                  templateVariables={templateVariables}
                   onContentChange={handleTemplateContentChange}
                   onRiskClick={(riskId) => {
                     // Switch to analysis view on mobile when risk is clicked
@@ -411,6 +418,7 @@ function TemplateDashboardContent() {
                     setSelectedTemplate(updatedTemplate)
                     setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
                   }}
+                  onVariablesUpdate={setTemplateVariables}
                   onToast={toast}
                 />
               </div>
