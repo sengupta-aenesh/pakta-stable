@@ -11,7 +11,7 @@ export const GET = apiErrorHandler(async (request: NextRequest, { params }: { pa
   }
 
   const { id } = params
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: template, error } = await supabase
     .from('templates')
@@ -33,37 +33,23 @@ export const GET = apiErrorHandler(async (request: NextRequest, { params }: { pa
 
 // PUT /api/template/[id] - Update specific template
 export const PUT = apiErrorHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
-  console.log('🚀 PUT request started for template:', params.id)
-  
   const user = await getCurrentUser()
   if (!user) {
-    console.log('❌ No user found - unauthorized')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  console.log('✅ User authenticated:', user.id)
   const { id } = params
   
   try {
     const body = await request.json()
     const { title, content, folder_id, resolved_risks } = body
 
-    console.log('📝 Template update request:', {
-      templateId: id,
-      userId: user.id,
-      hasTitle: title !== undefined,
-      hasContent: content !== undefined,
-      hasFolderId: folder_id !== undefined,
-      hasResolvedRisks: resolved_risks !== undefined,
-      resolvedRisksType: typeof resolved_risks,
-      resolvedRisksLength: Array.isArray(resolved_risks) ? resolved_risks.length : 'not array'
-    })
 
     if (title && !title.trim()) {
       return NextResponse.json({ error: 'Template title cannot be empty' }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Build update object dynamically
     const updateData: any = {
@@ -80,21 +66,7 @@ export const PUT = apiErrorHandler(async (request: NextRequest, { params }: { pa
         return NextResponse.json({ error: 'Resolved risks must be an array' }, { status: 400 })
       }
       updateData.resolved_risks = resolved_risks
-      console.log('📊 Setting resolved_risks:', resolved_risks.length, 'items')
     }
-
-    console.log('🔄 Updating template with data:', {
-      templateId: id,
-      updateFields: Object.keys(updateData),
-      resolvedRisksCount: updateData.resolved_risks?.length || 0
-    })
-
-    console.log('🔍 About to execute Supabase query:', {
-      table: 'templates',
-      templateId: id,
-      userId: user.id,
-      updateData: JSON.stringify(updateData, null, 2)
-    })
 
     const { data: template, error } = await supabase
       .from('templates')
@@ -103,12 +75,6 @@ export const PUT = apiErrorHandler(async (request: NextRequest, { params }: { pa
       .eq('user_id', user.id)
       .select()
       .single()
-
-    console.log('📊 Supabase query result:', {
-      hasData: !!template,
-      hasError: !!error,
-      errorDetails: error ? { code: error.code, message: error.message, details: error.details } : null
-    })
 
     if (error) {
       console.error('❌ Supabase error updating template:', {
@@ -130,12 +96,6 @@ export const PUT = apiErrorHandler(async (request: NextRequest, { params }: { pa
       }, { status: 500 })
     }
 
-    console.log('✅ Template updated successfully:', {
-      id: template.id,
-      title: template.title,
-      resolvedRisksCount: template.resolved_risks?.length || 0
-    })
-    
     return NextResponse.json(template)
     
   } catch (requestError) {
@@ -163,7 +123,7 @@ export const DELETE = apiErrorHandler(async (request: NextRequest, { params }: {
   }
 
   const { id } = params
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // First, delete all versions associated with this template
   const { error: versionsError } = await supabase
