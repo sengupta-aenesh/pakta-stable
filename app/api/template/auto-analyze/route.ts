@@ -209,12 +209,59 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       templateId
     )
 
-    // Cache template field result
+    // CRITICAL: Normalize template content after variable detection
+    console.log('🔧 Starting template content normalization after variable detection...')
+    
+    let normalizedContent = content
+    const detectedVariables = completeResult.missingInfo || []
+    
+    if (detectedVariables.length > 0) {
+      console.log('🔄 Normalizing', detectedVariables.length, 'detected variables to standard format')
+      
+      // Replace each detected variable with standardized format
+      detectedVariables.forEach((variable, index) => {
+        if (variable.occurrences && variable.occurrences.length > 0) {
+          variable.occurrences.forEach(occurrence => {
+            if (occurrence.text && occurrence.text.trim()) {
+              // Replace the exact occurrence text with standardized format
+              const escapedText = occurrence.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const exactTextPattern = new RegExp(escapedText, 'gi')
+              const standardizedVariable = `{{${variable.label.replace(/\s+/g, '_')}}}`
+              
+              const beforeReplace = normalizedContent
+              normalizedContent = normalizedContent.replace(exactTextPattern, standardizedVariable)
+              
+              if (beforeReplace !== normalizedContent) {
+                console.log(`✅ Normalized variable ${index + 1}:`, occurrence.text, '→', standardizedVariable)
+              }
+            }
+          })
+        }
+      })
+      
+      console.log('🔧 Template normalization completed:', {
+        originalLength: content.length,
+        normalizedLength: normalizedContent.length,
+        hasChanges: normalizedContent !== content,
+        variablesProcessed: detectedVariables.length
+      })
+      
+      // CRITICAL: Update the actual template content in the database with normalized version
+      if (normalizedContent !== content) {
+        console.log('💾 Persisting normalized template content to database...')
+        await templatesApi.update(templateId, { content: normalizedContent })
+        console.log('✅ Normalized template content saved to database')
+      }
+    } else {
+      console.log('ℹ️ No variables detected, skipping normalization')
+    }
+
+    // Cache template field result with normalized content
     await templatesApi.updateAnalysisCache(templateId, 'complete', {
       missingInfo: completeResult.missingInfo || [],
       variableSections: completeResult.variableSections || [],
       processingSteps: completeResult.processingSteps || {},
-      processedContent: completeResult.processedContent || content
+      processedContent: normalizedContent // Use normalized content
     })
 
     // Mark as complete

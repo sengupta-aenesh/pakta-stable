@@ -400,49 +400,8 @@ export default function InteractiveTemplateEditor({
     }
   }, [content, risks, findSimpleTextPosition])
 
-  // Step 1: Normalize template content by converting all detected variables to standard format
-  const normalizeTemplateContent = useCallback((baseContent: string): string => {
-    if (!templateVariables || templateVariables.length === 0) {
-      return baseContent
-    }
-    
-    let normalizedContent = baseContent
-    
-    console.log('🔧 Normalizing template with standardized variable format:', {
-      variableCount: templateVariables.length,
-      contentLength: baseContent.length
-    })
-    
-    // Convert all detected variables to standard {{Variable_Name}} format
-    templateVariables.forEach(variable => {
-      if (variable.occurrences && variable.occurrences.length > 0) {
-        variable.occurrences.forEach(occurrence => {
-          if (occurrence.text && occurrence.text.trim()) {
-            // Replace the exact occurrence text with standardized format
-            const escapedText = occurrence.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-            const exactTextPattern = new RegExp(escapedText, 'gi')
-            const standardizedVariable = `{{${variable.label.replace(/\s+/g, '_')}}}`
-            
-            const beforeReplace = normalizedContent
-            normalizedContent = normalizedContent.replace(exactTextPattern, standardizedVariable)
-            
-            if (beforeReplace !== normalizedContent) {
-              console.log('✅ Normalized variable:', occurrence.text, '→', standardizedVariable)
-            }
-          }
-        })
-      }
-    })
-    
-    console.log('🔧 Template normalization completed:', {
-      hasChanges: normalizedContent !== baseContent,
-      normalizedLength: normalizedContent.length
-    })
-    
-    return normalizedContent
-  }, [templateVariables])
-
-  // Step 2: Apply variable replacement to normalized content (only in version mode)
+  // Apply variable replacement to content (only in version mode)
+  // Note: Template content is already normalized in the database after analysis
   const applyVariableReplacement = useCallback((normalizedContent: string) => {
     if (!isVersionMode || !versionData?.variables) {
       return normalizedContent
@@ -484,28 +443,25 @@ export default function InteractiveTemplateEditor({
     return processedContent
   }, [isVersionMode, versionData])
 
-  // Get formatted content for display with systematic variable processing
+  // Get formatted content for display with variable processing
   const getFormattedContent = useCallback(() => {
     const baseContent = beautifyContent(content)
     
-    // Step 1: Always normalize the template to show standardized variables
-    const normalizedContent = normalizeTemplateContent(baseContent)
-    
-    // Step 2: If in version mode, apply user input replacements
-    const finalContent = applyVariableReplacement(normalizedContent)
+    // Content is already normalized in database after analysis
+    // In version mode, apply user input replacements to standardized variables
+    const finalContent = applyVariableReplacement(baseContent)
     
     if (isVersionMode) {
       console.log('🎯 Version mode content processing:', {
-        originalContent: baseContent.substring(0, 100) + '...',
-        normalizedContent: normalizedContent.substring(0, 100) + '...',
+        baseContent: baseContent.substring(0, 100) + '...',
         finalContent: finalContent.substring(0, 100) + '...',
-        hasNormalization: normalizedContent !== baseContent,
-        hasReplacements: finalContent !== normalizedContent
+        hasReplacements: finalContent !== baseContent,
+        variablesReplaced: versionData?.variables.filter(v => v.value?.trim()).length || 0
       })
     }
     
     return finalContent
-  }, [content, beautifyContent, normalizeTemplateContent, applyVariableReplacement, isVersionMode])
+  }, [content, beautifyContent, applyVariableReplacement, isVersionMode, versionData])
 
   // Function to render content with risk highlights
   const renderHighlightedContent = useCallback(() => {

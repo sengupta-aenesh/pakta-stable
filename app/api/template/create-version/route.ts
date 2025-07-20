@@ -34,17 +34,16 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     }
 
     // Generate template content with systematic variable replacement
-    console.log('🔄 Starting systematic template version generation:', {
+    console.log('🔄 Starting template version generation with normalized content:', {
       templateId,
       originalLength: template.content?.length || 0,
       variableCount: variables.length
     })
     
-    // CRITICAL: Work with the normalized template content that has standardized variables
-    // The frontend should already have normalized the template, but we need to handle the standardized format
+    // Template content is already normalized with standardized {{Variable_Name}} format
     let generatedContent = template.content || ''
     
-    // Replace variables using standardized format
+    // Replace standardized variables with user input
     variables.forEach((variable: any) => {
       if (variable.value && variable.value.trim()) {
         // Use the standardized variable format: {{Variable_Name}}
@@ -55,30 +54,9 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
         generatedContent = generatedContent.replace(standardizedPattern, variable.value)
         
         if (beforeReplace !== generatedContent) {
-          console.log('✅ Replaced in version:', standardizedVariable, '→', variable.value)
+          console.log('✅ Replaced standardized variable:', standardizedVariable, '→', variable.value)
         } else {
-          console.warn('⚠️ Variable not found in template for replacement:', standardizedVariable)
-          
-          // FALLBACK: If standardized format not found, try to find and replace the original occurrence
-          // This handles cases where template wasn't normalized yet
-          console.log('🔄 Attempting fallback replacement for variable:', variable.label)
-          
-          // Try common patterns as fallback
-          const fallbackPatterns = [
-            new RegExp(`\\[${variable.label}\\]`, 'gi'),
-            new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
-            new RegExp(`<${variable.label}>`, 'gi'),
-            new RegExp(`_${variable.label}_`, 'gi'),
-            new RegExp(`\\$\\{${variable.label}\\}`, 'gi')
-          ]
-          
-          fallbackPatterns.forEach(pattern => {
-            const beforeFallback = generatedContent
-            generatedContent = generatedContent.replace(pattern, variable.value)
-            if (beforeFallback !== generatedContent) {
-              console.log('✅ Fallback replacement successful:', pattern.source, '→', variable.value)
-            }
-          })
+          console.warn('⚠️ Standardized variable not found in template:', standardizedVariable)
         }
       }
     })
