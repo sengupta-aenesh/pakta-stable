@@ -295,10 +295,10 @@ export default function InteractiveTemplateEditor({
     }
     
     // Strategy 6: Try finding the clause in smaller chunks (for template-specific text)
-    const clauseWords = clause.split(/\s+/).filter(w => w.length > 2)
-    if (clauseWords.length >= 2) {
+    const templateWords = clause.split(/\s+/).filter(w => w.length > 2)
+    if (templateWords.length >= 2) {
       // Find the most distinctive phrase (longest words)
-      const distinctivePhrase = clauseWords
+      const distinctivePhrase = templateWords
         .sort((a, b) => b.length - a.length)
         .slice(0, 3)
         .join(' ')
@@ -313,7 +313,7 @@ export default function InteractiveTemplateEditor({
     }
     
     // Strategy 7: Last resort - find any significant word from the clause
-    const significantWords = clauseWords.filter(w => w.length > 4)
+    const significantWords = templateWords.filter(w => w.length > 4)
     if (significantWords.length > 0) {
       const firstSignificantWord = significantWords[0]
       const wordIndex = lowerText.indexOf(firstSignificantWord.toLowerCase())
