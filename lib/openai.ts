@@ -2269,11 +2269,11 @@ export async function compareTemplateRisks(
   newRisks: any[], 
   resolvedRisks: any[]
 ): Promise<{ duplicateRiskIds: string[], uniqueRisks: any[] }> {
-  if (\!newRisks || newRisks.length === 0) {
+  if (!newRisks || newRisks.length === 0) {
     return { duplicateRiskIds: [], uniqueRisks: [] }
   }
   
-  if (\!resolvedRisks || resolvedRisks.length === 0) {
+  if (!resolvedRisks || resolvedRisks.length === 0) {
     return { duplicateRiskIds: [], uniqueRisks: newRisks }
   }
 
@@ -2307,7 +2307,7 @@ For each new risk, determine if it matches any resolved risk. Return a JSON obje
       "newRiskId": "string",
       "newRiskSummary": "brief description of the new risk",
       "isDuplicate": boolean,
-      "matchedResolvedRisk": "description of matched resolved risk"  < /dev/null |  null,
+      "matchedResolvedRisk": "description of matched resolved risk" | null,
       "reasoning": "explanation of why this is/isn't a duplicate"
     }
   ],
@@ -2344,7 +2344,7 @@ ${JSON.stringify(resolvedRisks.map((risk, index) => ({
   resolvedAt: risk.resolvedAt || "unknown"
 })), null, 2)}
 
-Analyze each new risk and determine if it's a duplicate of any resolved risk. Return the comparison results in the specified JSON format.`
+Analyze each new risk and determine if it'\''s a duplicate of any resolved risk. Return the comparison results in the specified JSON format.`
         }
       ],
       max_completion_tokens: 4000,
