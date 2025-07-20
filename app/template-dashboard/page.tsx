@@ -182,6 +182,121 @@ function TemplateDashboardContent() {
     setTemplateRisks(risks)
   }, [])
 
+  // Handle template content changes
+  const handleTemplateContentChange = useCallback(async (content: string | null) => {
+    if (!selectedTemplate) return
+    
+    const safeContent = content || ''
+    console.log('📝 handleTemplateContentChange called:', { 
+      contentLength: safeContent.length, 
+      templateId: selectedTemplate.id,
+      wasNull: content === null
+    })
+    
+    try {
+      await templatesApi.update(selectedTemplate.id, { content: safeContent })
+      // Update the local template state
+      setSelectedTemplate(prev => prev ? { ...prev, content: safeContent } : null)
+      // Clear risks cache when content changes as it may no longer be accurate
+      setTemplateRisks([])
+      toast('Template updated successfully', 'success')
+    } catch (error) {
+      console.error('Error updating template:', error)
+      toast('Failed to update template', 'error')
+    }
+  }, [selectedTemplate, toast])
+
+  // Handle template title update with automatic saving
+  const handleTemplateTitleChange = useCallback(async (newTitle: string) => {
+    if (!selectedTemplate || !newTitle.trim()) return
+    
+    const trimmedTitle = newTitle.trim()
+    
+    // Update local state immediately for responsive UI
+    setSelectedTemplate(prev => prev ? { ...prev, title: trimmedTitle } : null)
+    
+    // Update in templates array as well
+    setTemplates(prev => prev.map(template => 
+      template.id === selectedTemplate.id 
+        ? { ...template, title: trimmedTitle }
+        : template
+    ))
+    
+    try {
+      // Save to database
+      await templatesApi.update(selectedTemplate.id, { title: trimmedTitle })
+      console.log('✅ Template title updated successfully:', trimmedTitle)
+      toast('Template title updated', 'success')
+    } catch (error) {
+      console.error('❌ Failed to update template title:', error)
+      toast('Failed to update title', 'error')
+      
+      // Revert on error
+      setSelectedTemplate(prev => prev ? { ...prev, title: selectedTemplate.title } : null)
+      setTemplates(prev => prev.map(template => 
+        template.id === selectedTemplate.id 
+          ? { ...template, title: selectedTemplate.title }
+          : template
+      ))
+    }
+  }, [selectedTemplate, toast])
+
+  // Debounced title saving to avoid saving on every keystroke
+  const titleSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const selectedTemplateRef = useRef<Template | null>(null)
+  
+  // Keep ref in sync with selectedTemplate
+  useEffect(() => {
+    selectedTemplateRef.current = selectedTemplate
+  }, [selectedTemplate])
+  
+  const handleTitleInputChange = useCallback((newTitle: string) => {
+    console.log('📝 handleTitleInputChange called with:', newTitle)
+    
+    const currentTemplate = selectedTemplateRef.current
+    if (!currentTemplate) {
+      console.log('❌ No selected template for title change')
+      return
+    }
+    
+    console.log('🔄 Updating title from', currentTemplate.title, 'to', newTitle)
+    
+    // Update local state immediately for responsive UI
+    setSelectedTemplate(prev => {
+      if (!prev) return null
+      const updated = { ...prev, title: newTitle }
+      console.log('✅ Updated selectedTemplate title:', updated.title)
+      return updated
+    })
+    
+    // Also update in templates array immediately
+    setTemplates(prev => prev.map(template => 
+      template.id === currentTemplate.id 
+        ? { ...template, title: newTitle }
+        : template
+    ))
+    
+    // Clear existing timeout
+    if (titleSaveTimeoutRef.current) {
+      clearTimeout(titleSaveTimeoutRef.current)
+    }
+    
+    // Set new timeout to save after user stops typing
+    titleSaveTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ Auto-saving title after timeout:', newTitle)
+      handleTemplateTitleChange(newTitle)
+    }, 1000) // Save 1 second after user stops typing
+  }, [handleTemplateTitleChange])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (titleSaveTimeoutRef.current) {
+        clearTimeout(titleSaveTimeoutRef.current)
+      }
+    }
+  }, [])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -192,8 +307,12 @@ function TemplateDashboardContent() {
 
   return (
     <div className={styles.dashboardContainer}>
-      {/* iOS-Style Top Navigation */}
-      <TopNavigation currentPage="template-dashboard" />
+      {/* iOS-Style Top Navigation with Template Title */}
+      <TopNavigation 
+        currentPage="template-dashboard"
+        contractTitle={selectedTemplate?.title || ''}
+        onContractTitleChange={selectedTemplate ? handleTitleInputChange : undefined}
+      />
 
       {/* Trial Status */}
       <TrialStatus />
@@ -251,15 +370,34 @@ function TemplateDashboardContent() {
                 })}
                 <InteractiveTemplateEditor
                   template={selectedTemplate}
-                  onTemplateUpdate={(updatedTemplate) => {
-                    setSelectedTemplate(updatedTemplate)
-                    // Update the template in the list
-                    setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
+                  risks={templateRisks}
+                  onContentChange={handleTemplateContentChange}
+                  onRiskClick={(riskId) => {
+                    // Switch to analysis view on mobile when risk is clicked
+                    if (window.innerWidth <= 768) {
+                      setMobileView('analysis')
+                    }
                   }}
+                  onHighlightClick={(riskId) => {
+                    // Scroll to risk card in analysis panel
+                    if (typeof window !== 'undefined' && (window as any).scrollToTemplateRiskCard) {
+                      (window as any).scrollToTemplateRiskCard(riskId)
+                    }
+                    // Switch to analysis view on mobile when highlighted text is clicked
+                    if (window.innerWidth <= 768) {
+                      setMobileView('analysis')
+                    }
+                  }}
+                  onComment={(text, position) => {
+                    // Handle comment creation for templates
+                    const comment = prompt(`Add comment for template: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"\n\nEnter your comment:`)
+                    if (comment) {
+                      toast(`Comment added: ${comment}`, 'success')
+                    }
+                  }}
+                  onReanalyzeRisks={reanalyzeRisksRef.current}
                   onRegisterUpdateFunction={handleRegisterUpdateFunction}
-                  onRegisterReanalysisFunction={handleRegisterReanalysisFunction}
-                  onRisksUpdate={handleRisksUpdate}
-                  onToast={toast}
+                  className={styles.templateEditor}
                 />
               </div>
 

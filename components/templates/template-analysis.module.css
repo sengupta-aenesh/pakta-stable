@@ -329,7 +329,328 @@
   line-height: 1.5;
 }
 
-/* Mobile Responsive */
+/* Risk Analysis Header - Contract Style */
+.riskAnalysisHeader {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.riskAnalysisTitle {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.025em;
+}
+
+.overallRiskScore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.overallScoreLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.overallScoreValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.riskSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.riskCount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.totalRisks {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.totalRisksLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.riskBreakdown {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.riskBreakdownItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.riskBreakdownItem:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.riskBreakdownNumber {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  min-width: 16px;
+  text-align: center;
+}
+
+.riskBreakdownLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+/* Risk Dots */
+.riskDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.riskDot.high {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.riskDot.medium {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.riskDot.low {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* Contract-style Risk Cards */
+.riskItem {
+  width: calc(100% + 8px);
+  margin-left: -4px;
+  margin-right: -4px;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.clickableRisk {
+  cursor: pointer;
+  position: relative;
+}
+
+.clickableRisk:hover {
+  border-color: #111827;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.1);
+  transform: translateY(-1px);
+}
+
+.clickableRisk:active {
+  transform: translateY(0);
+}
+
+.emphasizedRiskCard {
+  animation: emphasizeRiskCard 3s ease-in-out;
+  border-color: #111827 !important;
+  box-shadow: 0 4px 20px rgba(17, 24, 39, 0.25) !important;
+}
+
+@keyframes emphasizeRiskCard {
+  0%, 100% { 
+    transform: scale(1);
+    background: #ffffff;
+  }
+  10% { 
+    transform: scale(1.02);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02));
+  }
+  20% { 
+    transform: scale(1.01);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.03));
+  }
+  30% { 
+    transform: scale(1.02);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02));
+  }
+  50% { 
+    transform: scale(1);
+    background: #ffffff;
+  }
+}
+
+/* Override old risk header styles */
+.riskHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scrollIcon {
+  margin-left: auto;
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.clickableRisk:hover .scrollIcon {
+  color: #111827;
+}
+
+.scrollHint {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.clickableRisk:hover .scrollHint {
+  opacity: 1;
+}
+
+.riskCategory {
+  font-weight: 500;
+  color: #374151;
+}
+
+.riskLevel {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.riskDescription {
+  margin: 8px 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.riskQuote {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-left: 3px solid #e5e7eb;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.riskDetails {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.riskMitigation {
+  margin: 8px 0 0 0;
+  color: #374151;
+}
+
+.riskMitigation strong {
+  color: #111827;
+}
+
+.riskPrecedent {
+  margin: 8px 0 0 0;
+  color: #6b7280;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.riskPrecedent strong {
+  color: #111827;
+  font-style: normal;
+}
+
+.riskActions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.riskActions .resolveButton {
+  background: #10B981;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.riskActions .resolveButton:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* Risks Tab Override */
+.risks {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.risksList {
+  padding: 0;
+  margin: 0 20px 24px 20px;
+}
+
+/* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .header {
     padding: 0.75rem;
@@ -380,5 +701,69 @@
   .emptyState {
     height: 150px;
     padding: 1.5rem 1rem;
+  }
+
+  /* Risk Analysis Header Mobile */
+  .riskAnalysisHeader {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .riskAnalysisTitle {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .overallRiskScore {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  
+  .overallScoreLabel {
+    font-size: 13px;
+  }
+  
+  .overallScoreValue {
+    font-size: 18px;
+  }
+  
+  .riskSummary {
+    gap: 10px;
+  }
+  
+  .riskCount {
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  
+  .totalRisks {
+    font-size: 20px;
+  }
+  
+  .totalRisksLabel {
+    font-size: 12px;
+  }
+  
+  .riskBreakdown {
+    gap: 6px;
+  }
+  
+  .riskBreakdownItem {
+    padding: 6px 8px;
+    gap: 3px;
+  }
+  
+  .riskBreakdownNumber {
+    font-size: 12px;
+    min-width: 14px;
+  }
+  
+  .riskBreakdownLabel {
+    font-size: 10px;
+  }
+  
+  .risksList {
+    padding: 0;
+    margin: 0 16px 16px 16px;
   }
 }

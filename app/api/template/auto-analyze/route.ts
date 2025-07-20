@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { apiErrorHandler } from '@/lib/api-error-handler'
 import { captureContractError, addSentryBreadcrumb, setSentryUser } from '@/lib/sentry-utils'
-import { summarizeContract, identifyRiskyTerms, extractMissingInfo } from '@/lib/openai'
+import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields } from '@/lib/openai'
 import { templatesApi } from '@/lib/supabase'
 
 export const POST = apiErrorHandler(async (request: NextRequest) => {
@@ -92,7 +92,7 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
     await updateAnalysisStatus(templateId, 'in_progress', 10, null, 'Starting summary analysis...')
     
     const summaryResult = await performWithRetry(
-      () => summarizeContract(content), // Reuse the same function since templates are analyzed like contracts
+      () => summarizeTemplate(content), // Template-specific summary analysis
       maxRetries,
       'summary',
       templateId
@@ -111,7 +111,7 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
     await updateAnalysisStatus(templateId, 'in_progress', 40, null, 'Starting risk analysis...')
     
     const riskResult = await performWithRetry(
-      () => identifyRiskyTerms(content),
+      () => identifyTemplateRisks(content), // Template-specific risk analysis
       maxRetries,
       'risks',
       templateId
@@ -131,26 +131,27 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
     await templatesApi.updateAnalysisCache(templateId, 'risks', riskAnalysisData)
     await updateAnalysisStatus(templateId, 'risks_complete', 66, null, 'Risk analysis complete')
 
-    // Step 3: Complete Analysis (Progress: 66% -> 100%)
-    addSentryBreadcrumb('Starting template complete analysis', 'template', 'info', { templateId })
-    await updateAnalysisStatus(templateId, 'in_progress', 75, null, 'Starting completeness analysis...')
+    // Step 3: Template Field Analysis (Progress: 66% -> 100%)
+    addSentryBreadcrumb('Starting template field analysis', 'template', 'info', { templateId })
+    await updateAnalysisStatus(templateId, 'in_progress', 75, null, 'Starting template field analysis...')
     
     const completeResult = await performWithRetry(
-      () => extractMissingInfo(content),
+      () => extractTemplateFields(content), // Template-specific field extraction
       maxRetries,
       'complete',
       templateId
     )
 
-    // Cache complete result
+    // Cache template field result
     await templatesApi.updateAnalysisCache(templateId, 'complete', {
       missingInfo: completeResult.missingInfo || [],
+      variableSections: completeResult.variableSections || [],
       processingSteps: completeResult.processingSteps || {},
       processedContent: completeResult.processedContent || content
     })
 
     // Mark as complete
-    await updateAnalysisStatus(templateId, 'complete', 100, null, 'All analysis complete')
+    await updateAnalysisStatus(templateId, 'complete', 100, null, 'Template analysis complete')
 
     addSentryBreadcrumb('Template auto-analysis completed successfully', 'template', 'info', { templateId })
 
@@ -158,7 +159,7 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       success: true,
       progress: 100,
       status: 'complete',
-      message: 'All template analysis completed successfully',
+      message: 'Template analysis completed successfully - template fields, risks, and version control analyzed',
       results: {
         summary: summaryResult,
         risks: riskResult,

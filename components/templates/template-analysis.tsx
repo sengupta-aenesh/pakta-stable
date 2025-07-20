@@ -21,7 +21,7 @@ export default function TemplateAnalysis({
   onTemplateUpdate,
   onToast
 }: TemplateAnalysisProps) {
-  const [activeTab, setActiveTab] = useState<'summary' | 'risks' | 'versions'>('summary')
+  const [activeTab, setActiveTab] = useState<'summary' | 'risks'>('summary')
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisProgress, setAnalysisProgress] = useState(0)
 
@@ -83,16 +83,81 @@ export default function TemplateAnalysis({
   const statusInfo = getAnalysisStatus()
   const hasAnalysis = template.analysis_cache?.summary || template.analysis_cache?.risks
 
+  // Handle clicking on a risk to scroll to it in the template
+  const handleRiskClick = (risk: any) => {
+    // Check if the global scroll function is available
+    if (typeof window !== 'undefined' && (window as any).scrollToTemplateRisk) {
+      (window as any).scrollToTemplateRisk(risk.id || '')
+    }
+    
+    // Switch to editor view on mobile when risk is clicked
+    if (window.innerWidth <= 768) {
+      // Template dashboard doesn't have mobile view switching currently
+      // This could be added later if needed
+    }
+  }
+
+  // Function to scroll to and highlight a specific risk card
+  const scrollToRiskCard = useCallback((riskId: string) => {
+    const riskElement = document.querySelector(`[data-risk-card-id="${riskId}"]`)
+    if (riskElement) {
+      riskElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+      
+      // Add temporary emphasis to the risk card
+      riskElement.classList.add(styles.emphasizedRiskCard || 'emphasized')
+      setTimeout(() => {
+        riskElement.classList.remove(styles.emphasizedRiskCard || 'emphasized')
+      }, 3000)
+    }
+  }, [])
+
+  // Expose scrollToRiskCard function globally
+  useEffect(() => {
+    if (template) {
+      (window as any).scrollToTemplateRiskCard = scrollToRiskCard
+    }
+  }, [scrollToRiskCard, template])
+
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {
     try {
-      // Find the risk to resolve
-      const riskToResolve = risks.find(risk => risk.id === riskId)
-      if (!riskToResolve) return
+      console.log('🔧 Resolving template risk:', { riskId, totalRisks: risks.length })
+      console.log('📊 Available risk IDs:', risks.map(r => r.id))
+
+      // Find the risk to resolve with more flexible matching
+      let riskToResolve = risks.find(risk => risk.id === riskId)
+      
+      // If not found by exact ID, try by index-based ID
+      if (!riskToResolve && riskId.includes('template-risk-')) {
+        const index = parseInt(riskId.split('template-risk-')[1])
+        riskToResolve = risks[index]
+        console.log('📍 Found risk by index fallback:', { index, found: !!riskToResolve })
+      }
+      
+      if (!riskToResolve) {
+        console.error('❌ Risk not found for resolution:', riskId)
+        onToast('Risk not found for resolution', 'error')
+        return
+      }
+
+      console.log('✅ Found risk to resolve:', { id: riskToResolve.id, category: riskToResolve.category })
 
       // Add to resolved risks
       const currentResolvedRisks = template.resolved_risks || []
-      const updatedResolvedRisks = [...currentResolvedRisks, { ...riskToResolve, resolvedAt: new Date().toISOString() }]
+      const updatedResolvedRisks = [...currentResolvedRisks, { 
+        ...riskToResolve, 
+        resolvedAt: new Date().toISOString(),
+        resolvedBy: 'user'
+      }]
+
+      console.log('📝 Updating template with resolved risks:', { 
+        templateId: template.id,
+        currentResolvedCount: currentResolvedRisks.length,
+        newResolvedCount: updatedResolvedRisks.length
+      })
 
       // Update template with resolved risk
       const response = await fetch(`/api/template/${template.id}`, {
@@ -105,19 +170,29 @@ export default function TemplateAnalysis({
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to resolve risk')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ API Error:', { status: response.status, error: errorText })
+        throw new Error(`API request failed: ${response.status} - ${errorText}`)
+      }
 
       const updatedTemplate = await response.json()
+      console.log('✅ Template updated successfully:', { 
+        id: updatedTemplate.id,
+        resolvedRisksCount: updatedTemplate.resolved_risks?.length || 0
+      })
+      
       onTemplateUpdate(updatedTemplate)
 
       // Update risks display (remove resolved risk)
-      const updatedRisks = risks.filter(risk => risk.id !== riskId)
+      const updatedRisks = risks.filter(risk => risk.id !== riskToResolve.id)
+      console.log('📊 Updated risks display:', { before: risks.length, after: updatedRisks.length })
       onRisksUpdate(updatedRisks)
 
-      onToast('Risk marked as resolved', 'success')
+      onToast('Template risk marked as resolved', 'success')
     } catch (error) {
-      console.error('Error resolving risk:', error)
-      onToast('Failed to resolve risk', 'error')
+      console.error('❌ Error resolving template risk:', error)
+      onToast(`Failed to resolve risk: ${error.message}`, 'error')
     }
   }
 
@@ -158,12 +233,6 @@ export default function TemplateAnalysis({
         >
           Risk Analysis ({risks.length})
         </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'versions' ? styles.active : ''}`}
-          onClick={() => setActiveTab('versions')}
-        >
-          Version Control
-        </button>
       </div>
 
       {/* Tab Content */}
@@ -197,6 +266,22 @@ export default function TemplateAnalysis({
                     )}
                   </div>
                 )}
+                
+                {/* Template Version Information - Integrated into Summary */}
+                <div className={styles.summarySection}>
+                  <h4>Version Management</h4>
+                  <TemplateVersionList
+                    templateId={template.id}
+                    onToast={onToast}
+                    onTemplateRestore={() => {
+                      // Trigger a refresh of the template data
+                      if (onTemplateUpdate) {
+                        // Force a re-fetch of the template to get updated content
+                        window.location.reload()
+                      }
+                    }}
+                  />
+                </div>
               </div>
             ) : (
               <div className={styles.emptyState}>
@@ -207,44 +292,116 @@ export default function TemplateAnalysis({
         )}
 
         {activeTab === 'risks' && (
-          <div className={styles.risksTab}>
+          <div className={styles.risks}>
+            <div className={styles.riskAnalysisHeader}>
+              <h3 className={styles.riskAnalysisTitle}>Template Risk Analysis</h3>
+              
+              <div className={styles.overallRiskScore}>
+                <span className={styles.overallScoreLabel}>Overall Risk Score</span>
+                <span className={styles.overallScoreValue}>
+                  {risks.length > 0 
+                    ? Math.round(risks.reduce((sum, risk) => sum + (risk.riskScore || 0), 0) / risks.length)
+                    : 0}/10
+                </span>
+              </div>
+              
+              <div className={styles.riskSummary}>
+                <div className={styles.riskCount}>
+                  <span className={styles.totalRisks}>{risks.length}</span>
+                  <span className={styles.totalRisksLabel}>risks identified</span>
+                </div>
+                
+                <div className={styles.riskBreakdown}>
+                  <div className={styles.riskBreakdownItem}>
+                    <span className={`${styles.riskDot} ${styles.high}`}></span>
+                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'high').length}</span>
+                    <span className={styles.riskBreakdownLabel}>high</span>
+                  </div>
+                  <div className={styles.riskBreakdownItem}>
+                    <span className={`${styles.riskDot} ${styles.medium}`}></span>
+                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'medium').length}</span>
+                    <span className={styles.riskBreakdownLabel}>medium</span>
+                  </div>
+                  <div className={styles.riskBreakdownItem}>
+                    <span className={`${styles.riskDot} ${styles.low}`}></span>
+                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'low').length}</span>
+                    <span className={styles.riskBreakdownLabel}>low</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             {risks.length > 0 ? (
               <div className={styles.risksList}>
-                {risks.map((risk) => (
-                  <div key={risk.id} className={styles.riskCard}>
+                {risks.map((risk, index) => (
+                  <div 
+                    key={risk.id || index} 
+                    className={`${styles.riskItem} ${styles.clickableRisk}`}
+                    onClick={() => handleRiskClick(risk)}
+                    data-risk-card-id={risk.id || `template-risk-${index}`}
+                  >
                     <div className={styles.riskHeader}>
-                      <span className={`${styles.riskBadge} ${styles[risk.riskLevel]}`}>
-                        {risk.riskLevel.toUpperCase()} RISK
+                      <span className={`${styles.riskDot} ${styles[risk.riskLevel || 'medium']}`}></span>
+                      <span className={styles.riskCategory}>
+                        Template Risk {index + 1} of {risks.length} • {risk.category || 'General'} (Severity: {risk.riskScore || 5}/10)
                       </span>
+                      <span className={styles.riskLevel}>{(risk.riskLevel || 'medium').toUpperCase()}</span>
+                      <svg 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2"
+                        className={styles.scrollIcon}
+                      >
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </div>
+                    <p className={styles.riskDescription}>{risk.explanation || 'No explanation provided'}</p>
+                    <blockquote className={styles.riskQuote}>"{risk.clause || 'No clause identified'}"</blockquote>
+                    <p className={styles.riskDetails}>
+                      <strong>Location:</strong> {risk.clauseLocation || 'Not specified'}
+                      {risk.affectedParty && (
+                        <> | <strong>Affects:</strong> {risk.affectedParty}</>
+                      )}
+                    </p>
+                    <p className={styles.riskMitigation}>
+                      <strong>Recommendation:</strong> {risk.suggestion || 'No recommendation provided'}
+                    </p>
+                    {risk.legalPrecedent && (
+                      <p className={styles.riskPrecedent}>
+                        <strong>Legal Context:</strong> {risk.legalPrecedent}
+                      </p>
+                    )}
+                    <div className={styles.riskActions}>
                       <button
                         className={styles.resolveButton}
-                        onClick={() => handleResolveRisk(risk.id)}
-                        title="Mark as resolved"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleResolveRisk(risk.id || `template-risk-${index}`)
+                        }}
+                        title="Mark this template risk as resolved"
                       >
                         ✓ Resolve
                       </button>
                     </div>
-                    <h4>{risk.category}</h4>
-                    <p className={styles.riskClause}>{risk.clause}</p>
-                    <p className={styles.riskExplanation}>{risk.explanation}</p>
-                    {risk.suggestion && (
-                      <div className={styles.suggestion}>
-                        <strong>Suggestion:</strong> {risk.suggestion}
-                      </div>
-                    )}
+                    <div className={styles.scrollHint}>
+                      <span>Click to scroll to text in template</span>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className={styles.emptyState}>
-                <p>No active risks found. {hasAnalysis ? 'All risks have been resolved.' : 'Run analysis to identify potential risks.'}</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1', minHeight: '250px', color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
+                <p>No active risks found. {hasAnalysis ? 'All risks have been resolved.' : 'Run analysis to identify potential template risks.'}</p>
               </div>
             )}
 
             {/* Resolved Risks Section */}
             {template.resolved_risks && template.resolved_risks.length > 0 && (
               <div className={styles.resolvedRisksSection}>
-                <h3>Resolved Risks ({template.resolved_risks.length})</h3>
+                <h3>Resolved Template Risks ({template.resolved_risks.length})</h3>
                 <div className={styles.resolvedRisksList}>
                   {template.resolved_risks.map((resolvedRisk, index) => (
                     <div key={index} className={styles.resolvedRiskCard}>
@@ -264,21 +421,6 @@ export default function TemplateAnalysis({
           </div>
         )}
 
-        {activeTab === 'versions' && (
-          <div className={styles.versionsTab}>
-            <TemplateVersionList
-              templateId={template.id}
-              onToast={onToast}
-              onTemplateRestore={() => {
-                // Trigger a refresh of the template data
-                if (onTemplateUpdate) {
-                  // Force a re-fetch of the template to get updated content
-                  window.location.reload()
-                }
-              }}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

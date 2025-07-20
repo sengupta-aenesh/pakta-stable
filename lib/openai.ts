@@ -912,6 +912,778 @@ Is this acceptable? Respond with JSON:
   }
 }
 
+// TEMPLATE-SPECIFIC ANALYSIS FUNCTIONS
+// These functions are specifically designed for template analysis, focusing on
+// template fields, placeholders, variable sections, and version control
+
+const TEMPLATE_EXPERT_SYSTEM_PROMPT = `You are an elite legal template specialist with 30+ years of experience in:
+- Creating and analyzing legal document templates
+- Template field identification and standardization
+- Variable section analysis for multi-vendor/organization customization
+- Version control and template management best practices
+- Template reusability and scalability assessment
+
+You specialize in analyzing templates to identify:
+- Placeholder fields that need customization for different users/organizations
+- Variable sections that can be adapted for different business contexts
+- Template structure optimization for maximum reusability
+- Version control considerations for template management
+- Template field standardization and consistency
+
+Your analysis should focus on template functionality, reusability, and customization potential rather than standard contract risk analysis.`
+
+export async function summarizeTemplate(content: string): Promise<ContractSummary | { error: string; message: string }> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: TEMPLATE_EXPERT_SYSTEM_PROMPT
+        },
+        {
+          role: "user",
+          content: `Analyze this document to determine if it's a legal template, then provide a comprehensive template analysis.
+
+If this document is NOT a legal template or contract template (e.g., it's a resume, article, letter, etc.), respond with a JSON object:
+{
+  "error": "NOT_A_TEMPLATE",
+  "message": "This document does not appear to be a legal contract template. Please upload a valid template document."
+}
+
+If it IS a legal template, analyze it focusing on template-specific aspects and provide a summary as a JSON object:
+{
+  "overview": "Brief overview of the template and its purpose",
+  "contract_type": "Type of template (e.g., Service Agreement Template, NDA Template, etc.)",
+  "key_terms": {
+    "template_fields": "Number and types of placeholder fields as a string",
+    "variable_sections": "Customizable sections for different organizations as a string", 
+    "reusability_score": "Template reusability assessment (1-10) as a string"
+  },
+  "important_dates": ["Array of date fields that need customization"],
+  "parties": ["Array of party placeholders (e.g., [Company_A], [Vendor_Name])"],
+  "obligations": ["Array of key template obligations that can be customized"]
+}
+
+Focus on:
+1. **Template Fields**: Identify placeholder fields like [Company_Name], [Date], [Amount]
+2. **Variable Sections**: Sections that can be modified for different vendors/organizations
+3. **Customization Points**: Areas where template users would make changes
+4. **Reusability**: How well this template can be adapted for multiple use cases
+5. **Version Control**: Fields that would commonly change between template versions
+
+All values must be strings or arrays of strings. If any information is not found, use "Not specified" or empty array. Respond only with valid JSON.
+
+Template to analyze:
+${content}`
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.2,
+      response_format: { type: "json_object" }
+    })
+    
+    const result = JSON.parse(response.choices[0].message.content || "{}")
+    
+    // Check if it's an error response
+    if (result.error === 'NOT_A_TEMPLATE') {
+      return {
+        error: result.error,
+        message: result.message
+      }
+    }
+    
+    return {
+      overview: result.overview || "No template overview available",
+      contract_type: result.contract_type || "Unknown Template Type",
+      key_terms: result.key_terms || {},
+      important_dates: result.important_dates || [],
+      parties: result.parties || [],
+      obligations: result.obligations || []
+    }
+  } catch (error) {
+    console.error('OpenAI template summarization error:', error)
+    throw error
+  }
+}
+
+export async function identifyTemplateRisks(content: string): Promise<RiskAnalysis> {
+  try {
+    // For very large templates, use chunk-based analysis
+    const contentLength = content.length
+    const maxChunkSize = 25000
+    
+    if (contentLength > maxChunkSize) {
+      console.log(`🔍 Large template detected (${contentLength} chars), using comprehensive chunk analysis`)
+      return await performTemplateChunkAnalysis(content)
+    }
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `${TEMPLATE_EXPERT_SYSTEM_PROMPT}
+
+TEMPLATE RISK ANALYSIS INSTRUCTIONS:
+- Focus on TEMPLATE-SPECIFIC risks, not standard contract risks
+- Analyze template fields, placeholders, and customization points
+- Identify risks related to template usage, version control, and field management
+- Consider risks for template users who will customize this template
+- Be comprehensive but template-focused`
+        },
+        {
+          role: "user",
+          content: `Perform a COMPREHENSIVE template-specific risk analysis. Focus on template functionality, field management, and customization risks rather than standard contract legal risks.
+
+**TEMPLATE RISK CATEGORIES TO ANALYZE:**
+1. **Field Management Risks**: Missing or inconsistent placeholder fields
+2. **Customization Risks**: Sections that may be difficult to customize properly
+3. **Version Control Risks**: Template elements that may cause versioning issues
+4. **User Experience Risks**: Complex or confusing template sections
+5. **Data Consistency Risks**: Fields that may be filled inconsistently
+6. **Template Structure Risks**: Organizational or formatting issues
+7. **Reusability Risks**: Elements that limit template adaptability
+8. **Validation Risks**: Fields without proper guidance or validation
+9. **Legal Compliance Risks**: Template sections that may not cover required legal elements
+10. **Integration Risks**: Template compatibility with document generation systems
+
+**TEXT QUOTING RULES FOR TEMPLATE ANALYSIS:**
+- Quote specific template sections that create risks for template users
+- Include placeholder fields and variable sections in quotes
+- Focus on template structure rather than legal clause content
+- Quote 15-200 words showing the problematic template section
+- Preserve original formatting of template fields and placeholders
+
+**EXAMPLES OF TEMPLATE-SPECIFIC RISKS:**
+✅ GOOD: "The [Company_Name] field appears multiple times with different formatting"
+✅ GOOD: "Section 3 has complex nested fields that may confuse template users"
+✅ GOOD: "Date field [Execution_Date] lacks standardized format guidance"
+✅ GOOD: "Variable payment terms section may need legal review for each use"
+
+For EACH template risk found, provide:
+1. Quote of the problematic template section (15-200 words)
+2. Template section location if identifiable
+3. Risk level: high (7-10), medium (4-6), or low (1-3)
+4. Specific risk score (1-10)
+5. Template risk category
+6. Clear explanation of WHY this creates a template usage risk
+7. Specific improvement suggestion for the template
+8. Which template users are most affected
+9. Template management best practices (if applicable)
+
+Also provide:
+- Overall template risk score (1-10)
+- Executive summary focusing on template usability
+- Top 5 recommendations for template improvement
+
+Format as JSON:
+{
+  "overallRiskScore": number,
+  "executiveSummary": string,
+  "risks": [
+    {
+      "clause": "precise quoted template section (15-200 words)",
+      "clauseLocation": "Template Section X or description",
+      "riskLevel": "high|medium|low",
+      "riskScore": number,
+      "category": string,
+      "explanation": string,
+      "suggestion": string,
+      "affectedParty": "Template users, Template administrators, etc.",
+      "legalPrecedent": string (optional - template best practices)
+    }
+  ],
+  "recommendations": [string, string, string, string, string]
+}
+
+**TEMPLATE TO ANALYZE:**
+${content}
+
+Remember: Focus on template-specific risks that affect template users and template management, not standard contract legal risks.`
+        }
+      ],
+      max_tokens: 12000,
+      temperature: 0.2,
+      response_format: { type: "json_object" }
+    })
+    
+    const result = JSON.parse(response.choices[0].message.content || "{}")
+    
+    // Process and structure the risks with template-specific IDs
+    const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => {
+      let clause = (risk.clause || "").trim()
+      
+      // Clean formatting artifacts for template fields
+      clause = clause.replace(/^\d+\.\s*/, '')
+      clause = clause.replace(/^[a-z]\)\s*/i, '')
+      clause = clause.replace(/^\s*[-•]\s*/, '')
+      clause = clause.replace(/\s+/g, ' ')
+      
+      return {
+        id: `template-risk-${index}`,
+        clause: clause,
+        clauseLocation: risk.clauseLocation || "Not specified",
+        riskLevel: risk.riskLevel || "medium",
+        riskScore: risk.riskScore || 5,
+        category: risk.category || "Template Structure",
+        explanation: risk.explanation || "",
+        suggestion: risk.suggestion || "",
+        legalPrecedent: risk.legalPrecedent,
+        affectedParty: risk.affectedParty || "Template users"
+      }
+    })
+    
+    const highRiskCount = risks.filter(r => r.riskLevel === 'high').length
+    const mediumRiskCount = risks.filter(r => r.riskLevel === 'medium').length
+    const lowRiskCount = risks.filter(r => r.riskLevel === 'low').length
+    
+    console.log(`✅ Template risk analysis completed: ${risks.length} total template risks found`)
+    console.log(`📊 Template risk breakdown: ${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`)
+    
+    return {
+      overallRiskScore: result.overallRiskScore || 5,
+      totalRisksFound: risks.length,
+      highRiskCount,
+      mediumRiskCount,
+      lowRiskCount,
+      risks,
+      recommendations: result.recommendations || [],
+      executiveSummary: result.executiveSummary || "Template analysis completed."
+    }
+  } catch (error) {
+    console.error('OpenAI template risk analysis error:', error)
+    throw error
+  }
+}
+
+export async function extractTemplateFields(content: string): Promise<any> {
+  console.log('extractTemplateFields called with content length:', content.length)
+  
+  try {
+    // Template-specific field extraction focusing on customization points
+    const contentLength = content.length
+    const maxSafeLength = 30000
+    
+    let analysisContent = content
+    let truncated = false
+    
+    if (contentLength > maxSafeLength) {
+      console.log(`⚠️ Large template detected - using strategic analysis`)
+      
+      // For large templates, focus on sections with template fields and placeholders
+      const extractedSections: string[] = []
+      
+      // Method 1: Find all lines with placeholder patterns
+      const lines = content.split('\n')
+      const linesWithFields: string[] = []
+      
+      lines.forEach((line, index) => {
+        // Look for template field patterns: [Field], ___, {{Field}}, etc.
+        if (/\[.*?\]|_+|\{\{.*?\}\}|\$\{.*?\}/.test(line)) {
+          const contextStart = Math.max(0, index - 2)
+          const contextEnd = Math.min(lines.length, index + 3)
+          const contextLines = lines.slice(contextStart, contextEnd)
+          linesWithFields.push(contextLines.join('\n'))
+        }
+      })
+      
+      if (linesWithFields.length > 0) {
+        extractedSections.push(...linesWithFields)
+        console.log(`📍 Found ${linesWithFields.length} sections with template fields`)
+      }
+      
+      if (extractedSections.length > 0) {
+        analysisContent = extractedSections.join('\n\n')
+        console.log(`📝 Extracted template field sections (${analysisContent.length} chars)`)
+      } else {
+        const firstPart = content.substring(0, 15000)
+        const lastPart = content.substring(content.length - 10000)
+        analysisContent = firstPart + '\n\n[... MIDDLE TEMPLATE SECTIONS TRUNCATED ...]\n\n' + lastPart
+        truncated = true
+        console.log(`📄 Using truncated template analysis (${analysisContent.length} chars)`)
+      }
+    }
+    
+    console.log('🔄 Analyzing template for customizable fields and variable sections...')
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert template field analyst. Your task is to identify ALL customizable fields, placeholder sections, and variable elements in a legal document template${truncated ? ' (note: some middle sections may be truncated)' : ''}. 
+
+Focus on template-specific elements:
+1. **Placeholder Fields**: [Company_Name], [Date], [Amount], etc.
+2. **Variable Sections**: Sections that change for different organizations/vendors
+3. **Customization Points**: Areas template users would modify
+4. **Template Fields**: Blanks, underscores, or bracketed placeholders
+5. **Reusable Elements**: Parts that need customization for each template use
+6. **Version Variables**: Fields that commonly change between template versions
+7. **Organization-Specific Fields**: Company names, addresses, contact info
+8. **Contract-Specific Variables**: Dates, amounts, terms, conditions
+
+Think like a template manager identifying all points where template users need to input custom information.`
+        },
+        {
+          role: "user",
+          content: `Analyze this LEGAL TEMPLATE and identify EVERY customizable field, placeholder, and variable section that template users would need to fill in or customize:
+
+TEMPLATE${truncated ? ' (EXTRACTED SECTIONS)' : ''}:
+${analysisContent}
+
+**CRITICAL TEMPLATE ANALYSIS INSTRUCTIONS:**
+1. **Find ALL Template Fields**: Look for [Field], ___, {{Field}}, \${Field} patterns
+2. **Identify Variable Sections**: Sections that would change for different organizations
+3. **Locate Customization Points**: Areas requiring user input or modification
+4. **Template Field Categories**:
+   - Party Information: Company names, addresses, contact details
+   - Legal Identifiers: CIN, PAN, DIN numbers
+   - Dates: Execution dates, effective dates, term periods  
+   - Financial: Amounts, payment terms, currency
+   - Contract Specifics: Scope, deliverables, conditions
+   - Signatures: Signatory names, titles, witness details
+
+**TEMPLATE STANDARDIZATION RULES:**
+For date fields, standardize to format: "Xth day of Month, Year"
+- Combine related date components into single fields
+- Create user-friendly field descriptions
+- Focus on template reusability
+
+For EACH template field found, provide:
+- Field label for template users
+- Field description and purpose
+- Input placeholder/example
+- Field type (text, date, number, etc.)
+- Importance level for template completion
+- Template context where field appears
+- Exact target text to replace
+
+Respond with JSON:
+{
+  "templateFields": [
+    {
+      "id": "unique_field_id",
+      "label": "User-Friendly Field Label",
+      "description": "What template users need to provide",
+      "placeholder": "Input example or placeholder",
+      "fieldType": "text|date|number|email|address|select",
+      "importance": "critical|important|optional",
+      "templateContext": "Why this field is needed in the template",
+      "targetText": "exact text pattern to replace in template",
+      "context": "surrounding template text",
+      "category": "party_info|dates|financial|legal_ids|contract_terms|signatures",
+      "userInput": "",
+      "variableSection": false,
+      "versionControl": "does this field commonly change between template versions?"
+    }
+  ],
+  "variableSections": [
+    {
+      "id": "section_id",
+      "title": "Variable Section Title",
+      "description": "How this section can be customized",
+      "customizationGuidance": "Instructions for template users",
+      "content": "Section content that varies",
+      "useCases": ["Different scenarios where this section varies"]
+    }
+  ]
+}
+
+**BE COMPREHENSIVE** - Find every template field and customization point. Focus on template usability and reusability.`
+        }
+      ],
+      max_tokens: 8000,
+      temperature: 0.2,
+      response_format: { type: "json_object" }
+    })
+
+    const responseContent = response.choices[0].message.content || '{}'
+    
+    let extractionResult
+    try {
+      extractionResult = JSON.parse(responseContent)
+      console.log('✅ Successfully parsed template field extraction:', {
+        templateFields: extractionResult.templateFields?.length || 0,
+        variableSections: extractionResult.variableSections?.length || 0
+      })
+    } catch (parseError) {
+      console.error('❌ JSON Parse Error in template field extraction:', parseError)
+      try {
+        const repairedJSON = attemptJSONCompletion(responseContent)
+        extractionResult = JSON.parse(repairedJSON)
+        console.log('✅ Successfully parsed repaired template JSON')
+      } catch (repairError) {
+        console.error('❌ Template JSON repair failed:', repairError)
+        extractionResult = { templateFields: [], variableSections: [] }
+      }
+    }
+
+    const templateFields = extractionResult.templateFields || []
+    const variableSections = extractionResult.variableSections || []
+
+    // Map template fields to contract processing format for compatibility
+    const processedTemplateFields = templateFields.map((field: any, index: number) => {
+      const targetText = field.targetText || field.placeholder || ''
+      const allOccurrences: any[] = []
+      
+      if (targetText) {
+        let searchIndex = 0
+        while (true) {
+          const index = analysisContent.indexOf(targetText, searchIndex)
+          if (index === -1) break
+          
+          const contextStart = Math.max(0, index - 80)
+          const contextEnd = Math.min(analysisContent.length, index + targetText.length + 80)
+          const contextText = analysisContent.substring(contextStart, contextEnd)
+          
+          allOccurrences.push({
+            text: targetText,
+            position: {
+              start: index,
+              end: index + targetText.length
+            },
+            context: contextText
+          })
+          
+          searchIndex = index + 1
+        }
+      }
+      
+      console.log(`📍 Found ${allOccurrences.length} occurrences for template field "${field.label}": "${targetText}"`)
+      
+      return {
+        id: field.id || `template_field_${index}`,
+        label: field.label || `Template Field ${index + 1}`,
+        description: field.description || 'Template customization needed',
+        placeholder: field.placeholder || 'Enter information',
+        fieldType: field.fieldType || 'text',
+        importance: field.importance || 'important',
+        legalContext: field.templateContext || 'Template field requiring customization',
+        context: field.context || (allOccurrences[0]?.context || ''),
+        occurrences: allOccurrences,
+        category: field.category || 'template_field',
+        variableSection: field.variableSection || false,
+        versionControl: field.versionControl || 'Standard template field',
+        userInput: ''
+      }
+    })
+
+    const validTemplateFields = processedTemplateFields.filter(field => field.occurrences.length > 0)
+    
+    console.log(`✅ Template field extraction complete: ${validTemplateFields.length} fields ready for customization`)
+    
+    return {
+      missingInfo: validTemplateFields, // Use same format as contract processing for compatibility
+      variableSections: variableSections,
+      processedContent: analysisContent,
+      processingSteps: {
+        step1: {
+          name: 'Template Field Detection',
+          fieldsDetected: templateFields.length,
+          sectionsDetected: variableSections.length,
+          analysisType: truncated ? 'strategic_template_sections' : 'full_template',
+          contentAnalyzed: analysisContent.length,
+          originalSize: contentLength
+        },
+        step2: {
+          name: 'Template Field Mapping',
+          validFields: validTemplateFields.length,
+          totalOccurrences: validTemplateFields.reduce((sum, field) => sum + field.occurrences.length, 0),
+          mappingStrategy: 'template_field_search'
+        },
+        step3: {
+          name: 'Template Customization Analysis',
+          variableSectionsFound: variableSections.length,
+          templateReusabilityScore: validTemplateFields.length > 5 ? 'High' : validTemplateFields.length > 2 ? 'Medium' : 'Low'
+        }
+      }
+    }
+  } catch (error) {
+    console.error('OpenAI template field extraction error:', error)
+    throw new Error(`Template field extraction failed: ${error.message}`)
+  }
+}
+
+// Template-specific chunk analysis for large templates
+async function performTemplateChunkAnalysis(content: string): Promise<RiskAnalysis> {
+  console.log('🚀 Starting PARALLEL template chunk-based risk analysis...')
+  
+  const sections = splitTemplateIntoSections(content)
+  console.log(`📄 Split template into ${sections.length} sections for PARALLEL analysis`)
+  
+  const validSections = sections.filter(section => section.content.trim().length >= 100)
+  console.log(`✅ ${validSections.length} template sections ready for parallel processing`)
+  
+  if (validSections.length === 0) {
+    console.log('⚠️ No valid template sections found, falling back to single analysis')
+    return await performSingleTemplateAnalysis(content)
+  }
+  
+  const startTime = Date.now()
+  console.log(`🔄 Starting parallel template analysis of ${validSections.length} sections...`)
+  
+  try {
+    const sectionPromises = validSections.map(async (section, index) => {
+      console.log(`🔍 [${index + 1}/${validSections.length}] Processing template section: ${section.title}`)
+      
+      const sectionLength = section.content.length
+      const maxTokens = Math.min(8000, Math.max(3000, Math.floor(sectionLength / 4)))
+      
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `${TEMPLATE_EXPERT_SYSTEM_PROMPT}
+              
+You are analyzing a SECTION of a larger template. Focus on template-specific risks in this section - template field issues, customization problems, version control concerns, etc.`
+            },
+            {
+              role: "user",
+              content: `Analyze this TEMPLATE SECTION for template-specific risks. Focus on template functionality, field management, and user experience.
+
+**TEMPLATE SECTION: ${section.title}**
+${section.content}
+
+**TEMPLATE ANALYSIS REQUIREMENTS:**
+- Find template-specific risks (field management, customization, version control)
+- Quote precise template sections with risks (15-200 words each)
+- Use section context: "${section.title}"
+- Focus on template usability and management issues
+
+Provide JSON with template risks found:
+{
+  "risks": [
+    {
+      "clause": "precise template section quote",
+      "clauseLocation": "${section.title}",
+      "riskLevel": "high|medium|low",
+      "riskScore": number,
+      "category": "Template risk category",
+      "explanation": "Template-specific risk explanation",
+      "suggestion": "Template improvement suggestion",
+      "affectedParty": "Template users/administrators",
+      "legalPrecedent": "Template best practice (optional)"
+    }
+  ]
+}`
+            }
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        })
+        
+        const sectionResult = JSON.parse(response.choices[0].message.content || '{"risks": []}')
+        const sectionRisks = (sectionResult.risks || []).map((risk: any, riskIndex: number) => {
+          let clause = (risk.clause || "").trim()
+          clause = clause.replace(/^\d+\.\s*/, '')
+          clause = clause.replace(/^[a-z]\)\s*/i, '')
+          clause = clause.replace(/^\s*[-•]\s*/, '')
+          clause = clause.replace(/\s+/g, ' ')
+          
+          return {
+            id: `template-risk-${index}-${riskIndex}`,
+            clause: clause,
+            clauseLocation: risk.clauseLocation || section.title,
+            riskLevel: risk.riskLevel || "medium",
+            riskScore: risk.riskScore || 5,
+            category: risk.category || "Template Structure",
+            explanation: risk.explanation || "",
+            suggestion: risk.suggestion || "",
+            legalPrecedent: risk.legalPrecedent,
+            affectedParty: risk.affectedParty || "Template users"
+          }
+        })
+        
+        console.log(`✅ [${index + 1}/${validSections.length}] Completed: ${section.title} (${sectionRisks.length} template risks)`)
+        return sectionRisks
+        
+      } catch (error) {
+        console.error(`❌ [${index + 1}/${validSections.length}] Failed: ${section.title}`, error)
+        return []
+      }
+    })
+    
+    const allSectionRisks = await Promise.all(sectionPromises)
+    const allRisks: RiskFactor[] = allSectionRisks.flat()
+    
+    const processingTime = Date.now() - startTime
+    console.log(`🚀 PARALLEL template processing completed in ${processingTime}ms`)
+    console.log(`📊 Total template risks found: ${allRisks.length} across ${validSections.length} sections`)
+    
+    const highRiskCount = allRisks.filter(r => r.riskLevel === 'high').length
+    const mediumRiskCount = allRisks.filter(r => r.riskLevel === 'medium').length
+    const lowRiskCount = allRisks.filter(r => r.riskLevel === 'low').length
+    
+    console.log(`📈 Template risk breakdown: ${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`)
+    
+    const executiveSummary = `Comprehensive template analysis of ${validSections.length} sections revealed ${allRisks.length} template-specific risks. Template management priorities: ${highRiskCount} high-priority template improvements needed, ${mediumRiskCount} medium-priority enhancements recommended, and ${lowRiskCount} minor template optimizations identified.`
+    
+    const recommendations = [
+      `Address ${highRiskCount} high-priority template structure issues to improve user experience`,
+      `Review ${mediumRiskCount} medium-priority template field and customization concerns`,
+      `Implement template version control and field standardization practices`,
+      `Establish template user guidance and validation protocols`,
+      `Regular template quality audits to maintain usability and consistency`
+    ]
+    
+    const riskScoreSum = allRisks.reduce((sum, risk) => sum + risk.riskScore, 0)
+    const overallRiskScore = allRisks.length > 0 ? Math.round(riskScoreSum / allRisks.length) : 5
+    
+    return {
+      overallRiskScore,
+      totalRisksFound: allRisks.length,
+      highRiskCount,
+      mediumRiskCount,
+      lowRiskCount,
+      risks: allRisks,
+      recommendations,
+      executiveSummary
+    }
+    
+  } catch (error) {
+    console.error('❌ Parallel template chunk analysis failed:', error)
+    console.log('🔄 Falling back to single template analysis...')
+    return await performSingleTemplateAnalysis(content)
+  }
+}
+
+// Fallback single template analysis
+async function performSingleTemplateAnalysis(content: string): Promise<RiskAnalysis> {
+  console.log('🔍 Performing single-pass template analysis...')
+  
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: `${TEMPLATE_EXPERT_SYSTEM_PROMPT}
+
+TEMPLATE ANALYSIS INSTRUCTIONS:
+- Perform COMPREHENSIVE template-specific risk analysis
+- Focus on template fields, customization, and version control issues
+- Find ALL template management and usability risks
+- Prioritize template functionality over standard legal risk analysis`
+      },
+      {
+        role: "user",
+        content: `Perform a COMPREHENSIVE template-specific risk analysis of this template. Focus on template functionality, field management, customization risks, and user experience issues.
+
+**TEMPLATE TO ANALYZE:**
+${content}
+
+Find ALL template-specific risks comprehensively. Focus on template management rather than standard contract legal risks.`
+      }
+    ],
+    max_tokens: 12000,
+    temperature: 0.2,
+    response_format: { type: "json_object" }
+  })
+  
+  const result = JSON.parse(response.choices[0].message.content || "{}")
+  
+  const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => {
+    let clause = (risk.clause || "").trim()
+    clause = clause.replace(/^\d+\.\s*/, '')
+    clause = clause.replace(/^[a-z]\)\s*/i, '')
+    clause = clause.replace(/^\s*[-•]\s*/, '')
+    clause = clause.replace(/\s+/g, ' ')
+    
+    return {
+      id: `template-risk-${index}`,
+      clause: clause,
+      clauseLocation: risk.clauseLocation || "Not specified",
+      riskLevel: risk.riskLevel || "medium",
+      riskScore: risk.riskScore || 5,
+      category: risk.category || "Template Structure",
+      explanation: risk.explanation || "",
+      suggestion: risk.suggestion || "",
+      legalPrecedent: risk.legalPrecedent,
+      affectedParty: risk.affectedParty || "Template users"
+    }
+  })
+  
+  const highRiskCount = risks.filter(r => r.riskLevel === 'high').length
+  const mediumRiskCount = risks.filter(r => r.riskLevel === 'medium').length
+  const lowRiskCount = risks.filter(r => r.riskLevel === 'low').length
+  
+  console.log(`✅ Single-pass template analysis completed: ${risks.length} total template risks found`)
+  
+  return {
+    overallRiskScore: result.overallRiskScore || 5,
+    totalRisksFound: risks.length,
+    highRiskCount,
+    mediumRiskCount,
+    lowRiskCount,
+    risks,
+    recommendations: result.recommendations || [],
+    executiveSummary: result.executiveSummary || "Template analysis completed."
+  }
+}
+
+// Template-specific section splitting
+function splitTemplateIntoSections(content: string): Array<{title: string, content: string}> {
+  const sections: Array<{title: string, content: string}> = []
+  
+  // Template-specific section patterns
+  const templatePatterns = [
+    { pattern: /TEMPLATE\s+HEADER.*?(?=TEMPLATE|PARTIES|RECITALS|ARTICLE|SECTION|$)/gis, title: "Template Header" },
+    { pattern: /PARTIES\s+SECTION.*?(?=RECITALS|WHEREAS|ARTICLE|SECTION|$)/gis, title: "Parties Template Section" },
+    { pattern: /RECITALS.*?(?=AGREEMENT|ARTICLE|SECTION|$)/gis, title: "Recitals Template" },
+    { pattern: /\[.*?\].*?(?=\[|\n\n|$)/gs, title: "Placeholder Field Section" },
+    { pattern: /ARTICLE\s+[IVX\d]+.*?(?=ARTICLE|SECTION|$)/gis, title: "Template Article" },
+    { pattern: /SECTION\s+\d+.*?(?=ARTICLE|SECTION|$)/gis, title: "Template Section" },
+    { pattern: /SIGNATURE\s+BLOCK.*$/gis, title: "Signature Template" }
+  ]
+  
+  let remainingContent = content
+  let processedLength = 0
+  
+  templatePatterns.forEach((patternObj, patternIndex) => {
+    const matches = content.match(patternObj.pattern)
+    if (matches) {
+      matches.forEach((match, matchIndex) => {
+        const sectionContent = match.trim()
+        if (sectionContent.length > 200) {
+          sections.push({
+            title: `${patternObj.title} ${matchIndex + 1}`,
+            content: sectionContent
+          })
+          processedLength += sectionContent.length
+        }
+      })
+    }
+  })
+  
+  // Add chunks if pattern matching didn't capture most content
+  if (processedLength < content.length * 0.7) {
+    console.log('📄 Adding template content chunks for comprehensive coverage')
+    
+    const chunkSize = 4000
+    const overlap = 200
+    
+    for (let i = 0; i < content.length; i += chunkSize - overlap) {
+      const chunk = content.substring(i, i + chunkSize)
+      if (chunk.trim().length > 500) {
+        sections.push({
+          title: `Template Section ${Math.floor(i / chunkSize) + 1}`,
+          content: chunk
+        })
+      }
+    }
+  }
+  
+  const finalSections = sections.filter(section => 
+    section.content.length >= 200 && section.content.length <= 8000
+  )
+  
+  return finalSections.length > 0 ? finalSections : [{ title: "Full Template", content: content }]
+}
+
 // Two-step approach: Convert blanks to brackets, then extract for user input
 export async function extractMissingInfo(content: string): Promise<any> {
   console.log('extractMissingInfo called with content length:', content.length)
