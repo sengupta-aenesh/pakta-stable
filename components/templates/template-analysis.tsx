@@ -459,15 +459,38 @@ export default function TemplateAnalysis({
     onToast(`Template version "${versionName}" created! View the filled template above.`, 'success')
   }
 
-  // Load template variables from analysis cache
+  // Load template variables from analysis cache (preserve user input)
   useEffect(() => {
     if (template?.analysis_cache?.complete?.missingInfo) {
       const variables = template.analysis_cache.complete.missingInfo
-      setTemplateVariables(variables)
       
-      // Notify parent component of initial variable load
+      // CRITICAL: Preserve existing user input when updating variables
+      setTemplateVariables(prevVariables => {
+        const updatedVariables = variables.map(newVar => {
+          // Find existing variable with same ID or label
+          const existingVar = prevVariables.find(prev => 
+            prev.id === newVar.id || prev.label === newVar.label
+          )
+          
+          // Preserve user input if it exists
+          return {
+            ...newVar,
+            userInput: existingVar?.userInput || newVar.userInput || ''
+          }
+        })
+        
+        console.log('🔄 Template variables updated with user input preserved:', {
+          previousCount: prevVariables.length,
+          newCount: updatedVariables.length,
+          preservedInputs: updatedVariables.filter(v => v.userInput).length
+        })
+        
+        return updatedVariables
+      })
+      
+      // Notify parent component of variable load with preserved input
       if (onVariablesUpdate) {
-        const formattedVariables = variables.map(v => ({
+        const formattedVariables = templateVariables.map(v => ({
           id: v.id,
           label: v.label,
           userInput: v.userInput || '',
@@ -476,7 +499,7 @@ export default function TemplateAnalysis({
         onVariablesUpdate(formattedVariables)
       }
     }
-  }, [template?.analysis_cache, onVariablesUpdate])
+  }, [template?.analysis_cache?.complete?.missingInfo, onVariablesUpdate])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {

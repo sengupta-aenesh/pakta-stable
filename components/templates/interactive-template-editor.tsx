@@ -396,11 +396,37 @@ export default function InteractiveTemplateEditor({
     }
     
     let processedContent = baseContent
+    console.log('🔄 Starting variable replacement in version mode:', {
+      variableCount: versionData.variables.length,
+      contentLength: baseContent.length
+    })
     
     // Apply variable replacements for variables that have values
     versionData.variables.forEach(variable => {
       if (variable.value && variable.value.trim()) {
-        // Try multiple replacement patterns to be thorough
+        console.log('🔄 Processing variable:', variable.label, 'with value:', variable.value)
+        
+        // CRITICAL: Find the actual occurrence text from template variables
+        const correspondingTemplateVar = templateVariables?.find(tv => 
+          tv.id === variable.id || tv.label === variable.label
+        )
+        
+        if (correspondingTemplateVar?.occurrences) {
+          correspondingTemplateVar.occurrences.forEach(occurrence => {
+            if (occurrence.text && occurrence.text.trim()) {
+              // Replace the exact occurrence text found by AI analysis
+              const escapedText = occurrence.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const exactTextPattern = new RegExp(escapedText, 'gi')
+              const beforeReplace = processedContent
+              processedContent = processedContent.replace(exactTextPattern, variable.value)
+              if (beforeReplace !== processedContent) {
+                console.log('✅ Successfully replaced occurrence text:', occurrence.text, '→', variable.value)
+              }
+            }
+          })
+        }
+        
+        // Also try common variable patterns as fallback
         const patterns = [
           new RegExp(`\\[${variable.label}\\]`, 'gi'),
           new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
@@ -410,7 +436,11 @@ export default function InteractiveTemplateEditor({
         ]
         
         patterns.forEach(pattern => {
+          const beforeReplace = processedContent
           processedContent = processedContent.replace(pattern, variable.value)
+          if (beforeReplace !== processedContent) {
+            console.log('✅ Successfully replaced pattern:', pattern.source, '→', variable.value)
+          }
         })
         
         // Also replace with variable ID patterns for custom variables
@@ -420,14 +450,24 @@ export default function InteractiveTemplateEditor({
             new RegExp(`\\{\\{${variable.id}\\}\\}`, 'gi')
           ]
           idPatterns.forEach(pattern => {
+            const beforeReplace = processedContent
             processedContent = processedContent.replace(pattern, variable.value)
+            if (beforeReplace !== processedContent) {
+              console.log('✅ Successfully replaced ID pattern:', pattern.source, '→', variable.value)
+            }
           })
         }
       }
     })
     
+    console.log('🔄 Variable replacement completed:', {
+      originalLength: baseContent.length,
+      processedLength: processedContent.length,
+      hasChanges: processedContent !== baseContent
+    })
+    
     return processedContent
-  }, [isVersionMode, versionData])
+  }, [isVersionMode, versionData, templateVariables])
 
   // Get formatted content for display with conditional variable replacement
   const getFormattedContent = useCallback(() => {

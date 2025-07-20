@@ -121,11 +121,20 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
     const currentTemplate = await templatesApi.getById(templateId)
     const resolvedRisks = currentTemplate?.resolved_risks || []
     
+    console.log('🔍 Smart risk detection check:', {
+      templateId,
+      newRisksFound: riskResult.risks?.length || 0,
+      resolvedRisksCount: resolvedRisks.length,
+      hasResolvedRisks: resolvedRisks.length > 0,
+      shouldCompareRisks: resolvedRisks.length > 0 && (riskResult.risks?.length || 0) > 0
+    })
+    
     // Smart risk comparison: filter out risks that match previously resolved ones
     let finalRisks = riskResult.risks || []
     let duplicatesFiltered = 0
     
     if (resolvedRisks.length > 0 && finalRisks.length > 0) {
+      console.log('🎯 Starting smart risk comparison process')
       addSentryBreadcrumb('Starting smart risk comparison', 'template', 'info', { 
         templateId,
         newRisksCount: finalRisks.length,
@@ -135,14 +144,21 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       await updateAnalysisStatus(templateId, 'in_progress', 50, null, 'Comparing risks with resolved history...')
       
       try {
+        console.log('🔄 Calling compareTemplateRisks function...')
         const comparisonResult = await compareTemplateRisks(finalRisks, resolvedRisks)
+        console.log('✅ Comparison result received:', {
+          duplicateRiskIds: comparisonResult.duplicateRiskIds,
+          uniqueRisksCount: comparisonResult.uniqueRisks.length
+        })
+        
         finalRisks = comparisonResult.uniqueRisks
         duplicatesFiltered = comparisonResult.duplicateRiskIds.length
         
         console.log('🎯 Smart risk filtering completed:', {
           originalRisks: riskResult.risks?.length || 0,
           duplicatesFiltered,
-          finalUniqueRisks: finalRisks.length
+          finalUniqueRisks: finalRisks.length,
+          duplicateIds: comparisonResult.duplicateRiskIds
         })
         
         addSentryBreadcrumb('Smart risk comparison completed', 'template', 'info', {
@@ -152,10 +168,17 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
         })
         
       } catch (error) {
-        console.warn('⚠️ Risk comparison failed, keeping all risks:', error)
+        console.error('❌ Risk comparison failed:', error)
+        console.warn('⚠️ Risk comparison failed, keeping all risks')
         // Keep all risks if comparison fails
         finalRisks = riskResult.risks || []
       }
+    } else {
+      console.log('ℹ️ Skipping smart risk comparison:', {
+        reason: resolvedRisks.length === 0 ? 'No resolved risks to compare against' : 'No new risks to compare',
+        resolvedRisksCount: resolvedRisks.length,
+        newRisksCount: finalRisks.length
+      })
     }
 
     // Cache risk result - store complete RiskAnalysis object with smart filtering applied
