@@ -33,36 +33,61 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 })
     }
 
-    // Generate template content with variables replaced
+    // Generate template content with systematic variable replacement
+    console.log('🔄 Starting systematic template version generation:', {
+      templateId,
+      originalLength: template.content?.length || 0,
+      variableCount: variables.length
+    })
+    
+    // CRITICAL: Work with the normalized template content that has standardized variables
+    // The frontend should already have normalized the template, but we need to handle the standardized format
     let generatedContent = template.content || ''
     
-    // Replace variables in template content
+    // Replace variables using standardized format
     variables.forEach((variable: any) => {
       if (variable.value && variable.value.trim()) {
-        // Try multiple replacement patterns to be thorough
-        const patterns = [
-          new RegExp(`\\[${variable.label}\\]`, 'gi'),
-          new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
-          new RegExp(`<${variable.label}>`, 'gi'),
-          new RegExp(`_${variable.label}_`, 'gi'),
-          new RegExp(`\\$\\{${variable.label}\\}`, 'gi')
-        ]
+        // Use the standardized variable format: {{Variable_Name}}
+        const standardizedVariable = `{{${variable.label.replace(/\s+/g, '_')}}}`
+        const standardizedPattern = new RegExp(standardizedVariable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
         
-        patterns.forEach(pattern => {
-          generatedContent = generatedContent.replace(pattern, variable.value)
-        })
+        const beforeReplace = generatedContent
+        generatedContent = generatedContent.replace(standardizedPattern, variable.value)
         
-        // Also replace with variable ID patterns for custom variables
-        if (variable.id) {
-          const idPatterns = [
-            new RegExp(`\\[${variable.id}\\]`, 'gi'),
-            new RegExp(`\\{\\{${variable.id}\\}\\}`, 'gi')
+        if (beforeReplace !== generatedContent) {
+          console.log('✅ Replaced in version:', standardizedVariable, '→', variable.value)
+        } else {
+          console.warn('⚠️ Variable not found in template for replacement:', standardizedVariable)
+          
+          // FALLBACK: If standardized format not found, try to find and replace the original occurrence
+          // This handles cases where template wasn't normalized yet
+          console.log('🔄 Attempting fallback replacement for variable:', variable.label)
+          
+          // Try common patterns as fallback
+          const fallbackPatterns = [
+            new RegExp(`\\[${variable.label}\\]`, 'gi'),
+            new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
+            new RegExp(`<${variable.label}>`, 'gi'),
+            new RegExp(`_${variable.label}_`, 'gi'),
+            new RegExp(`\\$\\{${variable.label}\\}`, 'gi')
           ]
-          idPatterns.forEach(pattern => {
+          
+          fallbackPatterns.forEach(pattern => {
+            const beforeFallback = generatedContent
             generatedContent = generatedContent.replace(pattern, variable.value)
+            if (beforeFallback !== generatedContent) {
+              console.log('✅ Fallback replacement successful:', pattern.source, '→', variable.value)
+            }
           })
         }
       }
+    })
+    
+    console.log('🔄 Template version generation completed:', {
+      originalLength: template.content?.length || 0,
+      generatedLength: generatedContent.length,
+      hasChanges: generatedContent !== template.content,
+      replacedVariables: variables.filter((v: any) => v.value?.trim()).length
     })
 
     // Create template version with variables - matching database schema

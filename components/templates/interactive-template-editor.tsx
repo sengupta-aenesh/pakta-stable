@@ -400,16 +400,58 @@ export default function InteractiveTemplateEditor({
     }
   }, [content, risks, findSimpleTextPosition])
 
-  // Apply variable replacement to content (only in version mode)
-  const applyVariableReplacement = useCallback((baseContent: string) => {
-    if (!isVersionMode || !versionData?.variables) {
+  // Step 1: Normalize template content by converting all detected variables to standard format
+  const normalizeTemplateContent = useCallback((baseContent: string): string => {
+    if (!templateVariables || templateVariables.length === 0) {
       return baseContent
     }
     
-    let processedContent = baseContent
+    let normalizedContent = baseContent
+    
+    console.log('🔧 Normalizing template with standardized variable format:', {
+      variableCount: templateVariables.length,
+      contentLength: baseContent.length
+    })
+    
+    // Convert all detected variables to standard {{Variable_Name}} format
+    templateVariables.forEach(variable => {
+      if (variable.occurrences && variable.occurrences.length > 0) {
+        variable.occurrences.forEach(occurrence => {
+          if (occurrence.text && occurrence.text.trim()) {
+            // Replace the exact occurrence text with standardized format
+            const escapedText = occurrence.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const exactTextPattern = new RegExp(escapedText, 'gi')
+            const standardizedVariable = `{{${variable.label.replace(/\s+/g, '_')}}}`
+            
+            const beforeReplace = normalizedContent
+            normalizedContent = normalizedContent.replace(exactTextPattern, standardizedVariable)
+            
+            if (beforeReplace !== normalizedContent) {
+              console.log('✅ Normalized variable:', occurrence.text, '→', standardizedVariable)
+            }
+          }
+        })
+      }
+    })
+    
+    console.log('🔧 Template normalization completed:', {
+      hasChanges: normalizedContent !== baseContent,
+      normalizedLength: normalizedContent.length
+    })
+    
+    return normalizedContent
+  }, [templateVariables])
+
+  // Step 2: Apply variable replacement to normalized content (only in version mode)
+  const applyVariableReplacement = useCallback((normalizedContent: string) => {
+    if (!isVersionMode || !versionData?.variables) {
+      return normalizedContent
+    }
+    
+    let processedContent = normalizedContent
     console.log('🔄 Starting variable replacement in version mode:', {
       variableCount: versionData.variables.length,
-      contentLength: baseContent.length
+      contentLength: normalizedContent.length
     })
     
     // Apply variable replacements for variables that have values
@@ -417,74 +459,53 @@ export default function InteractiveTemplateEditor({
       if (variable.value && variable.value.trim()) {
         console.log('🔄 Processing variable:', variable.label, 'with value:', variable.value)
         
-        // CRITICAL: Find the actual occurrence text from template variables prop
-        const correspondingTemplateVar = templateVariables?.find(tv => 
-          tv.id === variable.id || tv.label === variable.label
-        )
+        // Replace standardized variable format with user input
+        const standardizedVariable = `{{${variable.label.replace(/\s+/g, '_')}}}`
+        const standardizedPattern = new RegExp(standardizedVariable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
         
-        if (correspondingTemplateVar?.occurrences) {
-          correspondingTemplateVar.occurrences.forEach(occurrence => {
-            if (occurrence.text && occurrence.text.trim()) {
-              // Replace the exact occurrence text found by AI analysis
-              const escapedText = occurrence.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-              const exactTextPattern = new RegExp(escapedText, 'gi')
-              const beforeReplace = processedContent
-              processedContent = processedContent.replace(exactTextPattern, variable.value)
-              if (beforeReplace !== processedContent) {
-                console.log('✅ Successfully replaced occurrence text:', occurrence.text, '→', variable.value)
-              }
-            }
-          })
-        }
+        const beforeReplace = processedContent
+        processedContent = processedContent.replace(standardizedPattern, variable.value)
         
-        // Also try common variable patterns as fallback
-        const patterns = [
-          new RegExp(`\\[${variable.label}\\]`, 'gi'),
-          new RegExp(`\\{\\{${variable.label}\\}\\}`, 'gi'),
-          new RegExp(`<${variable.label}>`, 'gi'),
-          new RegExp(`_${variable.label}_`, 'gi'),
-          new RegExp(`\\$\\{${variable.label}\\}`, 'gi')
-        ]
-        
-        patterns.forEach(pattern => {
-          const beforeReplace = processedContent
-          processedContent = processedContent.replace(pattern, variable.value)
-          if (beforeReplace !== processedContent) {
-            console.log('✅ Successfully replaced pattern:', pattern.source, '→', variable.value)
-          }
-        })
-        
-        // Also replace with variable ID patterns for custom variables
-        if (variable.id) {
-          const idPatterns = [
-            new RegExp(`\\[${variable.id}\\]`, 'gi'),
-            new RegExp(`\\{\\{${variable.id}\\}\\}`, 'gi')
-          ]
-          idPatterns.forEach(pattern => {
-            const beforeReplace = processedContent
-            processedContent = processedContent.replace(pattern, variable.value)
-            if (beforeReplace !== processedContent) {
-              console.log('✅ Successfully replaced ID pattern:', pattern.source, '→', variable.value)
-            }
-          })
+        if (beforeReplace !== processedContent) {
+          console.log('✅ Successfully replaced standardized variable:', standardizedVariable, '→', variable.value)
+        } else {
+          console.warn('⚠️ No replacement made for:', standardizedVariable)
         }
       }
     })
     
     console.log('🔄 Variable replacement completed:', {
-      originalLength: baseContent.length,
+      originalLength: normalizedContent.length,
       processedLength: processedContent.length,
-      hasChanges: processedContent !== baseContent
+      hasChanges: processedContent !== normalizedContent,
+      variablesReplaced: versionData.variables.filter(v => v.value?.trim()).length
     })
     
     return processedContent
-  }, [isVersionMode, versionData, templateVariables])
+  }, [isVersionMode, versionData])
 
-  // Get formatted content for display with conditional variable replacement
+  // Get formatted content for display with systematic variable processing
   const getFormattedContent = useCallback(() => {
     const baseContent = beautifyContent(content)
-    return applyVariableReplacement(baseContent)
-  }, [content, beautifyContent, applyVariableReplacement])
+    
+    // Step 1: Always normalize the template to show standardized variables
+    const normalizedContent = normalizeTemplateContent(baseContent)
+    
+    // Step 2: If in version mode, apply user input replacements
+    const finalContent = applyVariableReplacement(normalizedContent)
+    
+    if (isVersionMode) {
+      console.log('🎯 Version mode content processing:', {
+        originalContent: baseContent.substring(0, 100) + '...',
+        normalizedContent: normalizedContent.substring(0, 100) + '...',
+        finalContent: finalContent.substring(0, 100) + '...',
+        hasNormalization: normalizedContent !== baseContent,
+        hasReplacements: finalContent !== normalizedContent
+      })
+    }
+    
+    return finalContent
+  }, [content, beautifyContent, normalizeTemplateContent, applyVariableReplacement, isVersionMode])
 
   // Function to render content with risk highlights
   const renderHighlightedContent = useCallback(() => {
@@ -1093,12 +1114,22 @@ export default function InteractiveTemplateEditor({
                 {riskHighlights.length} risk{riskHighlights.length !== 1 ? 's' : ''} highlighted
               </span>
             )}
-            <span className={styles.selectionHint}>
-              {variableSelectionEnabled 
-                ? 'Variable mode: Select text to create template variables'
-                : 'Select any text to explain or improve with AI'
-              }
-            </span>
+            {isVersionMode ? (
+              <span className={styles.selectionHint} style={{ color: '#059669', fontWeight: '600' }}>
+                ✅ Version Mode: Viewing template with your variable inputs applied
+              </span>
+            ) : templateVariables && templateVariables.length > 0 ? (
+              <span className={styles.selectionHint} style={{ color: '#2563eb', fontWeight: '500' }}>
+                📍 Normalized Template: Variables shown in standard {'{{'} Variable_Name {'}}'}  format
+              </span>
+            ) : (
+              <span className={styles.selectionHint}>
+                {variableSelectionEnabled 
+                  ? 'Variable mode: Select text to create template variables'
+                  : 'Select any text to explain or improve with AI'
+                }
+              </span>
+            )}
             {showToolbar && (
               <span className={styles.toolbarStatus}>
                 ✓ Toolbar active

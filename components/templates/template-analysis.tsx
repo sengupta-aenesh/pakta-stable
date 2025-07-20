@@ -806,24 +806,22 @@ export default function TemplateAnalysis({
                       value={variable.userInput}
                       onChange={(e) => handleVariableChange(variable.id, e.target.value)}
                     />
-                    {variable.userInput && (
-                      <div className={styles.previewContainer}>
-                        <div className={styles.previewNote}>
-                          ✓ Will replace: {variable.occurrences.map(occ => `"${occ.text}"`).join(', ')}
-                        </div>
-                        {variable.context && (
-                          <div className={styles.previewResult}>
-                            <span className={styles.previewLabel}>Preview:</span>
-                            <code className={styles.previewText}>
-                              {variable.context.replace(
-                                variable.occurrences[0]?.text || '', 
-                                variable.userInput
-                              )}
-                            </code>
-                          </div>
-                        )}
+                    <div className={styles.previewContainer}>
+                      <div className={styles.previewNote}>
+                        📍 Standard format: <code>{'{{'}{variable.label.replace(/\s+/g, '_')}{'}}'}</code>
                       </div>
-                    )}
+                      <div className={styles.previewNote}>
+                        🔍 Found in: {variable.occurrences.map(occ => `"${occ.text}"`).join(', ')}
+                      </div>
+                      {variable.userInput && (
+                        <div className={styles.previewResult}>
+                          <span className={styles.previewLabel}>Preview replacement:</span>
+                          <code className={styles.previewText}>
+                            "{'{{'}{variable.label.replace(/\s+/g, '_')}{'}}'}" → "{variable.userInput}"
+                          </code>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
                 
