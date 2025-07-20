@@ -75,9 +75,32 @@ export default function TemplateAnalysis({
           setAnalysisProgress(100)
           setAnalyzing(false)
           
-          // Update template with new analysis results
-          const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
-          onTemplateUpdate(updatedTemplate)
+          // CRITICAL: Refresh template data from database to get updated analysis cache
+          try {
+            console.log('🔄 Refreshing template data after analysis completion...')
+            const response = await fetch(`/api/template/${template.id}`)
+            if (response.ok) {
+              const refreshedTemplate = await response.json()
+              console.log('✅ Template data refreshed:', {
+                id: refreshedTemplate.id,
+                status: refreshedTemplate.analysis_status,
+                hasRisks: !!refreshedTemplate.analysis_cache?.risks,
+                hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
+                variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
+              })
+              onTemplateUpdate(refreshedTemplate)
+            } else {
+              console.error('Failed to refresh template data')
+              // Fallback to basic update
+              const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
+              onTemplateUpdate(updatedTemplate)
+            }
+          } catch (error) {
+            console.error('Error refreshing template data:', error)
+            // Fallback to basic update
+            const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
+            onTemplateUpdate(updatedTemplate)
+          }
           
           // Check if smart filtering was applied and show appropriate message
           const riskData = statusData.riskData || template.analysis_cache?.risks
@@ -467,10 +490,13 @@ export default function TemplateAnalysis({
       hasComplete: !!template?.analysis_cache?.complete,
       hasMissingInfo: !!template?.analysis_cache?.complete?.missingInfo,
       missingInfoCount: template?.analysis_cache?.complete?.missingInfo?.length || 0,
-      templateId: template?.id
+      templateId: template?.id,
+      analysisStatus: template?.analysis_status,
+      cacheKeys: template?.analysis_cache ? Object.keys(template.analysis_cache) : []
     })
 
-    if (template?.analysis_cache?.complete?.missingInfo) {
+    // Load variables from analysis cache when template analysis is complete
+    if (template?.analysis_status === 'complete' && template?.analysis_cache?.complete?.missingInfo) {
       const variables = template.analysis_cache.complete.missingInfo
       
       console.log('📥 Loading template variables from cache:', {
@@ -478,8 +504,10 @@ export default function TemplateAnalysis({
         firstVariable: variables[0] ? {
           id: variables[0].id,
           label: variables[0].label,
-          occurrences: variables[0].occurrences?.length || 0
-        } : null
+          occurrences: variables[0].occurrences?.length || 0,
+          fieldType: variables[0].fieldType
+        } : null,
+        allVariables: variables.map(v => ({ id: v.id, label: v.label, fieldType: v.fieldType }))
       })
       
       // CRITICAL: Preserve existing user input when updating variables
@@ -506,21 +534,28 @@ export default function TemplateAnalysis({
         return updatedVariables
       })
       
-      // Notify parent component of variable load with preserved input
-      if (onVariablesUpdate) {
-        const formattedVariables = templateVariables.map(v => ({
-          id: v.id,
-          label: v.label,
-          userInput: v.userInput || '',
-          fieldType: v.fieldType
-        }))
-        onVariablesUpdate(formattedVariables)
+      // Notify parent component of variable load with preserved input - use updated variables
+      if (onVariablesUpdate && variables.length > 0) {
+        setTimeout(() => {
+          const formattedVariables = variables.map(v => ({
+            id: v.id,
+            label: v.label,
+            userInput: v.userInput || '',
+            fieldType: v.fieldType
+          }))
+          console.log('📤 Notifying parent of variable updates:', formattedVariables)
+          onVariablesUpdate(formattedVariables)
+        }, 100) // Small delay to ensure state update
       }
-    } else {
-      console.log('⚠️ No template variables found in analysis cache')
+    } else if (template?.analysis_status !== 'complete' || !template?.analysis_cache?.complete) {
+      console.log('⚠️ Template analysis not complete or no variables found:', {
+        status: template?.analysis_status,
+        hasCompleteCache: !!template?.analysis_cache?.complete,
+        hasMissingInfo: !!template?.analysis_cache?.complete?.missingInfo
+      })
       setTemplateVariables([])
     }
-  }, [template?.analysis_cache?.complete?.missingInfo, onVariablesUpdate])
+  }, [template?.analysis_status, template?.analysis_cache?.complete?.missingInfo, onVariablesUpdate])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {

@@ -105,7 +105,8 @@ function TemplateDashboardContent() {
       risksStructure: template.analysis_cache?.risks ? (Array.isArray(template.analysis_cache.risks) ? 'array' : 'object') : 'none'
     })
 
-    if (template.analysis_cache?.risks) {
+    // Only load risks if analysis is complete
+    if (template.analysis_status === 'complete' && template.analysis_cache?.risks) {
       const riskAnalysis = template.analysis_cache.risks
       const cachedRisks = Array.isArray(riskAnalysis) 
         ? riskAnalysis  // Fallback for old direct array format
@@ -120,7 +121,10 @@ function TemplateDashboardContent() {
       })
       setTemplateRisks(cachedRisks)
     } else {
-      console.log('⚠️ No risks found in analysis cache')
+      console.log('⚠️ No risks found in analysis cache or analysis not complete:', {
+        status: template.analysis_status,
+        hasRisks: !!template.analysis_cache?.risks
+      })
       setTemplateRisks([])
     }
     
@@ -248,8 +252,9 @@ function TemplateDashboardContent() {
       await templatesApi.update(selectedTemplate.id, { content: safeContent })
       // Update the local template state
       setSelectedTemplate(prev => prev ? { ...prev, content: safeContent } : null)
-      // Clear risks cache when content changes as it may no longer be accurate
+      // Clear risks and variables cache when content changes as they may no longer be accurate
       setTemplateRisks([])
+      setTemplateVariables([])
       toast('Template updated successfully', 'success')
     } catch (error) {
       console.error('Error updating template:', error)
@@ -466,7 +471,10 @@ function TemplateDashboardContent() {
                     setSelectedTemplate(updatedTemplate)
                     setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
                   }}
-                  onVariablesUpdate={setTemplateVariables}
+                  onVariablesUpdate={(variables) => {
+                    console.log('🔄 Variables updated from analysis component:', variables)
+                    setTemplateVariables(variables)
+                  }}
                   onVersionCreate={handleVersionCreate}
                   onToast={toast}
                 />
