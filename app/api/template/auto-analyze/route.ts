@@ -98,6 +98,13 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       templateId
     )
 
+    console.log('🔍 Template summary result:', {
+      hasError: 'error' in summaryResult,
+      resultKeys: Object.keys(summaryResult),
+      contractType: summaryResult.contract_type,
+      overview: summaryResult.overview?.substring(0, 100) + '...'
+    })
+
     if ('error' in summaryResult) {
       throw new Error(`Template summary analysis failed: ${summaryResult.message || 'Validation error'}`)
     }
@@ -116,6 +123,14 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       'risks',
       templateId
     )
+
+    console.log('🔍 Template risk analysis result:', {
+      hasRisks: !!riskResult.risks,
+      risksCount: riskResult.risks?.length || 0,
+      hasRecommendations: !!riskResult.recommendations,
+      overallRiskScore: riskResult.overallRiskScore,
+      executiveSummary: riskResult.executiveSummary?.substring(0, 100) + '...'
+    })
 
     // Get current template to check for resolved risks
     const currentTemplate = await templatesApi.getById(templateId)
@@ -208,6 +223,14 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       'complete',
       templateId
     )
+
+    console.log('🔍 Template field extraction result:', {
+      hasMissingInfo: !!completeResult.missingInfo,
+      missingInfoCount: completeResult.missingInfo?.length || 0,
+      hasVariableSections: !!completeResult.variableSections,
+      variableSectionsCount: completeResult.variableSections?.length || 0,
+      hasProcessedContent: !!completeResult.processedContent
+    })
 
     // CRITICAL: Normalize template content after variable detection
     console.log('🔧 Starting template content normalization after variable detection...')

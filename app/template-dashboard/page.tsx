@@ -94,13 +94,34 @@ function TemplateDashboardContent() {
     setSelectedTemplate(template)
     
     // Load cached risks from RiskAnalysis object
+    console.log('🔍 Template analysis cache structure:', {
+      hasAnalysisCache: !!template.analysis_cache,
+      analysisStatus: template.analysis_status,
+      analysisProgress: template.analysis_progress,
+      cacheKeys: template.analysis_cache ? Object.keys(template.analysis_cache) : [],
+      hasRisks: !!template.analysis_cache?.risks,
+      hasSummary: !!template.analysis_cache?.summary,
+      hasComplete: !!template.analysis_cache?.complete,
+      risksStructure: template.analysis_cache?.risks ? (Array.isArray(template.analysis_cache.risks) ? 'array' : 'object') : 'none'
+    })
+
     if (template.analysis_cache?.risks) {
       const riskAnalysis = template.analysis_cache.risks
       const cachedRisks = Array.isArray(riskAnalysis) 
         ? riskAnalysis  // Fallback for old direct array format
         : riskAnalysis.risks || []  // New RiskAnalysis object format
-      console.log('📥 Loading cached risks:', cachedRisks.length, 'risks')
+      console.log('📥 Loading cached risks:', {
+        risksCount: cachedRisks.length,
+        firstRisk: cachedRisks[0] ? {
+          id: cachedRisks[0].id,
+          category: cachedRisks[0].category,
+          riskLevel: cachedRisks[0].riskLevel
+        } : null
+      })
       setTemplateRisks(cachedRisks)
+    } else {
+      console.log('⚠️ No risks found in analysis cache')
+      setTemplateRisks([])
     }
     
     // On mobile, switch to analysis view when template is selected

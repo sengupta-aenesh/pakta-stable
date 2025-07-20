@@ -461,8 +461,26 @@ export default function TemplateAnalysis({
 
   // Load template variables from analysis cache (preserve user input)
   useEffect(() => {
+    console.log('🔍 Template variables loading check:', {
+      hasTemplate: !!template,
+      hasAnalysisCache: !!template?.analysis_cache,
+      hasComplete: !!template?.analysis_cache?.complete,
+      hasMissingInfo: !!template?.analysis_cache?.complete?.missingInfo,
+      missingInfoCount: template?.analysis_cache?.complete?.missingInfo?.length || 0,
+      templateId: template?.id
+    })
+
     if (template?.analysis_cache?.complete?.missingInfo) {
       const variables = template.analysis_cache.complete.missingInfo
+      
+      console.log('📥 Loading template variables from cache:', {
+        variablesCount: variables.length,
+        firstVariable: variables[0] ? {
+          id: variables[0].id,
+          label: variables[0].label,
+          occurrences: variables[0].occurrences?.length || 0
+        } : null
+      })
       
       // CRITICAL: Preserve existing user input when updating variables
       setTemplateVariables(prevVariables => {
@@ -498,6 +516,9 @@ export default function TemplateAnalysis({
         }))
         onVariablesUpdate(formattedVariables)
       }
+    } else {
+      console.log('⚠️ No template variables found in analysis cache')
+      setTemplateVariables([])
     }
   }, [template?.analysis_cache?.complete?.missingInfo, onVariablesUpdate])
 

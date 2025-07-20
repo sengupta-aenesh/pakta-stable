@@ -345,6 +345,103 @@ export default function UnifiedSidebar({
     setIsDragging(false)
   }
 
+  // Template drag and drop handlers
+  const handleTemplateDragStart = (e: React.DragEvent, template: Template) => {
+    console.log('🎯 Template Drag Start:', template.title)
+    
+    // Set drag data immediately
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', template.id)
+    
+    // Simple state updates with delay to prevent cancellation
+    setTimeout(() => {
+      setDraggedTemplate(template)
+      setIsTemplateDragging(true)
+    }, 50)
+  }
+
+  const handleTemplateDragEnd = (e: React.DragEvent) => {
+    console.log('🏁 Template Drag End')
+    setDraggedTemplate(null)
+    setDragOverTemplateFolder(null)
+    setIsTemplateDragging(false)
+  }
+
+  // Template folder drag handlers
+  const handleTemplateFolderDragOver = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    console.log('📁 Template Drag Over Folder:', folderId, 'draggedTemplate:', !!draggedTemplate)
+    
+    let draggedTemplateData = draggedTemplate
+    if (!draggedTemplateData) {
+      const templateId = e.dataTransfer.getData('text/plain')
+      if (templateId) {
+        draggedTemplateData = templates.find(t => t.id === templateId) || null
+      }
+    }
+    
+    if (draggedTemplateData && draggedTemplateData.folder_id !== folderId) {
+      setDragOverTemplateFolder(folderId)
+    }
+  }
+
+  const handleTemplateFolderDragEnter = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverTemplateFolder(folderId)
+  }
+
+  const handleTemplateFolderDragLeave = (e: React.DragEvent, folderId: string | null) => {
+    e.stopPropagation()
+    if (e.currentTarget === e.target) {
+      setDragOverTemplateFolder(null)
+    }
+  }
+
+  const handleTemplateFolderDrop = async (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    console.log('🎯 Template Drop in Folder:', folderId)
+    
+    const templateId = e.dataTransfer.getData('text/plain')
+    let draggedTemplateData = draggedTemplate
+    
+    if (!draggedTemplateData && templateId) {
+      draggedTemplateData = templates.find(t => t.id === templateId) || null
+    }
+    
+    if (!draggedTemplateData) {
+      console.error('❌ No template data found for drop')
+      setDragOverTemplateFolder(null)
+      return
+    }
+    
+    const targetFolderName = folderId ? templateFolders.find(f => f.id === folderId)?.name || 'folder' : 'All Templates'
+    
+    console.log('🎯 Template Drag & Drop - Starting drop operation:', {
+      templateId: draggedTemplateData.id,
+      templateTitle: draggedTemplateData.title,
+      fromFolder: draggedTemplateData.folder_id || 'All Templates',
+      targetFolderId: folderId,
+      targetFolderName
+    })
+    
+    try {
+      await templatesApi.update(draggedTemplateData.id, { folder_id: folderId })
+      console.log('✅ Template moved successfully')
+      onTemplatesUpdate()
+      onToast?.(`Template "${draggedTemplateData.title}" moved to ${targetFolderName}`, 'success')
+    } catch (error) {
+      console.error('❌ Error moving template:', error)
+      onToast?.('Failed to move template. Please try again.', 'error')
+    }
+    
+    setDragOverTemplateFolder(null)
+  }
+
   const handleFolderDragOver = (e: React.DragEvent, folderId: string | null) => {
     // Always prevent default to allow drop
     e.preventDefault()
@@ -729,6 +826,32 @@ export default function UnifiedSidebar({
     })
   }
 
+  // Delete template function
+  const handleDeleteTemplate = (template: Template, event: React.MouseEvent) => {
+    event.stopPropagation()
+    event.preventDefault()
+    
+    if (isTemplateDragging) return
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Template',
+      message: `Are you sure you want to delete "${template.title}"?\n\nThis action cannot be undone.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await templatesApi.delete(template.id)
+          onTemplatesUpdate()
+          onToast?.(`Template "${template.title}" deleted successfully`, 'success')
+        } catch (error) {
+          console.error('Error deleting template:', error)
+          onToast?.('Failed to delete template. Please try again.', 'error')
+        }
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+      }
+    })
+  }
+
   const renderContractItem = (contract: Contract, level: number = 0) => {
     const truncatedTitle = contract.title.length > 20 
       ? contract.title.substring(0, 20) + '...' 
@@ -833,6 +956,13 @@ export default function UnifiedSidebar({
           borderRadius: '4px',
           background: isBeingDragged ? 'rgba(17, 24, 39, 0.05)' : ''
         }}
+        draggable={true}
+        onDragStart={(e) => {
+          handleTemplateDragStart(e, template)
+        }}
+        onDragEnd={(e) => {
+          handleTemplateDragEnd(e)
+        }}
         onClick={(e) => {
           if (isTemplateDragging) {
             e.preventDefault()
@@ -860,6 +990,22 @@ export default function UnifiedSidebar({
           progress={template.analysis_progress || 0}
           size="small"
         />
+        
+        {/* Delete Template Button */}
+        <button
+          className={styles.deleteContractButton}
+          style={{
+            pointerEvents: isTemplateDragging ? 'none' : 'auto'
+          }}
+          onClick={(e) => handleDeleteTemplate(template, e)}
+          title="Delete template"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ pointerEvents: 'none' }}>
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+          </svg>
+        </button>
       </div>
     )
   }
@@ -892,6 +1038,25 @@ export default function UnifiedSidebar({
             pointerEvents: 'auto'
           }}
           onClick={() => !isEditing && !isTemplateDragging && onSelectTemplateFolder(folder.id)}
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleTemplateFolderDragOver(e, folder.id)
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleTemplateFolderDragEnter(e, folder.id)
+          }}
+          onDragLeave={(e) => {
+            e.stopPropagation()
+            handleTemplateFolderDragLeave(e, folder.id)
+          }}
+          onDrop={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleTemplateFolderDrop(e, folder.id)
+          }}
         >
           <button
             className={`${styles.expandIcon} ${isExpanded ? styles.expanded : ''}`}
