@@ -103,6 +103,16 @@ interface TextSelection {
 interface InteractiveTemplateEditorProps {
   template: Template | null
   risks: RiskFactor[]
+  templateVariables?: Array<{
+    id: string
+    label: string
+    userInput: string
+    fieldType: string
+    occurrences?: Array<{
+      text: string
+      position: number
+    }>
+  }>
   onContentChange: (content: string) => void
   onRiskClick?: (riskId: string) => void
   onHighlightClick?: (riskId: string) => void
@@ -126,6 +136,7 @@ interface InteractiveTemplateEditorProps {
 export default function InteractiveTemplateEditor({
   template,
   risks,
+  templateVariables,
   onContentChange,
   onRiskClick,
   onHighlightClick,
@@ -406,7 +417,7 @@ export default function InteractiveTemplateEditor({
       if (variable.value && variable.value.trim()) {
         console.log('🔄 Processing variable:', variable.label, 'with value:', variable.value)
         
-        // CRITICAL: Find the actual occurrence text from template variables
+        // CRITICAL: Find the actual occurrence text from template variables prop
         const correspondingTemplateVar = templateVariables?.find(tv => 
           tv.id === variable.id || tv.label === variable.label
         )
