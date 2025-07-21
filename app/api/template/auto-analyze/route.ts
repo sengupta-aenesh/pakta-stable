@@ -141,7 +141,12 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       newRisksFound: riskResult.risks?.length || 0,
       resolvedRisksCount: resolvedRisks.length,
       hasResolvedRisks: resolvedRisks.length > 0,
-      shouldCompareRisks: resolvedRisks.length > 0 && (riskResult.risks?.length || 0) > 0
+      shouldCompareRisks: resolvedRisks.length > 0 && (riskResult.risks?.length || 0) > 0,
+      resolvedRisks: resolvedRisks.map(r => ({ 
+        id: r.id, 
+        category: r.category, 
+        explanation: r.explanation?.substring(0, 50) + '...' 
+      }))
     })
     
     // Smart risk comparison: filter out risks that match previously resolved ones
@@ -160,10 +165,20 @@ export async function performSequentialTemplateAnalysis(templateId: string, cont
       
       try {
         console.log('🔄 Calling compareTemplateRisks function...')
+        console.log('📋 New risks being compared:', finalRisks.map(r => ({
+          id: r.id,
+          category: r.category,
+          explanation: r.explanation?.substring(0, 50) + '...'
+        })))
+        
         const comparisonResult = await compareTemplateRisks(finalRisks, resolvedRisks)
         console.log('✅ Comparison result received:', {
           duplicateRiskIds: comparisonResult.duplicateRiskIds,
-          uniqueRisksCount: comparisonResult.uniqueRisks.length
+          uniqueRisksCount: comparisonResult.uniqueRisks.length,
+          duplicatesDetailed: comparisonResult.duplicateRiskIds.map(id => {
+            const risk = finalRisks.find(r => r.id === id)
+            return { id, category: risk?.category, explanation: risk?.explanation?.substring(0, 50) + '...' }
+          })
         })
         
         finalRisks = comparisonResult.uniqueRisks

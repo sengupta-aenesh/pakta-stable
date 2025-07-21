@@ -55,13 +55,13 @@ export default function TemplateAnalysis({
     simulationActiveRef.current = true
     
     const progressSteps = [
-      { step: 5, message: 'Analyzing template structure...', delay: 12000 },
-      { step: 15, message: 'Identifying template variables...', delay: 14000 },
-      { step: 30, message: 'Processing template content...', delay: 13000 },
-      { step: 45, message: 'Detecting potential risks...', delay: 15000 },
-      { step: 65, message: 'Analyzing template patterns...', delay: 11000 },
-      { step: 80, message: 'Finalizing analysis...', delay: 13000 },
-      { step: 90, message: 'Completing analysis...', delay: 10000 }
+      { step: 5, message: 'Analyzing template structure...', delay: 2000 },
+      { step: 15, message: 'Identifying template variables...', delay: 3000 },
+      { step: 30, message: 'Processing template content...', delay: 3000 },
+      { step: 45, message: 'Detecting potential risks...', delay: 4000 },
+      { step: 65, message: 'Analyzing template patterns...', delay: 3000 },
+      { step: 80, message: 'Finalizing analysis...', delay: 3000 },
+      { step: 90, message: 'Completing analysis...', delay: 2000 }
     ]
     
     let currentStep = 0
@@ -74,20 +74,15 @@ export default function TemplateAnalysis({
         
         console.log(`📊 Progress simulation step ${currentStep + 1}: ${step}% - ${message}`)
         
-        // Update progress
-        setAnalysisProgress(prevProgress => {
-          const newProgress = Math.max(prevProgress, step)
-          console.log(`📈 Setting progress: ${prevProgress} → ${newProgress}`)
-          return newProgress
-        })
-        
+        // Update progress immediately
+        setAnalysisProgress(step)
         setCurrentProgressStep(step)
         
         currentStep++
         
         // Schedule next step
         console.log(`⏰ Scheduling next step in ${delay}ms`)
-        const nextTimeout = setTimeout(simulateProgress, delay)
+        const nextTimeout = setTimeout(() => simulateProgress(), delay)
         setProgressSimulation(nextTimeout)
       } else if (!simulationActiveRef.current) {
         console.log('⏹️ Progress simulation stopped - analysis completed')
@@ -96,13 +91,17 @@ export default function TemplateAnalysis({
       }
     }
     
-    // Start simulation immediately for first step
-    console.log('⏰ Starting first step in 300ms')
-    const initialTimeout = setTimeout(() => {
-      console.log('📊 Progress simulation first step executing...')
+    // Start simulation with first progress update immediately
+    console.log('📊 Starting progress simulation immediately')
+    setAnalysisProgress(5)
+    setCurrentProgressStep(5)
+    
+    // Schedule the second step
+    const nextTimeout = setTimeout(() => {
+      currentStep = 1
       simulateProgress()
-    }, 300)
-    setProgressSimulation(initialTimeout)
+    }, progressSteps[0].delay)
+    setProgressSimulation(nextTimeout)
   }
   
   // Clear progress simulation
