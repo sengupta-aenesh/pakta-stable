@@ -35,6 +35,7 @@ interface UnifiedSidebarProps {
   // View mode
   viewMode?: 'contracts' | 'templates'
   onViewModeChange?: (mode: 'contracts' | 'templates') => void
+  showViewModeToggle?: boolean // New prop to explicitly control toggle visibility
 }
 
 interface FolderTreeItem extends Folder {
@@ -72,7 +73,8 @@ export default function UnifiedSidebar({
   onToast,
   // View mode
   viewMode = 'contracts',
-  onViewModeChange = () => {}
+  onViewModeChange = () => {},
+  showViewModeToggle = false
 }: UnifiedSidebarProps) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
@@ -1558,53 +1560,6 @@ export default function UnifiedSidebar({
         {/* Normal Folder Tree (when not searching) */}
         {!searchTerm && (
           <div>
-            {/* View Mode Switcher - Only show if onViewModeChange is provided and functional */}
-            {onViewModeChange && onViewModeChange.toString() !== '() => {}' && (
-              <div style={{
-                display: 'flex',
-                marginBottom: '16px',
-                borderRadius: '8px',
-                backgroundColor: '#E5E7EB',
-                padding: '2px'
-              }}>
-                <button
-                  onClick={() => onViewModeChange('templates')}
-                  style={{
-                    flex: 1,
-                    padding: '8px 16px',
-                    border: 'none',
-                    borderRadius: '6px',
-                    backgroundColor: viewMode === 'templates' ? '#FFFFFF' : 'transparent',
-                    color: viewMode === 'templates' ? '#111827' : '#6B7280',
-                    fontSize: '14px',
-                    fontWeight: viewMode === 'templates' ? '600' : '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: viewMode === 'templates' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
-                  }}
-                >
-                  Templates
-                </button>
-                <button
-                  onClick={() => onViewModeChange('contracts')}
-                  style={{
-                    flex: 1,
-                    padding: '8px 16px',
-                    border: 'none',
-                    borderRadius: '6px',
-                    backgroundColor: viewMode === 'contracts' ? '#FFFFFF' : 'transparent',
-                    color: viewMode === 'contracts' ? '#111827' : '#6B7280',
-                    fontSize: '14px',
-                    fontWeight: viewMode === 'contracts' ? '600' : '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: viewMode === 'contracts' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
-                  }}
-                >
-                  Contracts
-                </button>
-              </div>
-            )}
 
             {/* Templates View */}
             {viewMode === 'templates' && (
