@@ -181,6 +181,7 @@ export default function FoldersPage() {
           // View mode
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          showViewModeToggle={true}
         />
       </div>
 
