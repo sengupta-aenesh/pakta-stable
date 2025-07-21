@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Contract, contractsApi } from '@/lib/supabase-client'
 import { Button, ConfirmationDialog, useToast, Toast } from '@/components/ui'
-import FileOptionsMenu from './file-options-menu'
+import ContextMenu from './context-menu'
 import FolderSelectionModal from './folder-selection-modal'
 import RenameModal from './rename-modal'
 import styles from '@/app/folders/folders.module.css'
@@ -50,6 +50,11 @@ export default function ContractGrid({
     isOpen: boolean
     contract: Contract | null
   }>({ isOpen: false, contract: null })
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean
+    position: { x: number; y: number }
+    contract: Contract | null
+  }>({ isOpen: false, position: { x: 0, y: 0 }, contract: null })
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -161,6 +166,17 @@ export default function ContractGrid({
       console.error('Error deleting contract:', error)
       toast('Failed to delete contract', 'error')
     }
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, contract: Contract) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      contract
+    })
+    setSelectedContract(contract)
   }
 
   return (
@@ -314,27 +330,8 @@ export default function ContractGrid({
                   key={contract.id}
                   className={styles.osFileItem}
                   onClick={() => onContractClick(contract)}
+                  onContextMenu={(e) => handleContextMenu(e, contract)}
                 >
-                  {/* Options Menu */}
-                  <FileOptionsMenu
-                    className={styles.fileOptionsMenu}
-                    onMove={() => {
-                      setSelectedContract(contract)
-                      setModalState({ type: 'move', isOpen: true })
-                    }}
-                    onCopy={() => {
-                      setSelectedContract(contract)
-                      setModalState({ type: 'copy', isOpen: true })
-                    }}
-                    onRename={() => {
-                      setSelectedContract(contract)
-                      setModalState({ type: 'rename', isOpen: true })
-                    }}
-                    onDelete={() => {
-                      setDeleteConfirmation({ isOpen: true, contract })
-                    }}
-                  />
-
                   {/* Minimalist Document Icon */}
                   <div className={styles.osIconContainer}>
                     <div className={styles.iconBackground}>
@@ -377,6 +374,29 @@ export default function ContractGrid({
         )}
         </div>
       </div>
+
+      {/* Context Menu */}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={() => setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, contract: null })}
+        onMove={() => {
+          setModalState({ type: 'move', isOpen: true })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, contract: null })
+        }}
+        onCopy={() => {
+          setModalState({ type: 'copy', isOpen: true })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, contract: null })
+        }}
+        onRename={() => {
+          setModalState({ type: 'rename', isOpen: true })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, contract: null })
+        }}
+        onDelete={() => {
+          setDeleteConfirmation({ isOpen: true, contract: contextMenu.contract })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, contract: null })
+        }}
+      />
 
       {/* Modals */}
       {modalState.type === 'move' && selectedContract && (

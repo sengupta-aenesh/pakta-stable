@@ -1338,10 +1338,3 @@
   font-style: italic;
 }
 
-/* File Options Menu */
-.fileOptionsMenu {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-}

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Template, TemplateFolder, templatesApi } from '@/lib/supabase-client'
 import { Button, ConfirmationDialog, useToast, Toast } from '@/components/ui'
-import FileOptionsMenu from './file-options-menu'
+import ContextMenu from './context-menu'
 import FolderSelectionModal from './folder-selection-modal'
 import RenameModal from './rename-modal'
 import styles from '@/app/folders/folders.module.css'
@@ -41,6 +41,11 @@ export default function TemplateGrid({
     isOpen: boolean
     template: Template | null
   }>({ isOpen: false, template: null })
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean
+    position: { x: number; y: number }
+    template: Template | null
+  }>({ isOpen: false, position: { x: 0, y: 0 }, template: null })
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -169,6 +174,17 @@ export default function TemplateGrid({
       console.error('Error deleting template:', error)
       toast('Failed to delete template', 'error')
     }
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, template: Template) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      template
+    })
+    setSelectedTemplate(template)
   }
 
   return (
@@ -325,27 +341,8 @@ export default function TemplateGrid({
                   key={template.id}
                   className={styles.osFileItem}
                   onClick={() => onTemplateClick(template)}
+                  onContextMenu={(e) => handleContextMenu(e, template)}
                 >
-                  {/* Options Menu */}
-                  <FileOptionsMenu
-                    className={styles.fileOptionsMenu}
-                    onMove={() => {
-                      setSelectedTemplate(template)
-                      setModalState({ type: 'move', isOpen: true })
-                    }}
-                    onCopy={() => {
-                      setSelectedTemplate(template)
-                      setModalState({ type: 'copy', isOpen: true })
-                    }}
-                    onRename={() => {
-                      setSelectedTemplate(template)
-                      setModalState({ type: 'rename', isOpen: true })
-                    }}
-                    onDelete={() => {
-                      setDeleteConfirmation({ isOpen: true, template })
-                    }}
-                  />
-
                   {/* Minimalist Document Icon */}
                   <div className={styles.osIconContainer}>
                     <div className={styles.iconBackground}>
@@ -388,6 +385,29 @@ export default function TemplateGrid({
         )}
         </div>
       </div>
+
+      {/* Context Menu */}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={() => setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, template: null })}
+        onMove={() => {
+          setModalState({ type: 'move', isOpen: true })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, template: null })
+        }}
+        onCopy={() => {
+          setModalState({ type: 'copy', isOpen: true })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, template: null })
+        }}
+        onRename={() => {
+          setModalState({ type: 'rename', isOpen: true })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, template: null })
+        }}
+        onDelete={() => {
+          setDeleteConfirmation({ isOpen: true, template: contextMenu.template })
+          setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, template: null })
+        }}
+      />
 
       {/* Modals */}
       {modalState.type === 'move' && selectedTemplate && (
