@@ -1372,7 +1372,7 @@ export default function UnifiedSidebar({
             <span>{creatingTemplateFolder ? 'Creating...' : 'New Template Folder'}</span>
           </button>
 
-          {/* Upload Buttons - Both Always Visible */}
+          {/* Upload Buttons - Show based on view mode */}
           <div className={styles.uploadSection}>
             {/* Hidden File Inputs */}
             <input
@@ -1392,25 +1392,29 @@ export default function UnifiedSidebar({
               disabled={uploadingTemplate || isTemplateDragging}
             />
             
-            {/* Upload Contract Button */}
-            <label htmlFor="contract-upload" className={`${styles.uploadButton} ${styles.contractUpload}`}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              <span>{uploading ? 'Uploading Contract...' : 'Upload Contract'}</span>
-            </label>
+            {/* Upload Contract Button - Only show in contracts view */}
+            {viewMode === 'contracts' && (
+              <label htmlFor="contract-upload" className={`${styles.uploadButton} ${styles.contractUpload}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>{uploading ? 'Uploading Contract...' : 'Upload Contract'}</span>
+              </label>
+            )}
             
-            {/* Upload Template Button */}
-            <label htmlFor="template-upload" className={`${styles.uploadButton} ${styles.templateUpload}`}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              <span>{uploadingTemplate ? 'Uploading Template...' : 'Upload Template'}</span>
-            </label>
+            {/* Upload Template Button - Only show in templates view */}
+            {viewMode === 'templates' && (
+              <label htmlFor="template-upload" className={`${styles.uploadButton} ${styles.templateUpload}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>{uploadingTemplate ? 'Uploading Template...' : 'Upload Template'}</span>
+              </label>
+            )}
             
             {/* Upload Progress Status */}
             {(uploading || uploadingTemplate) && (
@@ -1554,51 +1558,53 @@ export default function UnifiedSidebar({
         {/* Normal Folder Tree (when not searching) */}
         {!searchTerm && (
           <div>
-            {/* View Mode Switcher */}
-            <div style={{
-              display: 'flex',
-              marginBottom: '16px',
-              borderRadius: '8px',
-              backgroundColor: '#E5E7EB',
-              padding: '2px'
-            }}>
-              <button
-                onClick={() => onViewModeChange('templates')}
-                style={{
-                  flex: 1,
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: viewMode === 'templates' ? '#FFFFFF' : 'transparent',
-                  color: viewMode === 'templates' ? '#111827' : '#6B7280',
-                  fontSize: '14px',
-                  fontWeight: viewMode === 'templates' ? '600' : '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: viewMode === 'templates' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
-                }}
-              >
-                Templates
-              </button>
-              <button
-                onClick={() => onViewModeChange('contracts')}
-                style={{
-                  flex: 1,
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: viewMode === 'contracts' ? '#FFFFFF' : 'transparent',
-                  color: viewMode === 'contracts' ? '#111827' : '#6B7280',
-                  fontSize: '14px',
-                  fontWeight: viewMode === 'contracts' ? '600' : '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: viewMode === 'contracts' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
-                }}
-              >
-                Contracts
-              </button>
-            </div>
+            {/* View Mode Switcher - Only show if onViewModeChange is provided and functional */}
+            {onViewModeChange && onViewModeChange.toString() !== '() => {}' && (
+              <div style={{
+                display: 'flex',
+                marginBottom: '16px',
+                borderRadius: '8px',
+                backgroundColor: '#E5E7EB',
+                padding: '2px'
+              }}>
+                <button
+                  onClick={() => onViewModeChange('templates')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    backgroundColor: viewMode === 'templates' ? '#FFFFFF' : 'transparent',
+                    color: viewMode === 'templates' ? '#111827' : '#6B7280',
+                    fontSize: '14px',
+                    fontWeight: viewMode === 'templates' ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: viewMode === 'templates' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
+                  }}
+                >
+                  Templates
+                </button>
+                <button
+                  onClick={() => onViewModeChange('contracts')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    backgroundColor: viewMode === 'contracts' ? '#FFFFFF' : 'transparent',
+                    color: viewMode === 'contracts' ? '#111827' : '#6B7280',
+                    fontSize: '14px',
+                    fontWeight: viewMode === 'contracts' ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: viewMode === 'contracts' ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none'
+                  }}
+                >
+                  Contracts
+                </button>
+              </div>
+            )}
 
             {/* Templates View */}
             {viewMode === 'templates' && (

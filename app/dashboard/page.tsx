@@ -395,6 +395,9 @@ function DashboardContent() {
             user={user}
             showUserSection={false}
             onToast={toast}
+            // Force contracts view mode - no templates in dashboard
+            viewMode="contracts"
+            onViewModeChange={() => {}} // Disable view mode switching
           />
         </div>
 
