@@ -35,6 +35,8 @@ export default function TemplateAnalysis({
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [progressSimulation, setProgressSimulation] = useState<NodeJS.Timeout | null>(null)
   const [currentProgressStep, setCurrentProgressStep] = useState(0)
+  const [simulationStopFunction, setSimulationStopFunction] = useState<(() => void) | null>(null)
+  const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null)
   const [templateVariables, setTemplateVariables] = useState<MissingInfoItem[]>([])
   const [isCreatingVersion, setIsCreatingVersion] = useState(false)
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
@@ -49,6 +51,7 @@ export default function TemplateAnalysis({
 
   // Progressive progress simulation for better UX
   const startProgressSimulation = () => {
+    console.log('🚀 Starting progress simulation...')
     const progressSteps = [
       { step: 5, message: 'Analyzing template structure...', delay: 800 },
       { step: 15, message: 'Identifying template variables...', delay: 1200 },
@@ -60,37 +63,90 @@ export default function TemplateAnalysis({
     ]
     
     let currentStep = 0
+    let isSimulationActive = true // Use local flag instead of state dependency
     
     const simulateProgress = () => {
-      if (currentStep < progressSteps.length && analyzing) {
+      if (currentStep < progressSteps.length && isSimulationActive) {
         const { step, message, delay } = progressSteps[currentStep]
         
-        // Only update if we haven't received real progress from backend
+        console.log(`📊 Progress simulation step ${currentStep + 1}: ${step}% - ${message}`)
+        
+        // Update progress
         setAnalysisProgress(prevProgress => {
-          // If backend has provided higher progress, use that instead
-          return Math.max(prevProgress, step)
+          const newProgress = Math.max(prevProgress, step)
+          console.log(`📈 Setting progress: ${prevProgress} → ${newProgress}`)
+          return newProgress
         })
         
         setCurrentProgressStep(step)
-        console.log(`📊 Progress simulation: ${step}% - ${message}`)
         
         currentStep++
         
         const nextTimeout = setTimeout(simulateProgress, delay)
         setProgressSimulation(nextTimeout)
+      } else if (!isSimulationActive) {
+        console.log('⏹️ Progress simulation stopped - analysis completed')
+      } else {
+        console.log('📊 Progress simulation completed all steps')
       }
     }
     
-    // Start simulation after initial delay
-    const initialTimeout = setTimeout(simulateProgress, 500)
+    // Store cleanup function to stop simulation
+    const stopSimulation = () => {
+      isSimulationActive = false
+      console.log('🛑 Stopping progress simulation')
+    }
+    
+    // Start simulation immediately for first step
+    const initialTimeout = setTimeout(() => {
+      console.log('📊 Progress simulation first step executing...')
+      simulateProgress()
+    }, 300)
     setProgressSimulation(initialTimeout)
+    
+    // Return stop function for external control
+    return stopSimulation
   }
   
   // Clear progress simulation
   const clearProgressSimulation = () => {
+    console.log('🧹 Clearing progress simulation...')
     if (progressSimulation) {
       clearTimeout(progressSimulation)
       setProgressSimulation(null)
+    }
+    if (simulationStopFunction) {
+      simulationStopFunction()
+      setSimulationStopFunction(null)
+    }
+  }
+
+  // Helper function to refresh template data
+  const refreshTemplateData = async () => {
+    try {
+      console.log('🔄 Refreshing template data after analysis completion...')
+      const response = await fetch(`/api/template/${template.id}`)
+      if (response.ok) {
+        const refreshedTemplate = await response.json()
+        console.log('✅ Template data refreshed:', {
+          id: refreshedTemplate.id,
+          status: refreshedTemplate.analysis_status,
+          hasRisks: !!refreshedTemplate.analysis_cache?.risks,
+          hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
+          variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
+        })
+        onTemplateUpdate(refreshedTemplate)
+      } else {
+        console.error('Failed to refresh template data')
+        // Fallback to basic update
+        const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
+        onTemplateUpdate(updatedTemplate)
+      }
+    } catch (error) {
+      console.error('Error refreshing template data:', error)
+      // Fallback to basic update
+      const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
+      onTemplateUpdate(updatedTemplate)
     }
   }
 
@@ -105,11 +161,17 @@ export default function TemplateAnalysis({
         
         // Update progress - use backend progress if higher than simulation
         const backendProgress = statusData.progress || 0
-        if (backendProgress > 0) {
+        console.log(`📊 Backend status check:`, { 
+          status: statusData.status, 
+          progress: backendProgress, 
+          currentSimulationStep: currentProgressStep 
+        })
+        
+        if (backendProgress > 0 && backendProgress < 100) {
           console.log(`📈 Backend progress: ${backendProgress}%`)
           setAnalysisProgress(backendProgress)
-          // Clear simulation once we get real backend progress
-          if (backendProgress > currentProgressStep) {
+          // Only clear simulation if backend is significantly ahead
+          if (backendProgress > currentProgressStep + 20) {
             clearProgressSimulation()
           }
         }
@@ -129,36 +191,43 @@ export default function TemplateAnalysis({
           }, 1500) // Reduced from 2000ms for more responsive updates
         } else if (statusData.status === 'complete') {
           console.log('🎉 Template analysis completed!')
+          
+          // Check if minimum animation time has passed (5 seconds)
+          const minAnimationDuration = 5000
+          const elapsedTime = analysisStartTime ? Date.now() - analysisStartTime : minAnimationDuration
+          
+          if (elapsedTime < minAnimationDuration) {
+            // Wait for minimum animation time to complete
+            const remainingTime = minAnimationDuration - elapsedTime
+            console.log(`⏰ Waiting ${remainingTime}ms more for animation to complete`)
+            setTimeout(async () => {
+              clearProgressSimulation()
+              setAnalysisProgress(100)
+              setAnalyzing(false)
+              setAnalysisStartTime(null)
+              
+              // Refresh template data
+              await refreshTemplateData()
+              
+              // Show completion notification
+              const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
+              const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
+              if (smartFilteringApplied && duplicatesFiltered > 0) {
+                onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
+              } else {
+                onToast('Template analysis completed successfully!', 'success')
+              }
+            }, remainingTime)
+            return // Don't process completion immediately
+          }
+          
           clearProgressSimulation() // Clear any ongoing simulation
           setAnalysisProgress(100)
           setAnalyzing(false)
+          setAnalysisStartTime(null)
           
-          // CRITICAL: Refresh template data from database to get updated analysis cache
-          try {
-            console.log('🔄 Refreshing template data after analysis completion...')
-            const response = await fetch(`/api/template/${template.id}`)
-            if (response.ok) {
-              const refreshedTemplate = await response.json()
-              console.log('✅ Template data refreshed:', {
-                id: refreshedTemplate.id,
-                status: refreshedTemplate.analysis_status,
-                hasRisks: !!refreshedTemplate.analysis_cache?.risks,
-                hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
-                variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
-              })
-              onTemplateUpdate(refreshedTemplate)
-            } else {
-              console.error('Failed to refresh template data')
-              // Fallback to basic update
-              const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
-              onTemplateUpdate(updatedTemplate)
-            }
-          } catch (error) {
-            console.error('Error refreshing template data:', error)
-            // Fallback to basic update
-            const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
-            onTemplateUpdate(updatedTemplate)
-          }
+          // Refresh template data
+          await refreshTemplateData()
           
           // Check if smart filtering was applied and show appropriate message
           const riskData = statusData.riskData || template.analysis_cache?.risks
@@ -174,6 +243,7 @@ export default function TemplateAnalysis({
           clearProgressSimulation() // Clear simulation on failure
           setAnalyzing(false)
           setAnalysisProgress(0)
+          setAnalysisStartTime(null)
           onToast('Template analysis failed. Please try again.', 'error')
         }
       }
@@ -190,10 +260,13 @@ export default function TemplateAnalysis({
       setAnalyzing(true)
       setAnalysisProgress(0)
       setCurrentProgressStep(0)
+      setAnalysisStartTime(Date.now())
       onToast('Starting template analysis...', 'info')
 
       // Start progress simulation immediately for better UX
-      startProgressSimulation()
+      console.log('🎬 Calling startProgressSimulation from handleAnalyzeTemplate')
+      const stopFunction = startProgressSimulation()
+      setSimulationStopFunction(() => stopFunction)
 
       const response = await fetch('/api/template/auto-analyze', {
         method: 'POST',
@@ -213,8 +286,9 @@ export default function TemplateAnalysis({
       const result = await response.json()
       
       if (result.success) {
-        // Start polling for progress - reduced delay for faster initial response
-        setTimeout(() => checkAnalysisProgress(), 800)
+        // Start polling for progress - delay longer to let simulation run
+        console.log('✅ Analysis started successfully, will check backend status in 3 seconds')
+        setTimeout(() => checkAnalysisProgress(), 3000)
       } else {
         throw new Error(result.message || 'Analysis failed')
       }
@@ -224,6 +298,7 @@ export default function TemplateAnalysis({
       onToast('Template analysis failed. Please try again.', 'error')
       setAnalyzing(false)
       setAnalysisProgress(0)
+      setAnalysisStartTime(null)
     }
   }
 
@@ -627,8 +702,11 @@ export default function TemplateAnalysis({
       if (progressSimulation) {
         clearTimeout(progressSimulation)
       }
+      if (simulationStopFunction) {
+        simulationStopFunction()
+      }
     }
-  }, [progressSimulation])
+  }, [progressSimulation, simulationStopFunction])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {
@@ -724,11 +802,11 @@ export default function TemplateAnalysis({
             disabled={analyzing}
           >
             {analyzing ? (
-              analysisProgress <= 5 ? 'Starting Analysis...' :
-              analysisProgress <= 15 ? 'Scanning Template...' :
-              analysisProgress <= 45 ? 'Processing Content...' :
-              analysisProgress <= 80 ? 'Analyzing Risks...' :
-              analysisProgress < 100 ? 'Finalizing...' : 'Complete!'
+              analysisProgress <= 5 ? `Starting Analysis... ${analysisProgress}%` :
+              analysisProgress <= 15 ? `Scanning Template... ${analysisProgress}%` :
+              analysisProgress <= 45 ? `Processing Content... ${analysisProgress}%` :
+              analysisProgress <= 80 ? `Analyzing Risks... ${analysisProgress}%` :
+              analysisProgress < 100 ? `Finalizing... ${analysisProgress}%` : 'Complete!'
             ) : 'Analyze Template'}
           </button>
         </div>
