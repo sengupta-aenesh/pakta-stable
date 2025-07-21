@@ -39,6 +39,7 @@ export default function TemplateAnalysis({
   const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null)
   const simulationActiveRef = useRef<boolean>(false)
   const currentStepRef = useRef<number>(0)
+  const completionToastShownRef = useRef<boolean>(false)
   const [templateVariables, setTemplateVariables] = useState<MissingInfoItem[]>([])
   const [isCreatingVersion, setIsCreatingVersion] = useState(false)
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
@@ -191,11 +192,13 @@ export default function TemplateAnalysis({
         } else if (statusData.status === 'complete') {
           console.log('🎉 Template analysis completed!')
           
-          // Complete the analysis immediately
-          clearProgressSimulation()
-          setAnalysisProgress(100)
-          setAnalyzing(false)
-          setAnalysisStartTime(null)
+          // Only process completion once
+          if (!completionToastShownRef.current && analyzing) {
+            // Complete the analysis immediately
+            clearProgressSimulation()
+            setAnalysisProgress(100)
+            setAnalyzing(false)
+            setAnalysisStartTime(null)
           
           // Refresh template data
           try {
@@ -224,13 +227,15 @@ export default function TemplateAnalysis({
             onTemplateUpdate(updatedTemplate)
           }
           
-          // Show completion notification
-          const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
-          const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
-          if (smartFilteringApplied && duplicatesFiltered > 0) {
-            onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
-          } else {
-            onToast('Template analysis completed successfully!', 'success')
+            // Show completion notification
+            completionToastShownRef.current = true // Mark as shown
+            const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
+            const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
+            if (smartFilteringApplied && duplicatesFiltered > 0) {
+              onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
+            } else {
+              onToast('Template analysis completed successfully!', 'success')
+            }
           }
         } else if (statusData.status === 'failed') {
           clearProgressSimulation() // Clear simulation on failure
@@ -262,6 +267,7 @@ export default function TemplateAnalysis({
       setAnalysisProgress(0)
       setCurrentProgressStep(0)
       currentStepRef.current = 0
+      completionToastShownRef.current = false // Reset the toast flag
       setAnalysisStartTime(Date.now())
       onToast('Starting template analysis...', 'info')
 
@@ -769,7 +775,10 @@ export default function TemplateAnalysis({
         clearProgressSimulation()
         setAnalysisProgress(100)
         setAnalyzing(false)
-        onToast('Template analysis completed (timeout)', 'info')
+        if (!completionToastShownRef.current) {
+          completionToastShownRef.current = true
+          onToast('Template analysis completed (timeout)', 'info')
+        }
       }, 120000) // 2 minutes timeout
     }
     
