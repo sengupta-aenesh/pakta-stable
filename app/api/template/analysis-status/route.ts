@@ -34,7 +34,13 @@ export const GET = apiErrorHandler(async (request: NextRequest) => {
         summary: !!(template.analysis_cache?.summary),
         risks: !!(template.analysis_cache?.risks),
         complete: !!(template.analysis_cache?.complete)
-      }
+      },
+      // Include risk data for smart filtering information
+      riskData: template.analysis_cache?.risks ? {
+        duplicatesFiltered: template.analysis_cache.risks.duplicatesFiltered || 0,
+        smartFilteringApplied: template.analysis_cache.risks.smartFilteringApplied || false,
+        totalRisksFound: template.analysis_cache.risks.totalRisksFound || 0
+      } : null
     })
 
   } catch (error) {
