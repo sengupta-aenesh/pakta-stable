@@ -18,6 +18,7 @@ interface TemplateAnalysisProps {
   }>) => void
   onVersionCreate?: (variables: Array<{ id: string; label: string; value: string; fieldType: string }>, versionName: string) => void
   onToast: (message: string, type: 'success' | 'error' | 'info') => void
+  isEditMode?: boolean
 }
 
 export default function TemplateAnalysis({
@@ -27,7 +28,8 @@ export default function TemplateAnalysis({
   onTemplateUpdate,
   onVariablesUpdate,
   onVersionCreate,
-  onToast
+  onToast,
+  isEditMode = false
 }: TemplateAnalysisProps) {
   const [activeTab, setActiveTab] = useState<'summary' | 'variables' | 'risks'>('summary')
   const [analyzing, setAnalyzing] = useState(false)
@@ -862,7 +864,8 @@ export default function TemplateAnalysis({
             type="button"
             className={`${styles.refreshButton} ${styles.analyzeButton}`}
             onClick={handleAnalyzeTemplate}
-            disabled={analyzing}
+            disabled={analyzing || isEditMode}
+            title={isEditMode ? 'Exit edit mode to analyze template' : undefined}
           >
             {analyzing ? (
               analysisProgress <= 5 ? `Starting Analysis... ${analysisProgress}%` :
@@ -870,7 +873,7 @@ export default function TemplateAnalysis({
               analysisProgress <= 45 ? `Processing Content... ${analysisProgress}%` :
               analysisProgress <= 80 ? `Analyzing Risks... ${analysisProgress}%` :
               analysisProgress < 100 ? `Finalizing... ${analysisProgress}%` : 'Complete!'
-            ) : 'Analyze Template'}
+            ) : isEditMode ? 'Exit Edit Mode to Analyze' : 'Analyze Template'}
           </button>
         </div>
       </div>

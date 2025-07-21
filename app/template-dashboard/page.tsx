@@ -43,6 +43,7 @@ function TemplateDashboardContent() {
   const [mobileView, setMobileView] = useState<MobileView>('list')
   const reanalyzeRisksRef = useRef<(() => Promise<void>) | null>(null)
   const [updateTemplateContentFunction, setUpdateTemplateContentFunction] = useState<((content: string | null) => void) | null>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast, toasts, removeToast } = useToast()
@@ -457,6 +458,7 @@ function TemplateDashboardContent() {
                   }}
                   onReanalyzeRisks={reanalyzeRisksRef.current}
                   onRegisterUpdateFunction={handleRegisterUpdateFunction}
+                  onEditModeChange={setIsEditMode}
                   className={styles.templateEditor}
                 />
               </div>
@@ -470,6 +472,19 @@ function TemplateDashboardContent() {
                   onTemplateUpdate={(updatedTemplate) => {
                     setSelectedTemplate(updatedTemplate)
                     setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
+                    
+                    // Extract risks from the updated template
+                    if (updatedTemplate.analysis_status === 'complete' && updatedTemplate.analysis_cache?.risks) {
+                      const riskAnalysis = updatedTemplate.analysis_cache.risks
+                      const cachedRisks = Array.isArray(riskAnalysis) 
+                        ? riskAnalysis
+                        : riskAnalysis.risks || []
+                      console.log('📥 Loading risks from updated template:', {
+                        risksCount: cachedRisks.length,
+                        templateId: updatedTemplate.id
+                      })
+                      setTemplateRisks(cachedRisks)
+                    }
                   }}
                   onVariablesUpdate={(variables) => {
                     console.log('🔄 Variables updated from analysis component:', variables)
@@ -477,6 +492,7 @@ function TemplateDashboardContent() {
                   }}
                   onVersionCreate={handleVersionCreate}
                   onToast={toast}
+                  isEditMode={isEditMode}
                 />
               </div>
             </>

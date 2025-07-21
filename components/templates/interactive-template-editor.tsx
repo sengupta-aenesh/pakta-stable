@@ -131,6 +131,7 @@ interface InteractiveTemplateEditorProps {
     versionName: string
   }
   onBackToOriginal?: () => void
+  onEditModeChange?: (isEditing: boolean) => void
 }
 
 export default function InteractiveTemplateEditor({
@@ -146,7 +147,8 @@ export default function InteractiveTemplateEditor({
   className,
   isVersionMode = false,
   versionData,
-  onBackToOriginal
+  onBackToOriginal,
+  onEditModeChange
 }: InteractiveTemplateEditorProps) {
   const [content, setContent] = useState('')
   const [editingContent, setEditingContent] = useState('') // Separate state for editing
@@ -1024,6 +1026,11 @@ export default function InteractiveTemplateEditor({
       setContent(editingContent)
       setIsEditing(false)
       
+      // Notify parent component about edit mode change
+      if (onEditModeChange) {
+        onEditModeChange(false)
+      }
+      
       // Trigger reanalysis if function available
       if (onReanalyzeRisks) {
         console.log('🔄 Triggering template reanalysis after editing...')
@@ -1046,12 +1053,17 @@ export default function InteractiveTemplateEditor({
       setEditingContent(beautifyContent(content))
       setIsEditing(true)
       
+      // Notify parent component about edit mode change
+      if (onEditModeChange) {
+        onEditModeChange(true)
+      }
+      
       setTimeout(() => {
         editorRef.current?.focus()
         restoreScrollPosition()
       }, 150)
     }
-  }, [isEditing, forceSave, saveScrollPosition, restoreScrollPosition, content, beautifyContent, editingContent, onReanalyzeRisks])
+  }, [isEditing, forceSave, saveScrollPosition, restoreScrollPosition, content, beautifyContent, editingContent, onReanalyzeRisks, onEditModeChange])
 
   // Handle download actions
   const handleDownload = async (format: 'docx' | 'pdf') => {
