@@ -854,13 +854,7 @@ export default function TemplateAnalysis({
             disabled={analyzing || isEditMode}
             title={isEditMode ? 'Exit edit mode to analyze template' : undefined}
           >
-            {analyzing ? (
-              analysisProgress <= 5 ? `Starting Analysis... ${analysisProgress}%` :
-              analysisProgress <= 15 ? `Scanning Template... ${analysisProgress}%` :
-              analysisProgress <= 45 ? `Processing Content... ${analysisProgress}%` :
-              analysisProgress <= 80 ? `Analyzing Risks... ${analysisProgress}%` :
-              analysisProgress < 100 ? `Finalizing... ${analysisProgress}%` : 'Complete!'
-            ) : isEditMode ? 'Exit Edit Mode to Analyze' : 'Analyze Template'}
+            {analyzing ? 'Analyzing...' : isEditMode ? 'Exit Edit Mode to Analyze' : 'Analyze Template'}
           </button>
         </div>
       </div>
@@ -1083,27 +1077,6 @@ export default function TemplateAnalysis({
             <div className={styles.riskAnalysisHeader}>
               <h3 className={styles.riskAnalysisTitle}>Template Risk Analysis</h3>
               
-              {/* Smart Filtering Notification */}
-              {template.analysis_cache?.risks?.smartFilteringApplied && (
-                <div style={{
-                  padding: '12px 16px',
-                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                  border: '1px solid #0ea5e9',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2">
-                    <path d="M9 12l2 2 4-4"></path>
-                    <circle cx="12" cy="12" r="10"></circle>
-                  </svg>
-                  <div style={{ fontSize: '13px', color: '#075985' }}>
-                    <strong>🎯 Smart Risk Detection:</strong> {template.analysis_cache.risks.duplicatesFiltered || 0} duplicate risk{(template.analysis_cache.risks.duplicatesFiltered || 0) !== 1 ? 's' : ''} filtered from {template.analysis_cache.risks.originalRisksFound || 0} originally detected.
-                  </div>
-                </div>
-              )}
               
               <div className={styles.overallRiskScore}>
                 <span className={styles.overallScoreLabel}>Overall Risk Score</span>

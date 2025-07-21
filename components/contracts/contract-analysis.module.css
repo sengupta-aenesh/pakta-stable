@@ -74,13 +74,13 @@
 
 .refreshButton {
   width: 100%;
-  max-width: 320px;
-  padding: 12px 24px;
+  max-width: 200px;
+  padding: 8px 16px;
   background: #000;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 6px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   text-align: center;
