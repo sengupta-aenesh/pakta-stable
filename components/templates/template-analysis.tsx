@@ -57,13 +57,13 @@ export default function TemplateAnalysis({
     currentStepRef.current = 0
     
     const progressSteps = [
-      { step: 5, message: 'Analyzing template structure...', delay: 2000 },
-      { step: 15, message: 'Identifying template variables...', delay: 3000 },
-      { step: 30, message: 'Processing template content...', delay: 3000 },
-      { step: 45, message: 'Detecting potential risks...', delay: 4000 },
-      { step: 65, message: 'Analyzing template patterns...', delay: 3000 },
-      { step: 80, message: 'Finalizing analysis...', delay: 3000 },
-      { step: 90, message: 'Completing analysis...', delay: 2000 }
+      { step: 5, message: 'Analyzing template structure...', delay: 1500 },
+      { step: 15, message: 'Identifying template variables...', delay: 2000 },
+      { step: 30, message: 'Processing template content...', delay: 2000 },
+      { step: 45, message: 'Detecting potential risks...', delay: 2500 },
+      { step: 65, message: 'Analyzing template patterns...', delay: 2000 },
+      { step: 80, message: 'Finalizing analysis...', delay: 2000 },
+      { step: 90, message: 'Completing analysis...', delay: 1500 }
     ]
     
     const simulateProgress = () => {
@@ -191,59 +191,11 @@ export default function TemplateAnalysis({
         } else if (statusData.status === 'complete') {
           console.log('🎉 Template analysis completed!')
           
-          // Don't immediately stop - let progress animation continue for smoother UX
-          // Only stop if we're already at or near 100%
-          if (analysisProgress >= 90) {
-            clearProgressSimulation()
-            setAnalysisProgress(100)
-            setAnalyzing(false)
-            setAnalysisStartTime(null)
-              
-              // Refresh template data
-              try {
-                console.log('🔄 Refreshing template data after analysis completion...')
-                const response = await fetch(`/api/template/${template.id}`)
-                if (response.ok) {
-                  const refreshedTemplate = await response.json()
-                  console.log('✅ Template data refreshed:', {
-                    id: refreshedTemplate.id,
-                    status: refreshedTemplate.analysis_status,
-                    hasRisks: !!refreshedTemplate.analysis_cache?.risks,
-                    hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
-                    variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
-                  })
-                  onTemplateUpdate(refreshedTemplate)
-                } else {
-                  console.error('Failed to refresh template data')
-                  // Fallback to basic update
-                  const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
-                  onTemplateUpdate(updatedTemplate)
-                }
-              } catch (error) {
-                console.error('Error refreshing template data:', error)
-                // Fallback to basic update
-                const updatedTemplate = { ...template, analysis_status: 'complete', analysis_progress: 100 }
-                onTemplateUpdate(updatedTemplate)
-              }
-              
-              // Show completion notification
-              const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
-              const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
-              if (smartFilteringApplied && duplicatesFiltered > 0) {
-                onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
-              } else {
-                onToast('Template analysis completed successfully!', 'success')
-              }
-          } else {
-            // Progress hasn't reached 90% yet - continue polling to let animation run
-            console.log(`📊 Analysis complete but progress only at ${analysisProgress}% - continuing animation`)
-            setTimeout(() => {
-              if (template?.id === statusData.templateId) {
-                checkAnalysisProgress()
-              }
-            }, 1500)
-            return
-          }
+          // Complete the analysis immediately
+          clearProgressSimulation()
+          setAnalysisProgress(100)
+          setAnalyzing(false)
+          setAnalysisStartTime(null)
           
           // Refresh template data
           try {
@@ -272,11 +224,9 @@ export default function TemplateAnalysis({
             onTemplateUpdate(updatedTemplate)
           }
           
-          // Check if smart filtering was applied and show appropriate message
-          const riskData = statusData.riskData || template.analysis_cache?.risks
-          const duplicatesFiltered = riskData?.duplicatesFiltered || 0
-          const smartFilteringApplied = riskData?.smartFilteringApplied || false
-          
+          // Show completion notification
+          const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
+          const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
           if (smartFilteringApplied && duplicatesFiltered > 0) {
             onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
           } else {
@@ -800,6 +750,7 @@ export default function TemplateAnalysis({
   // Poll for analysis progress
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null
+    let timeoutFallback: NodeJS.Timeout | null = null
     
     if (analyzing) {
       console.log('📊 Setting up analysis progress polling...')
@@ -811,12 +762,24 @@ export default function TemplateAnalysis({
         console.log('⏰ Polling for analysis progress...')
         checkAnalysisProgress()
       }, 1500) // Poll every 1.5 seconds
+      
+      // Set a fallback timeout to ensure analysis completes within 2 minutes
+      timeoutFallback = setTimeout(() => {
+        console.log('⚠️ Analysis timeout reached, forcing completion')
+        clearProgressSimulation()
+        setAnalysisProgress(100)
+        setAnalyzing(false)
+        onToast('Template analysis completed (timeout)', 'info')
+      }, 120000) // 2 minutes timeout
     }
     
     return () => {
       if (pollInterval) {
         console.log('🧹 Clearing analysis polling interval')
         clearInterval(pollInterval)
+      }
+      if (timeoutFallback) {
+        clearTimeout(timeoutFallback)
       }
     }
   }, [analyzing, checkAnalysisProgress])
