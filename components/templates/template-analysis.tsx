@@ -239,10 +239,18 @@ export default function TemplateAnalysis({
           setAnalysisProgress(0)
           setAnalysisStartTime(null)
           onToast('Template analysis failed. Please try again.', 'error')
+        } else if (analyzing && (statusData.status === 'in_progress' || statusData.status === 'pending')) {
+          // Continue polling while analysis is in progress
+          console.log('⏰ Scheduling next progress check in 1.5 seconds')
+          setTimeout(() => checkAnalysisProgress(), 1500)
         }
       }
     } catch (error) {
       console.error('Failed to check analysis progress:', error)
+      // Retry on error if still analyzing
+      if (analyzing) {
+        setTimeout(() => checkAnalysisProgress(), 2000)
+      }
     }
   }
 
