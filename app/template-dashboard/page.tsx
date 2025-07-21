@@ -499,17 +499,42 @@ function TemplateDashboardContent() {
           ) : (
             <div className={styles.welcomeScreen}>
               <div className={styles.welcomeContent}>
-                <div className={styles.welcomeIcon}>
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                  </svg>
+                <div className={styles.welcomeIconWrapper}>
+                  <div className={styles.welcomeIconBackground}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      <path d="M13 3v5a2 2 0 002 2h5"/>
+                    </svg>
+                  </div>
                 </div>
-                <h2>Welcome to Template Manager</h2>
-                <p>Select a template from the sidebar to begin analysis and version management.</p>
                 
-                {templates.length === 0 && (
-                  <div className={styles.emptyState}>
-                    <p>No templates found. Upload your first template from the sidebar.</p>
+                <h2 className={styles.welcomeTitle}>Select a Template to Begin</h2>
+                <p className={styles.welcomeDescription}>
+                  Choose a template from the sidebar to start analyzing, managing risks, and creating versions.
+                </p>
+                
+                {templates.length === 0 ? (
+                  <div className={styles.welcomeActions}>
+                    <div className={styles.welcomeEmptyState}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <span>No templates yet</span>
+                    </div>
+                    <p className={styles.welcomeHint}>
+                      Upload your first template using the button in the sidebar
+                    </p>
+                  </div>
+                ) : (
+                  <div className={styles.welcomeStats}>
+                    <div className={styles.welcomeStatItem}>
+                      <span className={styles.welcomeStatNumber}>{templates.length}</span>
+                      <span className={styles.welcomeStatLabel}>Templates Available</span>
+                    </div>
+                    <div className={styles.welcomeStatItem}>
+                      <span className={styles.welcomeStatNumber}>{templateFolders.length}</span>
+                      <span className={styles.welcomeStatLabel}>Folders</span>
+                    </div>
                   </div>
                 )}
               </div>
