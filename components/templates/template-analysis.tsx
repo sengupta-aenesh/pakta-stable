@@ -42,7 +42,6 @@ export default function TemplateAnalysis({
   const [isCreatingVersion, setIsCreatingVersion] = useState(false)
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
   const [showOccurrencesList, setShowOccurrencesList] = useState(false)
-  const [isEditMode, setIsEditMode] = useState(false)
   const [showCustomVariableModal, setShowCustomVariableModal] = useState(false)
   const [customVariableForm, setCustomVariableForm] = useState({
     label: '',
@@ -525,18 +524,6 @@ export default function TemplateAnalysis({
     onToast(`Variable "${newVariable.label}" added successfully`, 'success')
   }
 
-  // Toggle edit mode
-  const handleToggleEditMode = () => {
-    setIsEditMode(!isEditMode)
-    onToast(isEditMode ? 'Edit mode disabled' : 'Edit mode enabled - select text in the template to add variables', 'info')
-    
-    // Expose the add variable function globally for the template editor
-    if (!isEditMode && typeof window !== 'undefined') {
-      (window as any).addTemplateVariable = handleAddVariable
-    } else if (typeof window !== 'undefined') {
-      delete (window as any).addTemplateVariable
-    }
-  }
 
   // Handle custom variable creation
   const handleCreateCustomVariable = () => {
