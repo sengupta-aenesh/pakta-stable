@@ -185,14 +185,14 @@ Also provide:
 
 Format as JSON:
 {
-  "overallRiskScore": number,
+  "overallRiskScore": number (1-10 scale ONLY),
   "executiveSummary": string,
   "risks": [
     {
       "clause": "precise quoted risky text (15-200 words)",
       "clauseLocation": "Section X.X or description",
       "riskLevel": "high|medium|low",
-      "riskScore": number,
+      "riskScore": number (1-10 scale ONLY),
       "category": string,
       "explanation": string,
       "suggestion": string,
@@ -232,7 +232,7 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
         clause: clause,
         clauseLocation: risk.clauseLocation || "Not specified",
         riskLevel: risk.riskLevel || "medium",
-        riskScore: risk.riskScore || 5,
+        riskScore: Math.min(Math.max(risk.riskScore || 5, 1), 10), // Clamp between 1-10
         category: risk.category || "Other",
         explanation: risk.explanation || "",
         suggestion: risk.suggestion || "",
@@ -250,7 +250,7 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
     console.log(`📊 Risk breakdown: ${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`)
     
     return {
-      overallRiskScore: result.overallRiskScore || 5,
+      overallRiskScore: Math.min(Math.max(result.overallRiskScore || 5, 1), 10), // Clamp between 1-10
       totalRisksFound: risks.length,
       highRiskCount,
       mediumRiskCount,
@@ -354,7 +354,7 @@ Provide JSON with ALL risks found:
             clause: clause,
             clauseLocation: risk.clauseLocation || section.title,
             riskLevel: risk.riskLevel || "medium",
-            riskScore: risk.riskScore || 5,
+            riskScore: Math.min(Math.max(risk.riskScore || 5, 1), 10), // Clamp between 1-10
             category: risk.category || "Other",
             explanation: risk.explanation || "",
             suggestion: risk.suggestion || "",
@@ -470,7 +470,7 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
       clause: clause,
       clauseLocation: risk.clauseLocation || "Not specified",
       riskLevel: risk.riskLevel || "medium",
-      riskScore: risk.riskScore || 5,
+      riskScore: Math.min(Math.max(risk.riskScore || 5, 1), 10), // Clamp between 1-10
       category: risk.category || "Other",
       explanation: risk.explanation || "",
       suggestion: risk.suggestion || "",
@@ -486,7 +486,7 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
   console.log(`✅ Single-pass analysis completed: ${risks.length} total risks found`)
   
   return {
-    overallRiskScore: result.overallRiskScore || 5,
+    overallRiskScore: Math.min(Math.max(result.overallRiskScore || 5, 1), 10), // Clamp between 1-10
     totalRisksFound: risks.length,
     highRiskCount,
     mediumRiskCount,
@@ -1125,7 +1125,7 @@ Remember: Focus on template-specific risks that affect template users and templa
         clause: clause,
         clauseLocation: risk.clauseLocation || "Not specified",
         riskLevel: risk.riskLevel || "medium",
-        riskScore: risk.riskScore || 5,
+        riskScore: Math.min(Math.max(risk.riskScore || 5, 1), 10), // Clamp between 1-10
         category: risk.category || "Template Structure",
         explanation: risk.explanation || "",
         suggestion: risk.suggestion || "",
@@ -1142,7 +1142,7 @@ Remember: Focus on template-specific risks that affect template users and templa
     console.log(`📊 Template risk breakdown: ${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`)
     
     return {
-      overallRiskScore: result.overallRiskScore || 5,
+      overallRiskScore: Math.min(Math.max(result.overallRiskScore || 5, 1), 10), // Clamp between 1-10
       totalRisksFound: risks.length,
       highRiskCount,
       mediumRiskCount,
@@ -1490,7 +1490,7 @@ Provide JSON with template risks found:
             clause: clause,
             clauseLocation: risk.clauseLocation || section.title,
             riskLevel: risk.riskLevel || "medium",
-            riskScore: risk.riskScore || 5,
+            riskScore: Math.min(Math.max(risk.riskScore || 5, 1), 10), // Clamp between 1-10
             category: risk.category || "Template Structure",
             explanation: risk.explanation || "",
             suggestion: risk.suggestion || "",
@@ -1598,7 +1598,7 @@ Find ALL template-specific risks comprehensively. Focus on template management r
       clause: clause,
       clauseLocation: risk.clauseLocation || "Not specified",
       riskLevel: risk.riskLevel || "medium",
-      riskScore: risk.riskScore || 5,
+      riskScore: Math.min(Math.max(risk.riskScore || 5, 1), 10), // Clamp between 1-10
       category: risk.category || "Template Structure",
       explanation: risk.explanation || "",
       suggestion: risk.suggestion || "",
@@ -1614,7 +1614,7 @@ Find ALL template-specific risks comprehensively. Focus on template management r
   console.log(`✅ Single-pass template analysis completed: ${risks.length} total template risks found`)
   
   return {
-    overallRiskScore: result.overallRiskScore || 5,
+    overallRiskScore: Math.min(Math.max(result.overallRiskScore || 5, 1), 10), // Clamp between 1-10
     totalRisksFound: risks.length,
     highRiskCount,
     mediumRiskCount,

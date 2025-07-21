@@ -1126,7 +1126,7 @@ export default function TemplateAnalysis({
                 <span className={styles.overallScoreLabel}>Overall Risk Score</span>
                 <span className={styles.overallScoreValue}>
                   {risks.length > 0 
-                    ? Math.round(risks.reduce((sum, risk) => sum + (risk.riskScore || 0), 0) / risks.length)
+                    ? Math.min(Math.round(risks.reduce((sum, risk) => sum + Math.min(Math.max(risk.riskScore || 5, 1), 10), 0) / risks.length), 10)
                     : 0}/10
                 </span>
               </div>

@@ -644,7 +644,7 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
   }
 
   const overallRiskScore = risks.length > 0 
-    ? risks.reduce((sum, risk) => sum + (risk.riskScore || 0), 0) / risks.length 
+    ? Math.min(Math.round(risks.reduce((sum, risk) => sum + Math.min(Math.max(risk.riskScore || 5, 1), 10), 0) / risks.length), 10)
     : 0
 
   return (
