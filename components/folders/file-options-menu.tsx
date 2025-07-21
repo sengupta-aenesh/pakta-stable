@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MoreVertical, FolderOpen, Copy, Trash2, Edit3 } from 'lucide-react'
+import { MoreHorizontal, FolderOpen, Copy, Trash2, Edit3 } from 'lucide-react'
 import styles from './file-options-menu.module.css'
 
 interface FileOptionsMenuProps {
@@ -59,7 +59,7 @@ export default function FileOptionsMenu({
         }}
         aria-label="File options"
       >
-        <MoreVertical size={16} />
+        <MoreHorizontal size={16} />
       </button>
 
       {isOpen && (
