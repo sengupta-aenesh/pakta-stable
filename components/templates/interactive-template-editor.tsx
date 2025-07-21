@@ -684,7 +684,7 @@ export default function InteractiveTemplateEditor({
   }, [scrollToRisk, template])
 
   // Handle variable creation from selected text
-  const handleCreateVariable = useCallback((selectedText: string, position: { start: number; end: number }) => {
+  const handleCreateVariableFromSelection = useCallback((selectedText: string, position: { start: number; end: number }) => {
     if (!selectedText.trim()) return
     
     // Check if global variable creation function is available from analysis component
@@ -773,7 +773,7 @@ export default function InteractiveTemplateEditor({
         const startOffset = range.startOffset
         const endOffset = range.endOffset
         
-        handleCreateVariable(selectedText, { start: startOffset, end: endOffset })
+        handleCreateVariableFromSelection(selectedText, { start: startOffset, end: endOffset })
         
         // Clear selection after variable creation
         selection.removeAllRanges()
@@ -797,7 +797,7 @@ export default function InteractiveTemplateEditor({
       range
     })
     setShowToolbar(true)
-  }, [isEditing, variableSelectionEnabled, handleCreateVariable])
+  }, [isEditing, variableSelectionEnabled, handleCreateVariableFromSelection])
 
   // Add event listeners for text selection
   useEffect(() => {
