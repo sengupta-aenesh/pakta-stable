@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Template, RiskFactor } from '@/lib/types'
+import { Template, RiskFactor, UserCreatedVariable } from '@/lib/types'
 import SelectionToolbar from '../contracts/selection-toolbar'
 import styles from './interactive-template-editor.module.css'
 
@@ -158,10 +158,84 @@ export default function InteractiveTemplateEditor({
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false)
   const [isVariableMode, setIsVariableMode] = useState(false)
   const [variableSelectionEnabled, setVariableSelectionEnabled] = useState(false)
+  const [showVariableDropdown, setShowVariableDropdown] = useState(false)
+  const [showCreateVariableModal, setShowCreateVariableModal] = useState(false)
+  const [showRenameVariableModal, setShowRenameVariableModal] = useState(false)
+  const [variableToRename, setVariableToRename] = useState<string | null>(null)
+  const [variableSearch, setVariableSearch] = useState('')
+  const [newVariableForm, setNewVariableForm] = useState({
+    label: '',
+    description: '',
+    fieldType: 'text' as 'text' | 'email' | 'number' | 'date'
+  })
+  const [renameVariableForm, setRenameVariableForm] = useState({
+    label: '',
+    description: ''
+  })
+  const [allVariables, setAllVariables] = useState<Array<{
+    id: string
+    label: string
+    fieldType: string
+    description?: string
+    occurrences: number
+    isUserCreated?: boolean
+  }>>([])
+  const [cursorPosition, setCursorPosition] = useState<number | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const downloadRef = useRef<HTMLDivElement>(null)
+  const variableDropdownRef = useRef<HTMLDivElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Count variable occurrences in content
+  const countVariableOccurrences = useCallback((variableLabel: string, contentToSearch: string): number => {
+    const variablePattern = `{{${variableLabel.replace(/\s+/g, '_')}}}`
+    const regex = new RegExp(variablePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+    const matches = contentToSearch.match(regex)
+    return matches ? matches.length : 0
+  }, [])
+
+  // Merge AI-detected and user-created variables
+  const mergeVariables = useCallback(() => {
+    const mergedVars: Array<{
+      id: string
+      label: string
+      fieldType: string
+      description?: string
+      occurrences: number
+      isUserCreated?: boolean
+    }> = []
+
+    // Add user-created variables first
+    if (template?.user_created_variables) {
+      template.user_created_variables.forEach(userVar => {
+        mergedVars.push({
+          ...userVar,
+          occurrences: countVariableOccurrences(userVar.label, editingContent || content),
+          isUserCreated: true
+        })
+      })
+    }
+
+    // Add AI-detected variables from templateVariables prop
+    if (templateVariables) {
+      templateVariables.forEach(aiVar => {
+        // Check if this variable already exists in user-created
+        const exists = mergedVars.some(v => v.label.toLowerCase() === aiVar.label.toLowerCase())
+        if (!exists) {
+          mergedVars.push({
+            id: aiVar.id,
+            label: aiVar.label,
+            fieldType: aiVar.fieldType,
+            occurrences: countVariableOccurrences(aiVar.label, editingContent || content),
+            isUserCreated: false
+          })
+        }
+      })
+    }
+
+    setAllVariables(mergedVars)
+  }, [template, templateVariables, content, editingContent, countVariableOccurrences])
 
   // Document beautification function
   const beautifyContent = useCallback((rawContent: string): string => {
@@ -198,6 +272,11 @@ export default function InteractiveTemplateEditor({
       setEditingContent('')
     }
   }, [template?.id, template?.content])
+
+  // Merge variables when template or variables change
+  useEffect(() => {
+    mergeVariables()
+  }, [mergeVariables])
 
   // Register update function with parent
   useEffect(() => {
@@ -999,6 +1078,172 @@ export default function InteractiveTemplateEditor({
     }
   }, [])
 
+  // Handle cursor position tracking
+  const trackCursorPosition = useCallback(() => {
+    if (editorRef.current) {
+      setCursorPosition(editorRef.current.selectionStart)
+    }
+  }, [])
+
+  // Insert variable at cursor position
+  const insertVariableAtCursor = useCallback((variableLabel: string) => {
+    if (!editorRef.current) return
+
+    const textarea = editorRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = textarea.value
+    const variablePattern = `{{${variableLabel.replace(/\s+/g, '_')}}}`
+
+    // Insert the variable
+    const newText = text.substring(0, start) + variablePattern + text.substring(end)
+    setEditingContent(newText)
+    setContent(newText)
+
+    // Update cursor position after insertion
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPos = start + variablePattern.length
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+
+    // Close dropdown
+    setShowVariableDropdown(false)
+    setVariableSearch('')
+  }, [])
+
+  // Create new variable
+  const handleCreateVariable = useCallback(async () => {
+    if (!newVariableForm.label.trim() || !template) return
+
+    const newVariable: UserCreatedVariable = {
+      id: `custom-var-${Date.now()}`,
+      label: newVariableForm.label.trim(),
+      fieldType: newVariableForm.fieldType,
+      description: newVariableForm.description.trim(),
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
+    }
+
+    // Update template with new variable
+    const updatedVariables = [...(template.user_created_variables || []), newVariable]
+    
+    try {
+      const response = await fetch(`/api/template/${template.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_created_variables: updatedVariables
+        })
+      })
+
+      if (response.ok) {
+        // Update local state
+        template.user_created_variables = updatedVariables
+        mergeVariables()
+        
+        // Insert the variable at cursor
+        insertVariableAtCursor(newVariable.label)
+        
+        // Reset form and close modal
+        setNewVariableForm({ label: '', description: '', fieldType: 'text' })
+        setShowCreateVariableModal(false)
+      }
+    } catch (error) {
+      console.error('Error creating variable:', error)
+    }
+  }, [newVariableForm, template, mergeVariables, insertVariableAtCursor])
+
+  // Delete variable
+  const handleDeleteVariable = useCallback(async (variableId: string) => {
+    if (!template) return
+
+    const updatedVariables = template.user_created_variables.filter(v => v.id !== variableId)
+    
+    try {
+      const response = await fetch(`/api/template/${template.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_created_variables: updatedVariables
+        })
+      })
+
+      if (response.ok) {
+        template.user_created_variables = updatedVariables
+        mergeVariables()
+      }
+    } catch (error) {
+      console.error('Error deleting variable:', error)
+    }
+  }, [template, mergeVariables])
+
+  // Rename variable
+  const handleRenameVariable = useCallback(async () => {
+    if (!template || !variableToRename || !renameVariableForm.label.trim()) return
+
+    const variable = allVariables.find(v => v.id === variableToRename)
+    if (!variable || !variable.isUserCreated) return
+
+    const oldVariablePattern = `{{${variable.label.replace(/\s+/g, '_')}}}`
+    const newVariablePattern = `{{${renameVariableForm.label.trim().replace(/\s+/g, '_')}}}`
+
+    // Update all occurrences in content
+    const updatedContent = editingContent.replace(
+      new RegExp(oldVariablePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+      newVariablePattern
+    )
+
+    // Update variable in database
+    const updatedVariables = template.user_created_variables.map(v => 
+      v.id === variableToRename 
+        ? { ...v, label: renameVariableForm.label.trim(), description: renameVariableForm.description || v.description }
+        : v
+    )
+
+    try {
+      const response = await fetch(`/api/template/${template.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_created_variables: updatedVariables,
+          content: updatedContent
+        })
+      })
+
+      if (response.ok) {
+        template.user_created_variables = updatedVariables
+        setEditingContent(updatedContent)
+        setContent(updatedContent)
+        mergeVariables()
+        
+        // Close modal and reset
+        setShowRenameVariableModal(false)
+        setVariableToRename(null)
+        setRenameVariableForm({ label: '', description: '' })
+      }
+    } catch (error) {
+      console.error('Error renaming variable:', error)
+    }
+  }, [template, variableToRename, renameVariableForm, editingContent, allVariables, mergeVariables])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (variableDropdownRef.current && !variableDropdownRef.current.contains(event.target as Node)) {
+        setShowVariableDropdown(false)
+      }
+    }
+
+    if (showVariableDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showVariableDropdown])
+
   if (!template) {
     return (
       <div className={styles.noTemplate}>
@@ -1012,27 +1257,158 @@ export default function InteractiveTemplateEditor({
       {/* Toggle between view and edit modes */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <button 
-            className={`${styles.modeToggle} ${isEditing ? styles.editing : styles.viewing}`}
-            onClick={toggleEditMode}
-          >
-            {isEditing ? (
-              <>
+          {/* Only show edit button when NOT in version mode */}
+          {!isVersionMode && (
+            <button 
+              className={`${styles.modeToggle} ${isEditing ? styles.editing : styles.viewing}`}
+              onClick={toggleEditMode}
+            >
+              {isEditing ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Done Editing
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit Template
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Insert Variable button - only show in edit mode */}
+          {isEditing && !isVersionMode && (
+            <div className={styles.variableContainer} ref={variableDropdownRef}>
+              <button
+                className={styles.insertVariableButton}
+                onClick={() => setShowVariableDropdown(!showVariableDropdown)}
+                title="Insert a template variable"
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20 6 9 17 4 12"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="9" y1="9" x2="15" y2="9"/>
+                  <line x1="9" y1="12" x2="15" y2="12"/>
+                  <line x1="9" y1="15" x2="11" y2="15"/>
                 </svg>
-                Done Editing
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                Insert Variable
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.chevron}>
+                  <polyline points="6 9 12 15 18 9"/>
                 </svg>
-                Edit Template
-              </>
-            )}
-          </button>
+              </button>
+
+              {showVariableDropdown && (
+                <div className={styles.variableDropdown}>
+                  <div className={styles.variableDropdownHeader}>
+                    <input
+                      type="text"
+                      placeholder="Search variables..."
+                      value={variableSearch}
+                      onChange={(e) => setVariableSearch(e.target.value)}
+                      className={styles.variableSearchInput}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className={styles.variableDropdownActions}>
+                    <button
+                      className={styles.createVariableButton}
+                      onClick={() => {
+                        setShowVariableDropdown(false)
+                        setShowCreateVariableModal(true)
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v8m-4-4h8"/>
+                      </svg>
+                      Create New Variable
+                    </button>
+                  </div>
+
+                  <div className={styles.variableList}>
+                    {allVariables
+                      .filter(v => v.label.toLowerCase().includes(variableSearch.toLowerCase()))
+                      .map(variable => (
+                        <div
+                          key={variable.id}
+                          className={styles.variableItem}
+                        >
+                          <div 
+                            className={styles.variableInfo}
+                            onClick={() => insertVariableAtCursor(variable.label)}
+                          >
+                            <div className={styles.variableLabel}>
+                              <span className={styles.variableName}>{variable.label}</span>
+                              {variable.isUserCreated && (
+                                <span className={styles.userCreatedBadge}>User</span>
+                              )}
+                            </div>
+                            <div className={styles.variableDetails}>
+                              <span className={styles.variableType}>{variable.fieldType}</span>
+                              <span className={styles.variableOccurrences}>
+                                {variable.occurrences} occurrence{variable.occurrences !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            {variable.description && (
+                              <div className={styles.variableDescription}>{variable.description}</div>
+                            )}
+                          </div>
+                          {variable.isUserCreated && (
+                            <div className={styles.variableActions}>
+                              <button
+                                className={styles.variableActionButton}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setVariableToRename(variable.id)
+                                  setRenameVariableForm({ 
+                                    label: variable.label, 
+                                    description: variable.description || '' 
+                                  })
+                                  setShowRenameVariableModal(true)
+                                  setShowVariableDropdown(false)
+                                }}
+                                title="Rename variable"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                              </button>
+                              <button
+                                className={styles.variableActionButton}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (confirm(`Delete variable "${variable.label}"?`)) {
+                                    handleDeleteVariable(variable.id)
+                                  }
+                                }}
+                                title="Delete variable"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polyline points="3 6 5 6 21 6"/>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    {allVariables.filter(v => v.label.toLowerCase().includes(variableSearch.toLowerCase())).length === 0 && (
+                      <div className={styles.noVariables}>
+                        No variables found. Create a new one!
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Version Mode Actions - only show when in version mode */}
           {isVersionMode && (
@@ -1117,10 +1493,6 @@ export default function InteractiveTemplateEditor({
               <span className={styles.selectionHint} style={{ color: '#059669', fontWeight: '600' }}>
                 ✅ Version Mode: Viewing template with your variable inputs applied
               </span>
-            ) : templateVariables && templateVariables.length > 0 ? (
-              <span className={styles.selectionHint} style={{ color: '#2563eb', fontWeight: '500' }}>
-                📍 Normalized Template: Variables shown in standard {'{{'} Variable_Name {'}}'}  format
-              </span>
             ) : (
               <span className={styles.selectionHint}>
                 {variableSelectionEnabled 
@@ -1173,6 +1545,8 @@ export default function InteractiveTemplateEditor({
             ref={editorRef}
             value={editingContent}
             onChange={(e) => handleEditingContentChange(e.target.value)}
+            onKeyUp={trackCursorPosition}
+            onClick={trackCursorPosition}
             className={styles.editor}
             placeholder="Enter template content..."
             style={{
@@ -1220,6 +1594,162 @@ export default function InteractiveTemplateEditor({
         }}
         isVisible={!!(textSelection && showToolbar)}
       />
+
+      {/* Create Variable Modal */}
+      {showCreateVariableModal && (
+        <div className={styles.modal} onClick={() => setShowCreateVariableModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Create New Variable</h3>
+              <button
+                className={styles.closeButton}
+                onClick={() => setShowCreateVariableModal(false)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <div className={styles.formGroup}>
+                <label>Variable Name *</label>
+                <input
+                  type="text"
+                  value={newVariableForm.label}
+                  onChange={(e) => setNewVariableForm(prev => ({ ...prev, label: e.target.value }))}
+                  placeholder="e.g., Company Name"
+                  className={styles.formInput}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Description (Optional)</label>
+                <input
+                  type="text"
+                  value={newVariableForm.description}
+                  onChange={(e) => setNewVariableForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief description of this variable"
+                  className={styles.formInput}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Variable Type</label>
+                <select
+                  value={newVariableForm.fieldType}
+                  onChange={(e) => setNewVariableForm(prev => ({ 
+                    ...prev, 
+                    fieldType: e.target.value as 'text' | 'email' | 'number' | 'date' 
+                  }))}
+                  className={styles.formSelect}
+                >
+                  <option value="text">Text</option>
+                  <option value="email">Email</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                </select>
+              </div>
+
+              <div className={styles.previewSection}>
+                <label>Preview</label>
+                <div className={styles.variablePreview}>
+                  {newVariableForm.label ? `{{${newVariableForm.label.replace(/\s+/g, '_')}}}` : '{{Variable_Name}}'}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setShowCreateVariableModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.primaryButton}
+                onClick={handleCreateVariable}
+                disabled={!newVariableForm.label.trim()}
+              >
+                Create & Insert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Variable Modal */}
+      {showRenameVariableModal && (
+        <div className={styles.modal} onClick={() => setShowRenameVariableModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Rename Variable</h3>
+              <button
+                className={styles.closeButton}
+                onClick={() => setShowRenameVariableModal(false)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <div className={styles.formGroup}>
+                <label>Variable Name *</label>
+                <input
+                  type="text"
+                  value={renameVariableForm.label}
+                  onChange={(e) => setRenameVariableForm(prev => ({ ...prev, label: e.target.value }))}
+                  placeholder="e.g., Company Name"
+                  className={styles.formInput}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Description (Optional)</label>
+                <input
+                  type="text"
+                  value={renameVariableForm.description}
+                  onChange={(e) => setRenameVariableForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief description of this variable"
+                  className={styles.formInput}
+                />
+              </div>
+
+              <div className={styles.previewSection}>
+                <label>Preview</label>
+                <div className={styles.variablePreview}>
+                  {renameVariableForm.label ? `{{${renameVariableForm.label.replace(/\s+/g, '_')}}}` : '{{Variable_Name}}'}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.cancelButton}
+                onClick={() => {
+                  setShowRenameVariableModal(false)
+                  setVariableToRename(null)
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.primaryButton}
+                onClick={handleRenameVariable}
+                disabled={!renameVariableForm.label.trim()}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

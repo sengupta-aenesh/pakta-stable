@@ -108,7 +108,12 @@ export const templatesApi = {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data || []
+    
+    // Ensure all templates have user_created_variables initialized
+    return (data || []).map(template => ({
+      ...template,
+      user_created_variables: template.user_created_variables || []
+    }))
   },
   
   async getById(id: string): Promise<Template | null> {
@@ -121,7 +126,15 @@ export const templatesApi = {
       .single()
     
     if (error) throw error
-    return data
+    
+    // Ensure template has user_created_variables initialized
+    if (data) {
+      return {
+        ...data,
+        user_created_variables: data.user_created_variables || []
+      }
+    }
+    return null
   },
   
   async create(template: Omit<Template, 'id' | 'created_at' | 'updated_at'>): Promise<Template> {

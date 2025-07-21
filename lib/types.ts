@@ -52,8 +52,18 @@ export interface Template {
   analysis_retry_count: number | null
   analysis_error: string | null
   resolved_risks: RiskFactor[]
+  user_created_variables: UserCreatedVariable[]
   created_at: string
   updated_at: string
+}
+
+export interface UserCreatedVariable {
+  id: string
+  label: string
+  fieldType: 'text' | 'email' | 'number' | 'date'
+  description?: string
+  createdAt: string
+  isUserCreated: boolean
 }
 
 export interface TemplateFolder {

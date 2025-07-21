@@ -127,6 +127,38 @@
 .variablesActions {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+}
+
+.addVariableButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.addVariableButton:hover {
+  background: #1F2937;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.addVariableButton:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.addVariableButton svg {
+  flex-shrink: 0;
 }
 
 .editModeButton {
@@ -173,6 +205,20 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userCreatedBadge {
+  padding: 2px 8px;
+  background: #111827;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .occurrenceCount {
@@ -888,6 +934,7 @@
   margin-right: -4px;
   box-sizing: border-box;
   padding: 16px;
+  overflow: hidden;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -992,6 +1039,8 @@
   margin: 8px 0;
   color: #374151;
   line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .riskQuote {
@@ -1001,6 +1050,11 @@
   border-left: 3px solid #e5e7eb;
   font-style: italic;
   color: #6b7280;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  display: block;
 }
 
 .riskDetails {

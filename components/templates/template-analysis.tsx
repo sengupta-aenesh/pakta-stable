@@ -640,80 +640,110 @@ export default function TemplateAnalysis({
     }
   }
 
-  // Load template variables from analysis cache (preserve user input)
+  // Load template variables from analysis cache AND user-created variables
   useEffect(() => {
     console.log('🔍 Template variables loading check:', {
       hasTemplate: !!template,
       hasAnalysisCache: !!template?.analysis_cache,
       hasComplete: !!template?.analysis_cache?.complete,
       hasMissingInfo: !!template?.analysis_cache?.complete?.missingInfo,
+      hasUserCreatedVariables: !!template?.user_created_variables,
+      userCreatedCount: template?.user_created_variables?.length || 0,
       missingInfoCount: template?.analysis_cache?.complete?.missingInfo?.length || 0,
       templateId: template?.id,
       analysisStatus: template?.analysis_status,
       cacheKeys: template?.analysis_cache ? Object.keys(template.analysis_cache) : []
     })
 
-    // Load variables from analysis cache when template analysis is complete
-    if (template?.analysis_status === 'complete' && template?.analysis_cache?.complete?.missingInfo) {
-      const variables = template.analysis_cache.complete.missingInfo
-      
-      console.log('📥 Loading template variables from cache:', {
-        variablesCount: variables.length,
-        firstVariable: variables[0] ? {
-          id: variables[0].id,
-          label: variables[0].label,
-          occurrences: variables[0].occurrences?.length || 0,
-          fieldType: variables[0].fieldType
-        } : null,
-        allVariables: variables.map(v => ({ id: v.id, label: v.label, fieldType: v.fieldType }))
-      })
-      
-      // CRITICAL: Preserve existing user input when updating variables
-      setTemplateVariables(prevVariables => {
-        const updatedVariables = variables.map(newVar => {
-          // Find existing variable with same ID or label
-          const existingVar = prevVariables.find(prev => 
-            prev.id === newVar.id || prev.label === newVar.label
-          )
+    const allVariables: MissingInfoItem[] = []
+    const seenLabels = new Set<string>()
+
+    // First, add user-created variables
+    if (template?.user_created_variables && template.user_created_variables.length > 0) {
+      template.user_created_variables.forEach(userVar => {
+        const normalizedLabel = userVar.label.toLowerCase()
+        if (!seenLabels.has(normalizedLabel)) {
+          seenLabels.add(normalizedLabel)
           
-          // Preserve user input if it exists
-          return {
-            ...newVar,
-            userInput: existingVar?.userInput || newVar.userInput || ''
-          }
-        })
+          // Count occurrences in template content
+          const variablePattern = `{{${userVar.label.replace(/\s+/g, '_')}}}`
+          const regex = new RegExp(variablePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+          const matches = (template.content || '').match(regex) || []
+          
+          allVariables.push({
+            id: userVar.id,
+            label: userVar.label,
+            description: userVar.description || `User-created ${userVar.fieldType} variable`,
+            fieldType: userVar.fieldType,
+            userInput: '',
+            occurrences: matches.map((match, index) => ({
+              text: match,
+              context: `Occurrence ${index + 1}`,
+              position: { start: 0, end: match.length }
+            }))
+          })
+        }
+      })
+    }
+
+    // Then add AI-detected variables (if not already added by user)
+    if (template?.analysis_status === 'complete' && template?.analysis_cache?.complete?.missingInfo) {
+      const aiVariables = template.analysis_cache.complete.missingInfo
+      
+      aiVariables.forEach(aiVar => {
+        const normalizedLabel = aiVar.label.toLowerCase()
+        if (!seenLabels.has(normalizedLabel)) {
+          seenLabels.add(normalizedLabel)
+          allVariables.push(aiVar)
+        }
+      })
+    }
+    
+    console.log('📥 Loading all template variables:', {
+      totalCount: allVariables.length,
+      userCreatedCount: template?.user_created_variables?.length || 0,
+      aiDetectedCount: template?.analysis_cache?.complete?.missingInfo?.length || 0,
+      allVariables: allVariables.map(v => ({ id: v.id, label: v.label, fieldType: v.fieldType }))
+    })
+    
+    // CRITICAL: Preserve existing user input when updating variables
+    setTemplateVariables(prevVariables => {
+      const updatedVariables = allVariables.map(newVar => {
+        // Find existing variable with same ID or label
+        const existingVar = prevVariables.find(prev => 
+          prev.id === newVar.id || prev.label.toLowerCase() === newVar.label.toLowerCase()
+        )
         
-        console.log('🔄 Template variables updated with user input preserved:', {
-          previousCount: prevVariables.length,
-          newCount: updatedVariables.length,
-          preservedInputs: updatedVariables.filter(v => v.userInput).length
-        })
-        
-        return updatedVariables
+        // Preserve user input if it exists
+        return {
+          ...newVar,
+          userInput: existingVar?.userInput || newVar.userInput || ''
+        }
       })
       
-      // Notify parent component of variable load with preserved input - use updated variables
-      if (onVariablesUpdate && variables.length > 0) {
-        setTimeout(() => {
-          const formattedVariables = variables.map(v => ({
-            id: v.id,
-            label: v.label,
-            userInput: v.userInput || '',
-            fieldType: v.fieldType
-          }))
-          console.log('📤 Notifying parent of variable updates:', formattedVariables)
-          onVariablesUpdate(formattedVariables)
-        }, 100) // Small delay to ensure state update
-      }
-    } else if (template?.analysis_status !== 'complete' || !template?.analysis_cache?.complete) {
-      console.log('⚠️ Template analysis not complete or no variables found:', {
-        status: template?.analysis_status,
-        hasCompleteCache: !!template?.analysis_cache?.complete,
-        hasMissingInfo: !!template?.analysis_cache?.complete?.missingInfo
+      console.log('🔄 Template variables updated with user input preserved:', {
+        previousCount: prevVariables.length,
+        newCount: updatedVariables.length,
+        preservedInputs: updatedVariables.filter(v => v.userInput).length
       })
-      setTemplateVariables([])
+      
+      return updatedVariables
+    })
+    
+    // Notify parent component of variable load with preserved input
+    if (onVariablesUpdate && allVariables.length > 0) {
+      setTimeout(() => {
+        const formattedVariables = allVariables.map(v => ({
+          id: v.id,
+          label: v.label,
+          userInput: '',
+          fieldType: v.fieldType
+        }))
+        console.log('📤 Notifying parent of variable updates:', formattedVariables)
+        onVariablesUpdate(formattedVariables)
+      }, 100) // Small delay to ensure state update
     }
-  }, [template?.analysis_status, template?.analysis_cache?.complete?.missingInfo, onVariablesUpdate])
+  }, [template?.analysis_status, template?.analysis_cache?.complete?.missingInfo, template?.user_created_variables, template?.content, onVariablesUpdate])
 
   // Cleanup progress simulation on unmount
   useEffect(() => {
@@ -924,36 +954,15 @@ export default function TemplateAnalysis({
               <h3>Template Variables</h3>
               <div className={styles.variablesActions}>
                 <button
-                  className={styles.editModeButton}
+                  className={styles.addVariableButton}
                   onClick={() => setShowCustomVariableModal(true)}
-                  title="Create a custom variable manually"
+                  title="Add a new template variable"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v8m-4-4h8"/>
                   </svg>
-                  Add Custom Variable
-                </button>
-                <button
-                  className={`${styles.editModeButton} ${isEditMode ? styles.active : ''}`}
-                  onClick={handleToggleEditMode}
-                  title={isEditMode ? 'Exit variable creation mode' : 'Enter variable creation mode to add variables by selecting text'}
-                >
-                  {isEditMode ? (
-                    <>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                      Exit Variable Mode
-                    </>
-                  ) : (
-                    <>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
-                        <path d="M12 4v16m8-8H4"/>
-                      </svg>
-                      Create Variables
-                    </>
-                  )}
+                  <span>Add Variable</span>
                 </button>
                 {templateVariables.length > 0 && (
                   <div style={{ 
@@ -1002,6 +1011,10 @@ export default function TemplateAnalysis({
                     <div className={styles.variableHeader}>
                       <label className={styles.variableLabel}>
                         {variable.label}
+                        {/* Check if this is a user-created variable */}
+                        {template?.user_created_variables?.some(v => v.id === variable.id) && (
+                          <span className={styles.userCreatedBadge}>User Created</span>
+                        )}
                       </label>
                       <span className={styles.occurrenceCount}>
                         {variable.occurrences.length} occurrence{variable.occurrences.length !== 1 ? 's' : ''}
