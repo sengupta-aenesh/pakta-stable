@@ -59,8 +59,28 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
         max_tokens: 800,
       })
 
+      const redraftedText = completion.choices[0].message.content || ''
+      
+      // Generate explanation of changes
+      const explanationCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a template optimization assistant. Briefly explain the improvements made to the template text in 2-3 bullet points.'
+          },
+          {
+            role: 'user',
+            content: `Original text: "${selectedText}"\n\nImproved text: "${redraftedText}"\n\nExplain the key improvements made.`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      })
+      
       return NextResponse.json({
-        redraftedText: completion.choices[0].message.content
+        redraftedText: redraftedText,
+        explanation: explanationCompletion.choices[0].message.content || 'Text has been improved for template use.'
       })
     } else {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

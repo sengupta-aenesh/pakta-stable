@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Template, MissingInfoItem } from '@/lib/supabase-client'
 // Removed Button import to match contract analysis styling
-import TemplateVersionList from './template-version-list'
 import styles from './template-analysis.module.css'
 
 interface TemplateAnalysisProps {
@@ -585,7 +584,7 @@ export default function TemplateAnalysis({
     onToast(`Custom variable "${newVariable.label}" created successfully`, 'success')
   }
 
-  // Handle creating template version - switch to version mode
+  // Handle creating template version - save to backend and switch to version mode
   const handleCreateVersion = async () => {
     if (!template?.id || !onVersionCreate) return
     
@@ -608,10 +607,37 @@ export default function TemplateAnalysis({
     
     console.log('🎯 Creating template version with variables:', variablesWithValues)
     
-    // Trigger version mode in parent component
-    onVersionCreate(variablesWithValues, versionName)
-    
-    onToast(`Template version "${versionName}" created! View the filled template above.`, 'success')
+    try {
+      // Call the backend API to create the version
+      const response = await fetch('/api/template/create-version', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateId: template.id,
+          variables: variablesWithValues,
+          createdAt: new Date().toISOString(),
+          vendorName: 'Default' // You can make this configurable if needed
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create version')
+      }
+
+      const result = await response.json()
+      console.log('✅ Template version created in backend:', result)
+      
+      // Trigger version mode in parent component to show the filled template
+      onVersionCreate(variablesWithValues, versionName)
+      
+      onToast(`Template version "${versionName}" created and saved! View the filled template above.`, 'success')
+    } catch (error) {
+      console.error('Error creating template version:', error)
+      onToast('Failed to create template version. Please try again.', 'error')
+    }
   }
 
   // Load template variables from analysis cache (preserve user input)
@@ -883,21 +909,6 @@ export default function TemplateAnalysis({
                   </div>
                 )}
                 
-                {/* Template Version Information - Integrated into Summary */}
-                <div className={styles.summarySection}>
-                  <h4>Version Management</h4>
-                  <TemplateVersionList
-                    templateId={template.id}
-                    onToast={onToast}
-                    onTemplateRestore={() => {
-                      // Trigger a refresh of the template data
-                      if (onTemplateUpdate) {
-                        // Force a re-fetch of the template to get updated content
-                        window.location.reload()
-                      }
-                    }}
-                  />
-                </div>
               </div>
             ) : (
               <div className={styles.emptyState}>

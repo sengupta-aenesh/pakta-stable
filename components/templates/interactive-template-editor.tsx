@@ -819,12 +819,55 @@ export default function InteractiveTemplateEditor({
         throw new Error('No redrafted text received from AI')
       }
       
-      return data.redraftedText
+      // Return structured data for the toolbar to handle
+      return {
+        originalText: text,
+        redraftedText: data.redraftedText,
+        explanation: data.explanation || 'The text has been improved for template flexibility and clarity.',
+        onAccept: async () => {
+          // Replace the selected text in the content
+          const newContent = content.replace(text, data.redraftedText)
+          console.log('🔄 Template redraft accepted, updating content:', { 
+            oldLength: content.length, 
+            newLength: newContent.length,
+            originalText: text.substring(0, 50) + '...',
+            redraftedText: data.redraftedText.substring(0, 50) + '...'
+          })
+          
+          // Update content immediately
+          setContent(newContent)
+          setEditingContent(newContent)
+          onContentChange(newContent)
+          
+          // Close toolbar and clear selection
+          setShowToolbar(false)
+          setTextSelection(null)
+          
+          // If risks were being shown, trigger reanalysis
+          if (onReanalyzeRisks) {
+            console.log('🔄 Triggering template reanalysis after redraft...')
+            setTimeout(async () => {
+              try {
+                await onReanalyzeRisks()
+                console.log('✅ Template reanalysis completed')
+              } catch (error) {
+                console.error('❌ Template reanalysis failed:', error)
+              }
+            }, 500)
+          }
+        },
+        onReject: () => {
+          console.log('❌ Template redraft rejected')
+          // Just close the toolbar
+          setShowToolbar(false)
+          setTextSelection(null)
+        }
+      }
     } catch (error) {
       console.error('Template text redraft failed:', error)
       throw error
     }
-  }, [template])
+  }, [template, content, onContentChange, onReanalyzeRisks])
 
   // Close dropdown when clicking outside
   useEffect(() => {
