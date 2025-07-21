@@ -1095,6 +1095,9 @@ export default function InteractiveTemplateEditor({
     const text = textarea.value
     const variablePattern = `{{${variableLabel.replace(/\s+/g, '_')}}}`
 
+    // Store current scroll position
+    const currentScrollTop = textarea.scrollTop
+
     // Insert the variable
     const newText = text.substring(0, start) + variablePattern + text.substring(end)
     setEditingContent(newText)
@@ -1105,6 +1108,9 @@ export default function InteractiveTemplateEditor({
       textarea.focus()
       const newCursorPos = start + variablePattern.length
       textarea.setSelectionRange(newCursorPos, newCursorPos)
+      
+      // Restore scroll position to prevent auto-scrolling to bottom
+      textarea.scrollTop = currentScrollTop
     }, 0)
 
     // Close dropdown
@@ -1148,6 +1154,11 @@ export default function InteractiveTemplateEditor({
         // Reset form and close modal
         setNewVariableForm({ label: '', description: '', fieldType: 'text' })
         setShowCreateVariableModal(false)
+        
+        // Notify parent component to refresh variables
+        if (window.refreshTemplateVariables) {
+          window.refreshTemplateVariables()
+        }
       }
     } catch (error) {
       console.error('Error creating variable:', error)

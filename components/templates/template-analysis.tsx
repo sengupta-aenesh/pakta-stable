@@ -641,7 +641,7 @@ export default function TemplateAnalysis({
   }
 
   // Load template variables from analysis cache AND user-created variables
-  useEffect(() => {
+  const loadTemplateVariables = useCallback(() => {
     console.log('🔍 Template variables loading check:', {
       hasTemplate: !!template,
       hasAnalysisCache: !!template?.analysis_cache,
@@ -745,14 +745,31 @@ export default function TemplateAnalysis({
     }
   }, [template?.analysis_status, template?.analysis_cache?.complete?.missingInfo, template?.user_created_variables, template?.content, onVariablesUpdate])
 
-  // Cleanup progress simulation on unmount
+  // Load variables when template changes
   useEffect(() => {
+    loadTemplateVariables()
+  }, [loadTemplateVariables])
+
+  // Cleanup progress simulation on unmount and expose refresh function
+  useEffect(() => {
+    // Expose function to refresh variables from outside (e.g., when created in editor)
+    window.refreshTemplateVariables = () => {
+      console.log('🔄 Refreshing template variables from external trigger')
+      // Trigger the loadTemplateVariables effect by updating the template
+      if (template) {
+        // Force re-load of variables
+        loadTemplateVariables()
+      }
+    }
+
     return () => {
       if (progressSimulation) {
         clearTimeout(progressSimulation)
       }
+      // Clean up global function
+      delete window.refreshTemplateVariables
     }
-  }, [progressSimulation])
+  }, [progressSimulation, template, loadTemplateVariables])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {
@@ -953,17 +970,6 @@ export default function TemplateAnalysis({
             <div className={styles.variablesHeader}>
               <h3>Template Variables</h3>
               <div className={styles.variablesActions}>
-                <button
-                  className={styles.addVariableButton}
-                  onClick={() => setShowCustomVariableModal(true)}
-                  title="Add a new template variable"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 8v8m-4-4h8"/>
-                  </svg>
-                  <span>Add Variable</span>
-                </button>
                 {templateVariables.length > 0 && (
                   <div style={{ 
                     fontSize: '12px', 
