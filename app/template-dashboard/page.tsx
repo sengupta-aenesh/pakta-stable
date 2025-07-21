@@ -112,15 +112,39 @@ function TemplateDashboardContent() {
       const cachedRisks = Array.isArray(riskAnalysis) 
         ? riskAnalysis  // Fallback for old direct array format
         : riskAnalysis.risks || []  // New RiskAnalysis object format
-      console.log('📥 Loading cached risks:', {
-        risksCount: cachedRisks.length,
-        firstRisk: cachedRisks[0] ? {
-          id: cachedRisks[0].id,
-          category: cachedRisks[0].category,
-          riskLevel: cachedRisks[0].riskLevel
-        } : null
+      
+      // Filter out resolved risks
+      const resolvedRisks = template.resolved_risks || []
+      const filteredRisks = cachedRisks.filter(risk => {
+        // Check if this risk matches any resolved risk
+        const isResolved = resolvedRisks.some(resolved => {
+          // Match by exact ID first
+          if (risk.id === resolved.id) return true
+          
+          // Match by category and similar explanation
+          if (risk.category === resolved.category) {
+            // Check if explanations are similar (first 50 chars or key phrases)
+            const riskExplanation = risk.explanation?.toLowerCase() || ''
+            const resolvedExplanation = resolved.explanation?.toLowerCase() || ''
+            
+            // Simple similarity check
+            return riskExplanation.includes(resolvedExplanation.substring(0, 30)) ||
+                   resolvedExplanation.includes(riskExplanation.substring(0, 30))
+          }
+          
+          return false
+        })
+        
+        return !isResolved
       })
-      setTemplateRisks(cachedRisks)
+      
+      console.log('📥 Loading cached risks with filtering:', {
+        totalRisks: cachedRisks.length,
+        resolvedRisks: resolvedRisks.length,
+        filteredRisks: filteredRisks.length,
+        filtered: cachedRisks.length - filteredRisks.length
+      })
+      setTemplateRisks(filteredRisks)
     } else {
       console.log('⚠️ No risks found in analysis cache or analysis not complete:', {
         status: template.analysis_status,
@@ -221,6 +245,11 @@ function TemplateDashboardContent() {
 
   // Handle risks update from analysis component
   const handleRisksUpdate = useCallback((risks: any[]) => {
+    // When risks are updated (e.g., after resolving a risk), 
+    // they should already be filtered by the analysis component
+    console.log('📝 Risks update from analysis component:', {
+      risksCount: risks.length
+    })
     setTemplateRisks(risks)
   }, [])
 
@@ -479,11 +508,40 @@ function TemplateDashboardContent() {
                       const cachedRisks = Array.isArray(riskAnalysis) 
                         ? riskAnalysis
                         : riskAnalysis.risks || []
-                      console.log('📥 Loading risks from updated template:', {
-                        risksCount: cachedRisks.length,
+                      
+                      // Filter out resolved risks
+                      const resolvedRisks = updatedTemplate.resolved_risks || []
+                      const filteredRisks = cachedRisks.filter(risk => {
+                        // Check if this risk matches any resolved risk
+                        const isResolved = resolvedRisks.some(resolved => {
+                          // Match by exact ID first
+                          if (risk.id === resolved.id) return true
+                          
+                          // Match by category and similar explanation
+                          if (risk.category === resolved.category) {
+                            // Check if explanations are similar (first 50 chars or key phrases)
+                            const riskExplanation = risk.explanation?.toLowerCase() || ''
+                            const resolvedExplanation = resolved.explanation?.toLowerCase() || ''
+                            
+                            // Simple similarity check
+                            return riskExplanation.includes(resolvedExplanation.substring(0, 30)) ||
+                                   resolvedExplanation.includes(riskExplanation.substring(0, 30))
+                          }
+                          
+                          return false
+                        })
+                        
+                        return !isResolved
+                      })
+                      
+                      console.log('📥 Loading risks from updated template with filtering:', {
+                        totalRisks: cachedRisks.length,
+                        resolvedRisks: resolvedRisks.length,
+                        filteredRisks: filteredRisks.length,
+                        filtered: cachedRisks.length - filteredRisks.length,
                         templateId: updatedTemplate.id
                       })
-                      setTemplateRisks(cachedRisks)
+                      setTemplateRisks(filteredRisks)
                     }
                   }}
                   onVariablesUpdate={(variables) => {

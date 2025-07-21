@@ -144,7 +144,7 @@ export default function TemplateAnalysis({
   }
 
   // Progress checking function for template analysis
-  const checkAnalysisProgress = async () => {
+  const checkAnalysisProgress = useCallback(async () => {
     if (!template?.id) return
     
     try {
@@ -251,7 +251,7 @@ export default function TemplateAnalysis({
         setTimeout(() => checkAnalysisProgress(), 2000)
       }
     }
-  }
+  }, [template?.id, analyzing, onToast, onTemplateUpdate, refreshTemplateData, clearProgressSimulation, setAnalysisProgress, setAnalyzing, setAnalysisStartTime, currentProgressStep, analysisStartTime])
 
   // Handle analysis triggering
   const handleAnalyzeTemplate = async () => {
@@ -745,6 +745,27 @@ export default function TemplateAnalysis({
   useEffect(() => {
     loadTemplateVariables()
   }, [loadTemplateVariables])
+
+  // Poll for analysis progress
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout | null = null
+    
+    if (analyzing) {
+      console.log('📊 Setting up analysis progress polling...')
+      // Initial check after 1 second
+      pollInterval = setInterval(() => {
+        console.log('⏰ Polling for analysis progress...')
+        checkAnalysisProgress()
+      }, 1500) // Poll every 1.5 seconds
+    }
+    
+    return () => {
+      if (pollInterval) {
+        console.log('🧹 Clearing analysis polling interval')
+        clearInterval(pollInterval)
+      }
+    }
+  }, [analyzing, checkAnalysisProgress])
 
   // Cleanup progress simulation on unmount and expose refresh function
   useEffect(() => {
