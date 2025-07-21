@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Template, MissingInfoItem } from '@/lib/supabase-client'
 // Removed Button import to match contract analysis styling
 import TemplateVersionList from './template-version-list'
@@ -35,8 +35,8 @@ export default function TemplateAnalysis({
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [progressSimulation, setProgressSimulation] = useState<NodeJS.Timeout | null>(null)
   const [currentProgressStep, setCurrentProgressStep] = useState(0)
-  const [simulationStopFunction, setSimulationStopFunction] = useState<(() => void) | null>(null)
   const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null)
+  const simulationActiveRef = useRef<boolean>(false)
   const [templateVariables, setTemplateVariables] = useState<MissingInfoItem[]>([])
   const [isCreatingVersion, setIsCreatingVersion] = useState(false)
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
@@ -52,6 +52,8 @@ export default function TemplateAnalysis({
   // Progressive progress simulation for better UX
   const startProgressSimulation = () => {
     console.log('🚀 Starting progress simulation...')
+    simulationActiveRef.current = true
+    
     const progressSteps = [
       { step: 5, message: 'Analyzing template structure...', delay: 800 },
       { step: 15, message: 'Identifying template variables...', delay: 1200 },
@@ -63,10 +65,11 @@ export default function TemplateAnalysis({
     ]
     
     let currentStep = 0
-    let isSimulationActive = true // Use local flag instead of state dependency
     
     const simulateProgress = () => {
-      if (currentStep < progressSteps.length && isSimulationActive) {
+      console.log(`📊 simulateProgress called - step ${currentStep}, active: ${simulationActiveRef.current}`)
+      
+      if (currentStep < progressSteps.length && simulationActiveRef.current) {
         const { step, message, delay } = progressSteps[currentStep]
         
         console.log(`📊 Progress simulation step ${currentStep + 1}: ${step}% - ${message}`)
@@ -82,42 +85,33 @@ export default function TemplateAnalysis({
         
         currentStep++
         
+        // Schedule next step
+        console.log(`⏰ Scheduling next step in ${delay}ms`)
         const nextTimeout = setTimeout(simulateProgress, delay)
         setProgressSimulation(nextTimeout)
-      } else if (!isSimulationActive) {
+      } else if (!simulationActiveRef.current) {
         console.log('⏹️ Progress simulation stopped - analysis completed')
       } else {
         console.log('📊 Progress simulation completed all steps')
       }
     }
     
-    // Store cleanup function to stop simulation
-    const stopSimulation = () => {
-      isSimulationActive = false
-      console.log('🛑 Stopping progress simulation')
-    }
-    
     // Start simulation immediately for first step
+    console.log('⏰ Starting first step in 300ms')
     const initialTimeout = setTimeout(() => {
       console.log('📊 Progress simulation first step executing...')
       simulateProgress()
     }, 300)
     setProgressSimulation(initialTimeout)
-    
-    // Return stop function for external control
-    return stopSimulation
   }
   
   // Clear progress simulation
   const clearProgressSimulation = () => {
     console.log('🧹 Clearing progress simulation...')
+    simulationActiveRef.current = false
     if (progressSimulation) {
       clearTimeout(progressSimulation)
       setProgressSimulation(null)
-    }
-    if (simulationStopFunction) {
-      simulationStopFunction()
-      setSimulationStopFunction(null)
     }
   }
 
@@ -265,8 +259,7 @@ export default function TemplateAnalysis({
 
       // Start progress simulation immediately for better UX
       console.log('🎬 Calling startProgressSimulation from handleAnalyzeTemplate')
-      const stopFunction = startProgressSimulation()
-      setSimulationStopFunction(() => stopFunction)
+      startProgressSimulation()
 
       const response = await fetch('/api/template/auto-analyze', {
         method: 'POST',
@@ -702,11 +695,8 @@ export default function TemplateAnalysis({
       if (progressSimulation) {
         clearTimeout(progressSimulation)
       }
-      if (simulationStopFunction) {
-        simulationStopFunction()
-      }
     }
-  }, [progressSimulation, simulationStopFunction])
+  }, [progressSimulation])
 
   // Handle risk resolution (new feature for templates)
   const handleResolveRisk = async (riskId: string) => {
