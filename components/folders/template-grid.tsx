@@ -326,6 +326,26 @@ export default function TemplateGrid({
                   className={styles.osFileItem}
                   onClick={() => onTemplateClick(template)}
                 >
+                  {/* Options Menu */}
+                  <FileOptionsMenu
+                    className={styles.fileOptionsMenu}
+                    onMove={() => {
+                      setSelectedTemplate(template)
+                      setModalState({ type: 'move', isOpen: true })
+                    }}
+                    onCopy={() => {
+                      setSelectedTemplate(template)
+                      setModalState({ type: 'copy', isOpen: true })
+                    }}
+                    onRename={() => {
+                      setSelectedTemplate(template)
+                      setModalState({ type: 'rename', isOpen: true })
+                    }}
+                    onDelete={() => {
+                      setDeleteConfirmation({ isOpen: true, template })
+                    }}
+                  />
+
                   {/* Minimalist Document Icon */}
                   <div className={styles.osIconContainer}>
                     <div className={styles.iconBackground}>
@@ -361,26 +381,6 @@ export default function TemplateGrid({
                       </span>
                     )}
                   </div>
-
-                  {/* Options Menu */}
-                  <FileOptionsMenu
-                    className={styles.fileOptionsMenu}
-                    onMove={() => {
-                      setSelectedTemplate(template)
-                      setModalState({ type: 'move', isOpen: true })
-                    }}
-                    onCopy={() => {
-                      setSelectedTemplate(template)
-                      setModalState({ type: 'copy', isOpen: true })
-                    }}
-                    onRename={() => {
-                      setSelectedTemplate(template)
-                      setModalState({ type: 'rename', isOpen: true })
-                    }}
-                    onDelete={() => {
-                      setDeleteConfirmation({ isOpen: true, template })
-                    }}
-                  />
                 </div>
               )
             })}

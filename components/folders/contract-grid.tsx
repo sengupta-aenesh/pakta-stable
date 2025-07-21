@@ -315,6 +315,26 @@ export default function ContractGrid({
                   className={styles.osFileItem}
                   onClick={() => onContractClick(contract)}
                 >
+                  {/* Options Menu */}
+                  <FileOptionsMenu
+                    className={styles.fileOptionsMenu}
+                    onMove={() => {
+                      setSelectedContract(contract)
+                      setModalState({ type: 'move', isOpen: true })
+                    }}
+                    onCopy={() => {
+                      setSelectedContract(contract)
+                      setModalState({ type: 'copy', isOpen: true })
+                    }}
+                    onRename={() => {
+                      setSelectedContract(contract)
+                      setModalState({ type: 'rename', isOpen: true })
+                    }}
+                    onDelete={() => {
+                      setDeleteConfirmation({ isOpen: true, contract })
+                    }}
+                  />
+
                   {/* Minimalist Document Icon */}
                   <div className={styles.osIconContainer}>
                     <div className={styles.iconBackground}>
@@ -350,26 +370,6 @@ export default function ContractGrid({
                       </span>
                     )}
                   </div>
-
-                  {/* Options Menu */}
-                  <FileOptionsMenu
-                    className={styles.fileOptionsMenu}
-                    onMove={() => {
-                      setSelectedContract(contract)
-                      setModalState({ type: 'move', isOpen: true })
-                    }}
-                    onCopy={() => {
-                      setSelectedContract(contract)
-                      setModalState({ type: 'copy', isOpen: true })
-                    }}
-                    onRename={() => {
-                      setSelectedContract(contract)
-                      setModalState({ type: 'rename', isOpen: true })
-                    }}
-                    onDelete={() => {
-                      setDeleteConfirmation({ isOpen: true, contract })
-                    }}
-                  />
                 </div>
               )
             })}
