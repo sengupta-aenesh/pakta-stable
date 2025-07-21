@@ -1,0 +1,159 @@
+.container {
+  position: relative;
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.menuButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #000;
+}
+
+.menuButton:active {
+  transform: scale(0.95);
+}
+
+/* Parent hover reveals the button */
+*:hover > .container .menuButton {
+  opacity: 1;
+}
+
+/* Keep visible when menu is open */
+.container:has(.dropdown) .menuButton {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  z-index: 1000;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  text-align: left;
+}
+
+.option:hover {
+  background-color: #f5f5f5;
+}
+
+.option:active {
+  background-color: #ebebeb;
+}
+
+.option svg {
+  flex-shrink: 0;
+  color: #666;
+}
+
+.option.danger {
+  color: #dc2626;
+}
+
+.option.danger svg {
+  color: #dc2626;
+}
+
+.option.danger:hover {
+  background-color: #fee2e2;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e5e5e5;
+  margin: 4px 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .menuButton {
+    color: #999;
+  }
+
+  .menuButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .dropdown {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+
+  .option {
+    color: #e5e5e5;
+  }
+
+  .option:hover {
+    background-color: #2a2a2a;
+  }
+
+  .option:active {
+    background-color: #333;
+  }
+
+  .option svg {
+    color: #999;
+  }
+
+  .option.danger {
+    color: #ef4444;
+  }
+
+  .option.danger svg {
+    color: #ef4444;
+  }
+
+  .option.danger:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+
+  .divider {
+    background-color: #333;
+  }
+}

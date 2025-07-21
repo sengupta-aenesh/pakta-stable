@@ -1,7 +1,11 @@
 'use client'
 
-import { Contract } from '@/lib/supabase-client'
-import { Button } from '@/components/ui'
+import { useState } from 'react'
+import { Contract, contractsApi } from '@/lib/supabase-client'
+import { Button, ConfirmationDialog, useToast, Toast } from '@/components/ui'
+import FileOptionsMenu from './file-options-menu'
+import FolderSelectionModal from './folder-selection-modal'
+import RenameModal from './rename-modal'
 import styles from '@/app/folders/folders.module.css'
 
 interface Folder {
@@ -36,6 +40,16 @@ export default function ContractGrid({
   onBackToAll,
   onNewFolder
 }: ContractGridProps) {
+  const { toast, toasts, removeToast } = useToast()
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
+  const [modalState, setModalState] = useState<{
+    type: 'move' | 'copy' | 'rename' | 'delete' | null
+    isOpen: boolean
+  }>({ type: null, isOpen: false })
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean
+    contract: Contract | null
+  }>({ isOpen: false, contract: null })
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -75,6 +89,78 @@ export default function ContractGrid({
   const getFolderForContract = (contract: Contract) => {
     if (!contract.folder_id) return null
     return folders.find(f => f.id === contract.folder_id)
+  }
+
+  // Handle contract actions
+  const handleMove = async (folderId: string | null) => {
+    if (!selectedContract) return
+    
+    try {
+      await contractsApi.update(selectedContract.id, { folder_id: folderId })
+      toast('Contract moved successfully', 'success')
+      onContractsUpdate()
+      setModalState({ type: null, isOpen: false })
+      setSelectedContract(null)
+    } catch (error) {
+      console.error('Error moving contract:', error)
+      toast('Failed to move contract', 'error')
+    }
+  }
+
+  const handleCopy = async (folderId: string | null) => {
+    if (!selectedContract) return
+    
+    try {
+      const newContract = {
+        user_id: selectedContract.user_id,
+        title: `${selectedContract.title} (Copy)`,
+        content: selectedContract.content,
+        upload_url: selectedContract.upload_url,
+        file_key: selectedContract.file_key,
+        folder_id: folderId,
+        analysis_cache: selectedContract.analysis_cache,
+        analysis_status: selectedContract.analysis_status,
+        analysis_progress: selectedContract.analysis_progress
+      }
+      
+      await contractsApi.create(newContract)
+      toast('Contract copied successfully', 'success')
+      onContractsUpdate()
+      setModalState({ type: null, isOpen: false })
+      setSelectedContract(null)
+    } catch (error) {
+      console.error('Error copying contract:', error)
+      toast('Failed to copy contract', 'error')
+    }
+  }
+
+  const handleRename = async (newName: string) => {
+    if (!selectedContract) return
+    
+    try {
+      await contractsApi.update(selectedContract.id, { title: newName })
+      toast('Contract renamed successfully', 'success')
+      onContractsUpdate()
+      setModalState({ type: null, isOpen: false })
+      setSelectedContract(null)
+    } catch (error) {
+      console.error('Error renaming contract:', error)
+      toast('Failed to rename contract', 'error')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirmation.contract) return
+    
+    try {
+      await contractsApi.delete(deleteConfirmation.contract.id)
+      toast('Contract deleted successfully', 'success')
+      onContractsUpdate()
+      setDeleteConfirmation({ isOpen: false, contract: null })
+    } catch (error) {
+      console.error('Error deleting contract:', error)
+      toast('Failed to delete contract', 'error')
+    }
   }
 
   return (
@@ -264,6 +350,26 @@ export default function ContractGrid({
                       </span>
                     )}
                   </div>
+
+                  {/* Options Menu */}
+                  <FileOptionsMenu
+                    className={styles.fileOptionsMenu}
+                    onMove={() => {
+                      setSelectedContract(contract)
+                      setModalState({ type: 'move', isOpen: true })
+                    }}
+                    onCopy={() => {
+                      setSelectedContract(contract)
+                      setModalState({ type: 'copy', isOpen: true })
+                    }}
+                    onRename={() => {
+                      setSelectedContract(contract)
+                      setModalState({ type: 'rename', isOpen: true })
+                    }}
+                    onDelete={() => {
+                      setDeleteConfirmation({ isOpen: true, contract })
+                    }}
+                  />
                 </div>
               )
             })}
@@ -271,6 +377,69 @@ export default function ContractGrid({
         )}
         </div>
       </div>
+
+      {/* Modals */}
+      {modalState.type === 'move' && selectedContract && (
+        <FolderSelectionModal
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            setModalState({ type: null, isOpen: false })
+            setSelectedContract(null)
+          }}
+          onSelect={handleMove}
+          folders={folders}
+          title="Move Contract"
+          currentFolderId={selectedContract.folder_id}
+          fileType="contract"
+        />
+      )}
+
+      {modalState.type === 'copy' && selectedContract && (
+        <FolderSelectionModal
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            setModalState({ type: null, isOpen: false })
+            setSelectedContract(null)
+          }}
+          onSelect={handleCopy}
+          folders={folders}
+          title="Copy Contract"
+          currentFolderId={selectedContract.folder_id}
+          fileType="contract"
+        />
+      )}
+
+      {modalState.type === 'rename' && selectedContract && (
+        <RenameModal
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            setModalState({ type: null, isOpen: false })
+            setSelectedContract(null)
+          }}
+          onRename={handleRename}
+          currentName={selectedContract.title}
+          itemType="contract"
+        />
+      )}
+
+      <ConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, contract: null })}
+        onConfirm={handleDelete}
+        title="Delete Contract"
+        message={`Are you sure you want to delete "${deleteConfirmation.contract?.title}"? This action cannot be undone.`}
+        type="danger"
+      />
+
+      {/* Render toasts */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   )
 }

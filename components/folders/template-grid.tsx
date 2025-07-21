@@ -1,7 +1,11 @@
 'use client'
 
-import { Template, TemplateFolder } from '@/lib/supabase-client'
-import { Button } from '@/components/ui'
+import { useState } from 'react'
+import { Template, TemplateFolder, templatesApi } from '@/lib/supabase-client'
+import { Button, ConfirmationDialog, useToast, Toast } from '@/components/ui'
+import FileOptionsMenu from './file-options-menu'
+import FolderSelectionModal from './folder-selection-modal'
+import RenameModal from './rename-modal'
 import styles from '@/app/folders/folders.module.css'
 
 interface TemplateGridProps {
@@ -27,6 +31,16 @@ export default function TemplateGrid({
   onBackToAll,
   onNewTemplateFolder
 }: TemplateGridProps) {
+  const { toast, toasts, removeToast } = useToast()
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [modalState, setModalState] = useState<{
+    type: 'move' | 'copy' | 'rename' | 'delete' | null
+    isOpen: boolean
+  }>({ type: null, isOpen: false })
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean
+    template: Template | null
+  }>({ isOpen: false, template: null })
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -82,6 +96,79 @@ export default function TemplateGrid({
   const getFolderForTemplate = (template: Template) => {
     if (!template.folder_id) return null
     return templateFolders.find(f => f.id === template.folder_id)
+  }
+
+  // Handle template actions
+  const handleMove = async (folderId: string | null) => {
+    if (!selectedTemplate) return
+    
+    try {
+      await templatesApi.update(selectedTemplate.id, { folder_id: folderId })
+      toast('Template moved successfully', 'success')
+      onTemplatesUpdate()
+      setModalState({ type: null, isOpen: false })
+      setSelectedTemplate(null)
+    } catch (error) {
+      console.error('Error moving template:', error)
+      toast('Failed to move template', 'error')
+    }
+  }
+
+  const handleCopy = async (folderId: string | null) => {
+    if (!selectedTemplate) return
+    
+    try {
+      const newTemplate = {
+        user_id: selectedTemplate.user_id,
+        title: `${selectedTemplate.title} (Copy)`,
+        content: selectedTemplate.content,
+        upload_url: selectedTemplate.upload_url,
+        file_key: selectedTemplate.file_key,
+        folder_id: folderId,
+        analysis_cache: selectedTemplate.analysis_cache,
+        analysis_status: selectedTemplate.analysis_status,
+        analysis_progress: selectedTemplate.analysis_progress,
+        resolved_risks: selectedTemplate.resolved_risks
+      }
+      
+      await templatesApi.create(newTemplate)
+      toast('Template copied successfully', 'success')
+      onTemplatesUpdate()
+      setModalState({ type: null, isOpen: false })
+      setSelectedTemplate(null)
+    } catch (error) {
+      console.error('Error copying template:', error)
+      toast('Failed to copy template', 'error')
+    }
+  }
+
+  const handleRename = async (newName: string) => {
+    if (!selectedTemplate) return
+    
+    try {
+      await templatesApi.update(selectedTemplate.id, { title: newName })
+      toast('Template renamed successfully', 'success')
+      onTemplatesUpdate()
+      setModalState({ type: null, isOpen: false })
+      setSelectedTemplate(null)
+    } catch (error) {
+      console.error('Error renaming template:', error)
+      toast('Failed to rename template', 'error')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirmation.template) return
+    
+    try {
+      await templatesApi.delete(deleteConfirmation.template.id)
+      toast('Template deleted successfully', 'success')
+      onTemplatesUpdate()
+      setDeleteConfirmation({ isOpen: false, template: null })
+    } catch (error) {
+      console.error('Error deleting template:', error)
+      toast('Failed to delete template', 'error')
+    }
   }
 
   return (
@@ -274,6 +361,26 @@ export default function TemplateGrid({
                       </span>
                     )}
                   </div>
+
+                  {/* Options Menu */}
+                  <FileOptionsMenu
+                    className={styles.fileOptionsMenu}
+                    onMove={() => {
+                      setSelectedTemplate(template)
+                      setModalState({ type: 'move', isOpen: true })
+                    }}
+                    onCopy={() => {
+                      setSelectedTemplate(template)
+                      setModalState({ type: 'copy', isOpen: true })
+                    }}
+                    onRename={() => {
+                      setSelectedTemplate(template)
+                      setModalState({ type: 'rename', isOpen: true })
+                    }}
+                    onDelete={() => {
+                      setDeleteConfirmation({ isOpen: true, template })
+                    }}
+                  />
                 </div>
               )
             })}
@@ -281,6 +388,69 @@ export default function TemplateGrid({
         )}
         </div>
       </div>
+
+      {/* Modals */}
+      {modalState.type === 'move' && selectedTemplate && (
+        <FolderSelectionModal
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            setModalState({ type: null, isOpen: false })
+            setSelectedTemplate(null)
+          }}
+          onSelect={handleMove}
+          folders={templateFolders}
+          title="Move Template"
+          currentFolderId={selectedTemplate.folder_id}
+          fileType="template"
+        />
+      )}
+
+      {modalState.type === 'copy' && selectedTemplate && (
+        <FolderSelectionModal
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            setModalState({ type: null, isOpen: false })
+            setSelectedTemplate(null)
+          }}
+          onSelect={handleCopy}
+          folders={templateFolders}
+          title="Copy Template"
+          currentFolderId={selectedTemplate.folder_id}
+          fileType="template"
+        />
+      )}
+
+      {modalState.type === 'rename' && selectedTemplate && (
+        <RenameModal
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            setModalState({ type: null, isOpen: false })
+            setSelectedTemplate(null)
+          }}
+          onRename={handleRename}
+          currentName={selectedTemplate.title}
+          itemType="template"
+        />
+      )}
+
+      <ConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, template: null })}
+        onConfirm={handleDelete}
+        title="Delete Template"
+        message={`Are you sure you want to delete "${deleteConfirmation.template?.title}"? This action cannot be undone.`}
+        type="danger"
+      />
+
+      {/* Render toasts */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   )
 }

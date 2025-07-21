@@ -1203,6 +1203,7 @@
   min-height: 140px;
   max-width: 140px;
   text-align: center;
+  position: relative;
 }
 
 .osFileItem:hover {
@@ -1335,4 +1336,12 @@
   color: #9CA3AF;
   font-size: var(--font-size-sm);
   font-style: italic;
+}
+
+/* File Options Menu */
+.fileOptionsMenu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
 }

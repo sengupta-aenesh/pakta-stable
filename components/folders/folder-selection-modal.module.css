@@ -1,0 +1,226 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: #f5f5f5;
+  color: #111;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
+  min-height: 200px;
+}
+
+.folderTree {
+  margin-top: 8px;
+}
+
+.folderItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  position: relative;
+  user-select: none;
+}
+
+.folderItem:hover:not(.disabled) {
+  background-color: #f5f5f5;
+}
+
+.folderItem.selected {
+  background-color: #000;
+  color: white;
+}
+
+.folderItem.selected .folderIcon {
+  color: white;
+}
+
+.folderItem.selected .expandButton {
+  color: white;
+}
+
+.folderItem.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.expandButton {
+  position: absolute;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.expandButton svg {
+  transition: transform 0.2s ease;
+}
+
+.expandButton svg.expanded {
+  transform: rotate(90deg);
+}
+
+.folderIcon {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.folderName {
+  font-size: 14px;
+  color: inherit;
+}
+
+.currentLabel {
+  font-size: 12px;
+  color: #666;
+  margin-left: 8px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e5e5;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .modal {
+    background: #1a1a1a;
+  }
+
+  .header,
+  .footer {
+    border-color: #333;
+  }
+
+  .title {
+    color: #fff;
+  }
+
+  .closeButton {
+    color: #999;
+  }
+
+  .closeButton:hover {
+    background: #2a2a2a;
+    color: #fff;
+  }
+
+  .folderItem:hover:not(.disabled) {
+    background-color: #2a2a2a;
+  }
+
+  .folderItem.selected {
+    background-color: #fff;
+    color: #000;
+  }
+
+  .folderItem.selected .folderIcon {
+    color: #000;
+  }
+
+  .folderItem.selected .expandButton {
+    color: #000;
+  }
+
+  .folderIcon,
+  .expandButton {
+    color: #999;
+  }
+
+  .folderName {
+    color: #e5e5e5;
+  }
+
+  .currentLabel {
+    color: #999;
+  }
+}
