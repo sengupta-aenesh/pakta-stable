@@ -55,13 +55,13 @@ export default function TemplateAnalysis({
     simulationActiveRef.current = true
     
     const progressSteps = [
-      { step: 5, message: 'Analyzing template structure...', delay: 800 },
-      { step: 15, message: 'Identifying template variables...', delay: 1200 },
-      { step: 30, message: 'Processing template content...', delay: 1500 },
-      { step: 45, message: 'Detecting potential risks...', delay: 1800 },
-      { step: 65, message: 'Analyzing template patterns...', delay: 2000 },
-      { step: 80, message: 'Finalizing analysis...', delay: 2200 },
-      { step: 90, message: 'Completing analysis...', delay: 2500 }
+      { step: 5, message: 'Analyzing template structure...', delay: 12000 },
+      { step: 15, message: 'Identifying template variables...', delay: 14000 },
+      { step: 30, message: 'Processing template content...', delay: 13000 },
+      { step: 45, message: 'Detecting potential risks...', delay: 15000 },
+      { step: 65, message: 'Analyzing template patterns...', delay: 11000 },
+      { step: 80, message: 'Finalizing analysis...', delay: 13000 },
+      { step: 90, message: 'Completing analysis...', delay: 10000 }
     ]
     
     let currentStep = 0
@@ -186,8 +186,8 @@ export default function TemplateAnalysis({
         } else if (statusData.status === 'complete') {
           console.log('🎉 Template analysis completed!')
           
-          // Check if minimum animation time has passed (5 seconds)
-          const minAnimationDuration = 5000
+          // Check if minimum animation time has passed (90 seconds total for realistic experience)
+          const minAnimationDuration = 90000
           const elapsedTime = analysisStartTime ? Date.now() - analysisStartTime : minAnimationDuration
           
           if (elapsedTime < minAnimationDuration) {
