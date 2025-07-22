@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+// Removed toast import - notifications handled by components
 
 interface SubscriptionStatus {
   tier: string;
@@ -73,7 +73,8 @@ export function useSubscription() {
     
     const limit = subscription.limits[feature];
     if (!limit.allowed) {
-      toast.error(getUpgradeMessage(feature, limit.limit || 0));
+      // Notification will be shown by the calling component
+      console.warn(getUpgradeMessage(feature, limit.limit || 0));
     }
     
     return limit;

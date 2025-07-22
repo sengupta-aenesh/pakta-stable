@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import { Card } from '@/components/ui';
 import { Check, X } from 'lucide-react';
 // Stripe removed - payment functionality disabled
-import { toast } from 'sonner';
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks';
 
 interface UserSubscription {
   tier: string;
@@ -30,6 +30,7 @@ interface UserSubscription {
 }
 
 export default function SubscriptionPage() {
+  const notifications = useEnhancedNotifications();
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export default function SubscriptionPage() {
       setSubscription(data);
     } catch (error) {
       console.error('Error fetching subscription:', error);
-      toast.error('Failed to load subscription information');
+      notifications.error('Load Failed', 'Failed to load subscription information');
     } finally {
       setLoading(false);
     }
@@ -78,7 +79,7 @@ export default function SubscriptionPage() {
       }
     } catch (error) {
       console.error('Error creating checkout:', error);
-      toast.error('Failed to start checkout process');
+      notifications.error('Checkout Failed', 'Failed to start checkout process');
       setUpgrading(null);
     }
   };
@@ -97,7 +98,7 @@ export default function SubscriptionPage() {
       }
     } catch (error) {
       console.error('Error opening billing portal:', error);
-      toast.error('Failed to open billing portal');
+      notifications.error('Portal Failed', 'Failed to open billing portal');
     }
   };
 

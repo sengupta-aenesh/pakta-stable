@@ -542,7 +542,12 @@ function TemplateDashboardContent() {
                     setTemplateVariables(variables)
                   }}
                   onVersionCreate={handleVersionCreate}
-                  // Notification system is used internally
+                  onToast={(msg, type) => {
+                    // Map old onToast calls to new notification system
+                    if (type === 'success') notifications.success('Success', msg)
+                    else if (type === 'error') notifications.error('Error', msg)
+                    else notifications.info('Info', msg)
+                  }}
                   isEditMode={isEditMode}
                 />
               </div>

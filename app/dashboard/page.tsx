@@ -296,7 +296,7 @@ function DashboardContent() {
           : contract
       ))
     }
-  }, [selectedContract, toast])
+  }, [selectedContract])
 
   // Debounced title saving to avoid saving on every keystroke
   const titleSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -447,15 +447,7 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* Render toasts */}
-      {toasts.map((toast, index) => (
-        <Toast
-          key={`${toast.id}-${index}`}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }
