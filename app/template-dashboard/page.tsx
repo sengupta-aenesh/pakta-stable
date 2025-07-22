@@ -48,6 +48,7 @@ function TemplateDashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   // Using notification system instead of toasts
+  const notifications = useEnhancedNotifications()
 
   // Stable callback for registering update function to prevent infinite loops
   const handleRegisterUpdateFunction = useCallback((fn: (content: string | null) => void) => {
