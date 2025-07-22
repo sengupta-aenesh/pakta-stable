@@ -87,7 +87,7 @@ export function useSubscription() {
       folders: `You've reached your limit of ${limit} folders. Upgrade to create more.`
     };
     
-    return messages[feature] || 'You've reached your plan limit. Upgrade to continue.';
+    return messages[feature] || 'You\'ve reached your plan limit. Upgrade to continue.';
   };
 
   const canUseFeature = (feature: string): boolean => {

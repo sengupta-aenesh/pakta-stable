@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Contract, contractsApi, Template, templatesApi, TemplateFolder, templateFoldersApi } from '@/lib/supabase-client'
 import { getCurrentUser } from '@/lib/auth-client'
-import { Button, useToast, Toast, TopNavigation } from '@/components/ui'
+import { Button, TopNavigation } from '@/components/ui'
 import { foldersApi, Folder } from '@/lib/folders-api'
 import UnifiedSidebar from '@/components/folders/unified-sidebar'
 import ContractGrid from '@/components/folders/contract-grid'
 import TemplateGrid from '@/components/folders/template-grid'
 import StatsPanel from '@/components/folders/stats-panel'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import styles from './folders.module.css'
 
 export default function FoldersPage() {
@@ -23,7 +24,8 @@ export default function FoldersPage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
 
   useEffect(() => {
     loadUserAndData()
@@ -46,7 +48,7 @@ export default function FoldersPage() {
       ])
     } catch (error) {
       console.error('Error loading data:', error)
-      toast('Failed to load data', 'error')
+      notifications.error('Operation Failed', 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -177,7 +179,6 @@ export default function FoldersPage() {
           user={user}
           showUserSection={true}
           onSignOut={handleSignOut}
-          onToast={toast}
           // View mode
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -222,15 +223,7 @@ export default function FoldersPage() {
         />
       </div>
 
-      {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }

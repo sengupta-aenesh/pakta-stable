@@ -7,11 +7,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 import { Template, templatesApi, TemplateFolder, templateFoldersApi } from '@/lib/supabase-client'
 import { getCurrentUser } from '@/lib/auth-client'
-import { Button, useToast, Toast, TopNavigation } from '@/components/ui'
+import { Button, TopNavigation } from '@/components/ui'
 import UnifiedSidebar from '@/components/folders/unified-sidebar'
 import TemplateAnalysis from '@/components/templates/template-analysis'
 import InteractiveTemplateEditor from '@/components/templates/interactive-template-editor'
 import TrialStatus from '@/components/subscription/trial-status'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import styles from './template-dashboard.module.css'
 
 type MobileView = 'list' | 'editor' | 'analysis'
@@ -46,7 +47,7 @@ function TemplateDashboardContent() {
   const [isEditMode, setIsEditMode] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { toast, toasts, removeToast } = useToast()
+  // Using notification system instead of toasts
 
   // Stable callback for registering update function to prevent infinite loops
   const handleRegisterUpdateFunction = useCallback((fn: (content: string | null) => void) => {
@@ -161,15 +162,7 @@ function TemplateDashboardContent() {
     console.log('🎯 Template selected - COMPLETE:', template.id)
   }, [selectedTemplate?.id]) // Only depend on the ID to prevent excessive re-renders
 
-  // Debug duplicate keys
-  useEffect(() => {
-    const ids = toasts.map(t => t.id)
-    const uniqueIds = new Set(ids)
-    if (ids.length !== uniqueIds.size) {
-      console.warn('🚨 Duplicate toast IDs detected:', ids)
-      console.warn('🔍 Toasts array:', toasts)
-    }
-  }, [toasts])
+  // Debug code removed - using notification system now
 
   // URL monitoring for template selection
   useEffect(() => {
@@ -217,7 +210,7 @@ function TemplateDashboardContent() {
       ])
     } catch (error) {
       console.error('Error loading data:', error)
-      toast('Failed to load data', 'error')
+      notifications.error('Operation Failed', 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -285,12 +278,12 @@ function TemplateDashboardContent() {
       // Clear risks and variables cache when content changes as they may no longer be accurate
       setTemplateRisks([])
       setTemplateVariables([])
-      toast('Template updated successfully', 'success')
+      notifications.success('Success', 'Template updated successfully')
     } catch (error) {
       console.error('Error updating template:', error)
-      toast('Failed to update template', 'error')
+      notifications.error('Operation Failed', 'Failed to update template')
     }
-  }, [selectedTemplate, toast])
+  }, [selectedTemplate])
 
   // Handle template title update with automatic saving
   const handleTemplateTitleChange = useCallback(async (newTitle: string) => {
@@ -312,10 +305,10 @@ function TemplateDashboardContent() {
       // Save to database
       await templatesApi.update(selectedTemplate.id, { title: trimmedTitle })
       console.log('✅ Template title updated successfully:', trimmedTitle)
-      toast('Template title updated', 'success')
+      notifications.success('Success', 'Template title updated')
     } catch (error) {
       console.error('❌ Failed to update template title:', error)
-      toast('Failed to update title', 'error')
+      notifications.error('Operation Failed', 'Failed to update title')
       
       // Revert on error
       setSelectedTemplate(prev => prev ? { ...prev, title: selectedTemplate.title } : null)
@@ -325,7 +318,7 @@ function TemplateDashboardContent() {
           : template
       ))
     }
-  }, [selectedTemplate, toast])
+  }, [selectedTemplate])
 
   // Debounced title saving to avoid saving on every keystroke
   const titleSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -435,7 +428,7 @@ function TemplateDashboardContent() {
             })()}
             showUserSection={true}
             onSignOut={handleSignOut}
-            onToast={toast}
+            // Notification system is used internally
             // View mode - force templates
             viewMode="templates"
             onViewModeChange={() => {}} // No switching in template dashboard
@@ -482,7 +475,7 @@ function TemplateDashboardContent() {
                     // Handle comment creation for templates
                     const comment = prompt(`Add comment for template: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"\n\nEnter your comment:`)
                     if (comment) {
-                      toast(`Comment added: ${comment}`, 'success')
+                      notifications.success('Success', `Comment added: ${comment}`)
                     }
                   }}
                   onReanalyzeRisks={reanalyzeRisksRef.current}
@@ -549,7 +542,7 @@ function TemplateDashboardContent() {
                     setTemplateVariables(variables)
                   }}
                   onVersionCreate={handleVersionCreate}
-                  onToast={toast}
+                  // Notification system is used internally
                   isEditMode={isEditMode}
                 />
               </div>
@@ -601,15 +594,7 @@ function TemplateDashboardContent() {
         </div>
       </div>
 
-      {/* Render toasts */}
-      {toasts.map((toast, index) => (
-        <Toast
-          key={`${toast.id}-${index}`}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }

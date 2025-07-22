@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Button, Card, CardBody, Input, Textarea, useToast, Toast } from '@/components/ui'
+import { Button, Card, CardBody, Input, Textarea } from '@/components/ui'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 
 interface Message {
   role: 'human' | 'ai'
@@ -27,7 +28,8 @@ export function ContractCreatorDialog({
   const [generatedContract, setGeneratedContract] = useState<string | null>(null)
   const [editableFields, setEditableFields] = useState<any[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -93,13 +95,13 @@ export function ContractCreatorDialog({
         setContractCompleted(true)
         setGeneratedContract(data.session.generatedContract)
         setEditableFields(data.session.editableFields || [])
-        toast('Contract created successfully!', 'success')
+        notifications.success('Success', 'Contract created successfully!')
         onContractCreated?.(data.contractId)
       }
 
     } catch (error) {
       console.error('Error sending message:', error)
-      toast('Failed to send message. Please try again.', 'error')
+      notifications.error('Operation Failed', 'Failed to send message. Please try again.')
       setMessages(prev => [...prev, { 
         role: 'ai', 
         content: 'Sorry, I encountered an error. Please try again.' 
@@ -268,14 +270,7 @@ export function ContractCreatorDialog({
       </div>
 
       {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </>
   )
 }

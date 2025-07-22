@@ -148,6 +148,16 @@
   color: #FFFFFF;
 }
 
+/* Notification Wrapper */
+.notificationWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid #e5e7eb;
+}
+
 .navItem.active:hover {
   background: #1F2937;
 }

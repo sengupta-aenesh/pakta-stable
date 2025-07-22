@@ -307,25 +307,6 @@ export { default as TopNavigation } from './top-navigation'
 // ConfirmationDialog export
 export { default as ConfirmationDialog } from './confirmation-dialog'
 
-// Simple toast hook
-export function useToast() {
-  const [toasts, setToasts] = React.useState<Array<{ id: string, message: string, type: 'success' | 'error' | 'info' }>>([])
-  
-  const toast = React.useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    // Generate unique ID using timestamp + random number to prevent duplicates
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    console.log('🍞 Creating toast with ID:', id, 'Message:', message)
-    setToasts(prev => [...prev, { id, message, type }])
-  }, [])
-  
-  const removeToast = React.useCallback((id: string) => {
-    console.log('🗑️ Removing toast with ID:', id)
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }, [])
-  
-  return {
-    toast,
-    toasts,
-    removeToast
-  }
-}
+// Re-export notification hooks for backward compatibility
+export { useToast } from '@/components/notifications/notification.hooks'
+export { useEnhancedNotifications } from '@/components/notifications/notification.hooks'

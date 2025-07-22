@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
+import NotificationBell from '../notifications/NotificationBell'
 import styles from './top-navigation.module.css'
 
 interface TopNavigationProps {
@@ -98,7 +99,7 @@ export default function TopNavigation({
           )}
         </div>
 
-        {/* Right side - navigation icons */}
+        {/* Right side - navigation icons and notifications */}
         <div className={styles.navRight}>
           {navItems.map((item) => (
             <button
@@ -113,6 +114,11 @@ export default function TopNavigation({
               <span className={styles.navLabel}>{item.label}</span>
             </button>
           ))}
+          
+          {/* Notification Bell */}
+          <div className={styles.notificationWrapper}>
+            <NotificationBell />
+          </div>
         </div>
       </div>
     </div>

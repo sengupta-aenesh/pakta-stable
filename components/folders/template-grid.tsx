@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Template, TemplateFolder, templatesApi } from '@/lib/supabase-client'
-import { Button, ConfirmationDialog, useToast, Toast } from '@/components/ui'
+import { Button, ConfirmationDialog } from '@/components/ui'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import ContextMenu from './context-menu'
 import FolderSelectionModal from './folder-selection-modal'
 import RenameModal from './rename-modal'
@@ -31,7 +32,8 @@ export default function TemplateGrid({
   onBackToAll,
   onNewTemplateFolder
 }: TemplateGridProps) {
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [modalState, setModalState] = useState<{
     type: 'move' | 'copy' | 'rename' | 'delete' | null
@@ -109,13 +111,13 @@ export default function TemplateGrid({
     
     try {
       await templatesApi.update(selectedTemplate.id, { folder_id: folderId })
-      toast('Template moved successfully', 'success')
+      notifications.success('File Moved', 'Template moved successfully')
       onTemplatesUpdate()
       setModalState({ type: null, isOpen: false })
       setSelectedTemplate(null)
     } catch (error) {
       console.error('Error moving template:', error)
-      toast('Failed to move template', 'error')
+      notifications.error('Operation Failed', 'Failed to move template')
     }
   }
 
@@ -137,13 +139,13 @@ export default function TemplateGrid({
       }
       
       await templatesApi.create(newTemplate)
-      toast('Template copied successfully', 'success')
+      notifications.success('Success', 'Template copied successfully')
       onTemplatesUpdate()
       setModalState({ type: null, isOpen: false })
       setSelectedTemplate(null)
     } catch (error) {
       console.error('Error copying template:', error)
-      toast('Failed to copy template', 'error')
+      notifications.error('Operation Failed', 'Failed to copy template')
     }
   }
 
@@ -152,13 +154,13 @@ export default function TemplateGrid({
     
     try {
       await templatesApi.update(selectedTemplate.id, { title: newName })
-      toast('Template renamed successfully', 'success')
+      notifications.success('Success', 'Template renamed successfully')
       onTemplatesUpdate()
       setModalState({ type: null, isOpen: false })
       setSelectedTemplate(null)
     } catch (error) {
       console.error('Error renaming template:', error)
-      toast('Failed to rename template', 'error')
+      notifications.error('Operation Failed', 'Failed to rename template')
     }
   }
 
@@ -167,12 +169,12 @@ export default function TemplateGrid({
     
     try {
       await templatesApi.delete(deleteConfirmation.template.id)
-      toast('Template deleted successfully', 'success')
+      notifications.success('File Deleted', 'Template deleted successfully')
       onTemplatesUpdate()
       setDeleteConfirmation({ isOpen: false, template: null })
     } catch (error) {
       console.error('Error deleting template:', error)
-      toast('Failed to delete template', 'error')
+      notifications.error('Operation Failed', 'Failed to delete template')
     }
   }
 
@@ -463,14 +465,7 @@ export default function TemplateGrid({
       />
 
       {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }

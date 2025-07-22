@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
+import { notificationHelpers } from '@/components/notifications/notification.utils'
 import TemplateVersionModal from './template-version-modal'
 import styles from './template-version-list.module.css'
 
@@ -16,15 +18,15 @@ interface TemplateVersion {
 
 interface TemplateVersionListProps {
   templateId: string
-  onToast: (message: string, type: 'success' | 'error' | 'info') => void
   onTemplateRestore?: () => void
 }
 
 export default function TemplateVersionList({
   templateId,
-  onToast,
   onTemplateRestore
 }: TemplateVersionListProps) {
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
   const [versions, setVersions] = useState<TemplateVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -45,7 +47,7 @@ export default function TemplateVersionList({
       }
     } catch (error) {
       console.error('Error fetching versions:', error)
-      onToast('Failed to load versions', 'error')
+      notifications.error('Load Failed', 'Failed to load versions')
     } finally {
       setLoading(false)
     }
@@ -80,7 +82,7 @@ export default function TemplateVersionList({
       const result = await response.json()
 
       if (result.success) {
-        onToast(`Version "${data.version_name}" created successfully`, 'success')
+        notify(notificationHelpers.versionCreated(data.version_name))
         setShowCreateModal(false)
         fetchVersions() // Refresh the list
       } else {
@@ -88,7 +90,7 @@ export default function TemplateVersionList({
       }
     } catch (error) {
       console.error('Error creating version:', error)
-      onToast('Failed to create version', 'error')
+      notifications.error('Creation Failed', 'Failed to create version')
     } finally {
       setCreating(false)
     }
@@ -109,7 +111,7 @@ export default function TemplateVersionList({
       const result = await response.json()
 
       if (result.success) {
-        onToast(result.message || `Template restored from version "${versionName}"`, 'success')
+        notifications.success('Version Restored', result.message || `Template restored from version "${versionName}"`)
         if (onTemplateRestore) {
           onTemplateRestore()
         }
@@ -118,7 +120,7 @@ export default function TemplateVersionList({
       }
     } catch (error) {
       console.error('Error restoring version:', error)
-      onToast('Failed to restore from version', 'error')
+      notifications.error('Restore Failed', 'Failed to restore from version')
     } finally {
       setActionLoading(null)
     }
@@ -140,14 +142,14 @@ export default function TemplateVersionList({
       const result = await response.json()
 
       if (result.success) {
-        onToast(`Version "${versionName}" deleted successfully`, 'success')
+        notifications.success('Version Deleted', `Version "${versionName}" deleted successfully`)
         fetchVersions() // Refresh the list
       } else {
         throw new Error(result.error || 'Failed to delete version')
       }
     } catch (error) {
       console.error('Error deleting version:', error)
-      onToast('Failed to delete version', 'error')
+      notifications.error('Delete Failed', 'Failed to delete version')
     } finally {
       setActionLoading(null)
     }

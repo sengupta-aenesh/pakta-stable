@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from '@/lib/auth-client'
-import { Button, Input, Label, Alert, useToast, Toast } from '@/components/ui'
+import { Button, Input, Label, Alert } from '@/components/ui'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import Link from 'next/link'
 import styles from './login.module.css'
 
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,7 +27,7 @@ export default function LoginPage() {
       setError(result.error)
       setLoading(false)
     } else {
-      toast('Login successful! Redirecting...', 'success')
+      notifications.success('Success', 'Login successful! Redirecting...')
       setTimeout(() => {
         router.push('/folders')
         router.refresh()
@@ -123,14 +124,7 @@ export default function LoginPage() {
       </div>
       
       {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }

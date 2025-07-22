@@ -14,7 +14,8 @@ import InteractiveContractEditor from '@/components/contracts/interactive-contra
 import { ContractAnalysis } from '@/components/contracts/contract-analysis'
 import UnifiedSidebar from '@/components/folders/unified-sidebar'
 import TrialStatus from '@/components/subscription/trial-status'
-import { Button, useToast, Toast, TopNavigation } from '@/components/ui'
+import { Button, TopNavigation } from '@/components/ui'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import styles from './dashboard.module.css'
 
 type MobileView = 'list' | 'editor' | 'analysis'
@@ -32,7 +33,8 @@ function DashboardContent() {
   const [updateContractContentFunction, setUpdateContractContentFunction] = useState<((content: string | null) => void) | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
 
   // Stable callback for registering update function to prevent infinite loops
   const handleRegisterUpdateFunction = useCallback((fn: (content: string | null) => void) => {
@@ -90,15 +92,7 @@ function DashboardContent() {
     console.log('🎯 Contract selected - COMPLETE:', contract.id)
   }, [selectedContract?.id]) // Only depend on the ID to prevent excessive re-renders
 
-  // Debug duplicate keys
-  useEffect(() => {
-    const ids = toasts.map(t => t.id)
-    const uniqueIds = new Set(ids)
-    if (ids.length !== uniqueIds.size) {
-      console.warn('🚨 Duplicate toast IDs detected:', ids)
-      console.warn('🔍 Toasts array:', toasts)
-    }
-  }, [toasts])
+  // Debug code removed - using notification system now
 
   useEffect(() => {
     loadUserAndContracts()
@@ -184,7 +178,7 @@ function DashboardContent() {
       }
     } catch (error) {
       console.error('Error loading contracts:', error)
-      toast('Failed to load contracts', 'error')
+      notifications.error('Operation Failed', 'Failed to load contracts')
     } finally {
       setLoading(false)
     }
@@ -200,7 +194,7 @@ function DashboardContent() {
     if (user) {
       const updatedContracts = await contractsApi.getAll(user.id)
       setContracts(updatedContracts)
-      toast('Contract updated successfully', 'success')
+      notifications.success('Success', 'Contract updated successfully')
     }
   }
 
@@ -221,10 +215,10 @@ function DashboardContent() {
       setSelectedContract(prev => prev ? { ...prev, content: safeContent } : null)
       // Clear risks cache when content changes as it may no longer be accurate
       setContractRisks([])
-      toast('Contract updated successfully', 'success')
+      notifications.success('Success', 'Contract updated successfully')
     } catch (error) {
       console.error('Error updating contract:', error)
-      toast('Failed to update contract', 'error')
+      notifications.error('Operation Failed', 'Failed to update contract')
     }
   }
 
@@ -289,10 +283,10 @@ function DashboardContent() {
       // Save to database
       await contractsApi.update(selectedContract.id, { title: trimmedTitle })
       console.log('✅ Contract title updated successfully:', trimmedTitle)
-      toast('Contract title updated', 'success')
+      notifications.success('Success', 'Contract title updated')
     } catch (error) {
       console.error('❌ Failed to update contract title:', error)
-      toast('Failed to update title', 'error')
+      notifications.error('Operation Failed', 'Failed to update title')
       
       // Revert on error
       setSelectedContract(prev => prev ? { ...prev, title: selectedContract.title } : null)
@@ -394,7 +388,7 @@ function DashboardContent() {
             onContractClick={handleContractSelect}
             user={user}
             showUserSection={false}
-            onToast={toast}
+            // Notification system is used internally
             // Force contracts view mode - no templates in dashboard
             viewMode="contracts"
             onViewModeChange={() => {}} // Disable view mode switching
@@ -430,7 +424,7 @@ function DashboardContent() {
                 // For now, we'll just show an alert (you can enhance this with a proper comment system later)
                 const comment = prompt(`Add comment for: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"\n\nEnter your comment:`)
                 if (comment) {
-                  toast(`Comment added: ${comment}`, 'success')
+                  notifications.success('Success', `Comment added: ${comment}`)
                 }
               }}
               onReanalyzeRisks={reanalyzeRisksRef.current}

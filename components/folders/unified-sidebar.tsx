@@ -10,6 +10,8 @@ import mammoth from 'mammoth'
 import styles from '@/app/folders/folders.module.css'
 import ContractStatusBadge from '@/components/contracts/contract-status-badge'
 import UploadFlowStatus from '@/components/contracts/upload-flow-status'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
+import { notificationHelpers } from '@/components/notifications/notification.utils'
 
 interface UnifiedSidebarProps {
   folders: Folder[]
@@ -31,7 +33,7 @@ interface UnifiedSidebarProps {
   user: any
   showUserSection?: boolean
   onSignOut?: () => void
-  onToast?: (message: string, type: 'success' | 'error' | 'info') => void
+  // Removed onToast - using notification system internally
   // View mode
   viewMode?: 'contracts' | 'templates'
   onViewModeChange?: (mode: 'contracts' | 'templates') => void
@@ -70,13 +72,14 @@ export default function UnifiedSidebar({
   user,
   showUserSection = false,
   onSignOut,
-  onToast,
   // View mode
   viewMode = 'contracts',
   onViewModeChange = () => {},
   showViewModeToggle = false
 }: UnifiedSidebarProps) {
   const router = useRouter()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [editingFolder, setEditingFolder] = useState<string | null>(null)
@@ -247,10 +250,10 @@ export default function UnifiedSidebar({
       setCreatingFolder(false)
       setNewFolderName('')
       onFoldersUpdate()
-      onToast?.('Folder created successfully!', 'success')
+      notifications.success('Folder Created', 'Folder created successfully!')
     } catch (error) {
       console.error('Failed to create folder:', error)
-      onToast?.('Failed to create folder. Please try again.', 'error')
+      notifications.error('Creation Failed', 'Failed to create folder. Please try again.')
       setCreatingFolder(false)
       setNewFolderName('')
     }
@@ -272,10 +275,10 @@ export default function UnifiedSidebar({
       setCreatingTemplateFolder(false)
       setNewTemplateFolderName('')
       if (onTemplateFoldersUpdate) onTemplateFoldersUpdate()
-      onToast?.('Template folder created successfully!', 'success')
+      notifications.success('Folder Created', 'Template folder created successfully!')
     } catch (error) {
       console.error('Failed to create template folder:', error)
-      onToast?.('Failed to create template folder. Please try again.', 'error')
+      notifications.error('Creation Failed', 'Failed to create template folder. Please try again.')
       setCreatingTemplateFolder(false)
       setNewTemplateFolderName('')
     }
@@ -294,10 +297,10 @@ export default function UnifiedSidebar({
       setEditingFolder(null)
       setEditingName('')
       onFoldersUpdate()
-      onToast?.('Folder renamed successfully!', 'success')
+      notifications.success('Folder Renamed', 'Folder renamed successfully!')
     } catch (error) {
       console.error('Failed to update folder:', error)
-      onToast?.('Failed to rename folder. Please try again.', 'error')
+      notifications.error('Rename Failed', 'Failed to rename folder. Please try again.')
     }
   }
 
@@ -435,10 +438,10 @@ export default function UnifiedSidebar({
       await templatesApi.update(draggedTemplateData.id, { folder_id: folderId })
       console.log('✅ Template moved successfully')
       onTemplatesUpdate()
-      onToast?.(`Template "${draggedTemplateData.title}" moved to ${targetFolderName}`, 'success')
+      notify(notificationHelpers.fileMoved(draggedTemplateData.title, targetFolderName))
     } catch (error) {
       console.error('❌ Error moving template:', error)
-      onToast?.('Failed to move template. Please try again.', 'error')
+      notifications.error('Move Failed', 'Failed to move template. Please try again.')
     }
     
     setDragOverTemplateFolder(null)
@@ -546,7 +549,7 @@ export default function UnifiedSidebar({
       console.log('🚫 Cannot drop into All Contracts section')
       setDragOverFolder(null)
       setIsDragging(false)
-      onToast?.('Cannot move contracts to "All Contracts" section', 'error')
+      notifications.error('Invalid Move', 'Cannot move contracts to "All Contracts" section')
       return
     }
     
@@ -556,7 +559,7 @@ export default function UnifiedSidebar({
       setDragOverFolder(null)
       setIsDragging(false)
       setDraggedContract(null)
-      onToast?.('Contract is already in this folder', 'info')
+      notifications.info('No Change', 'Contract is already in this folder')
       return
     }
     
@@ -583,7 +586,7 @@ export default function UnifiedSidebar({
       setDraggedContract(null)
       
       console.log('🎉 Drag & Drop - Operation completed successfully')
-      onToast?.(`"${draggedContractData.title}" moved to ${targetFolderName}`, 'success')
+      notify(notificationHelpers.fileMoved(draggedContractData.title, targetFolderName))
     } catch (error) {
       console.error('❌ Drag & Drop - Failed to move contract:', error)
       console.error('Error details:', {
@@ -591,7 +594,7 @@ export default function UnifiedSidebar({
         targetFolderId: folderId,
         errorMessage: error.message || 'Unknown error'
       })
-      onToast?.('Failed to move contract. Please try again.', 'error')
+      notifications.error('Move Failed', 'Failed to move contract. Please try again.')
       setDraggedContract(null)
     }
   }
@@ -661,7 +664,7 @@ export default function UnifiedSidebar({
       
       // Template uploaded successfully - NO automatic analysis (matches contract flow)
       console.log('✅ Template Upload - Template uploaded successfully')
-      onToast?.('Template uploaded successfully! Click "Analyze Template" to start AI analysis.', 'success')
+      notify(notificationHelpers.fileUploaded(file.name, 'template'))
       
       // Refresh template list first, then select the new template
       onTemplatesUpdate()
@@ -694,7 +697,7 @@ export default function UnifiedSidebar({
       }
       
       setTemplateUploadError(userMessage)
-      onToast?.(userMessage, 'error')
+      notifications.error('Upload Failed', userMessage)
     } finally {
       setUploadingTemplate(false)
       // Clear progress after a short delay
@@ -757,7 +760,7 @@ export default function UnifiedSidebar({
       
       // Contract uploaded successfully - no automatic analysis
       console.log('✅ File Upload - Contract uploaded successfully')
-      onToast?.('Contract uploaded successfully! Click "Analyze" to start AI analysis.', 'success')
+      notify(notificationHelpers.fileUploaded(file.name, 'contract'))
       
       // Refresh contract list first, then select the new contract
       onContractsUpdate()
@@ -790,7 +793,7 @@ export default function UnifiedSidebar({
       }
       
       setUploadError(userMessage)
-      onToast?.(userMessage, 'error')
+      notifications.error('Upload Failed', userMessage)
     } finally {
       setUploading(false)
       // Clear progress after a short delay
@@ -818,10 +821,10 @@ export default function UnifiedSidebar({
         try {
           await contractsApi.delete(contract.id)
           onContractsUpdate()
-          onToast?.(`Contract "${contract.title}" deleted successfully`, 'success')
+          notify(notificationHelpers.fileDeleted(contract.title))
         } catch (error) {
           console.error('Error deleting contract:', error)
-          onToast?.('Failed to delete contract. Please try again.', 'error')
+          notifications.error('Delete Failed', 'Failed to delete contract. Please try again.')
         }
         setConfirmDialog(prev => ({ ...prev, isOpen: false }))
       }
@@ -844,10 +847,10 @@ export default function UnifiedSidebar({
         try {
           await templatesApi.delete(template.id)
           onTemplatesUpdate()
-          onToast?.(`Template "${template.title}" deleted successfully`, 'success')
+          notify(notificationHelpers.fileDeleted(template.title))
         } catch (error) {
           console.error('Error deleting template:', error)
-          onToast?.('Failed to delete template. Please try again.', 'error')
+          notifications.error('Delete Failed', 'Failed to delete template. Please try again.')
         }
         setConfirmDialog(prev => ({ ...prev, isOpen: false }))
       }
@@ -1104,18 +1107,16 @@ export default function UnifiedSidebar({
     // Check if folder has contracts
     const folderContracts = contracts.filter(contract => contract.folder_id === folder.id)
     if (folderContracts.length > 0) {
-      onToast?.(
-        `Cannot delete "${folder.name}" - it contains ${folderContracts.length} contract${folderContracts.length > 1 ? 's' : ''}. Please move or delete the contracts first.`,
-        'error'
+      notifications.error('Delete Failed', 
+        `Cannot delete "${folder.name}" - it contains ${folderContracts.length} contract${folderContracts.length > 1 ? 's' : ''}. Please move or delete the contracts first.`
       )
       return
     }
     
     // Check if folder has subfolders
     if (folder.children.length > 0) {
-      onToast?.(
-        `Cannot delete "${folder.name}" - it contains ${folder.children.length} subfolder${folder.children.length > 1 ? 's' : ''}. Please delete the subfolders first.`,
-        'error'
+      notifications.error('Delete Failed', 
+        `Cannot delete "${folder.name}" - it contains ${folder.children.length} subfolder${folder.children.length > 1 ? 's' : ''}. Please delete the subfolders first.`
       )
       return
     }
@@ -1135,10 +1136,10 @@ export default function UnifiedSidebar({
             onSelectFolder(null)
           }
           
-          onToast?.(`Folder "${folder.name}" deleted successfully`, 'success')
+          notifications.success('Folder Deleted', `Folder "${folder.name}" deleted successfully`)
         } catch (error) {
           console.error('Error deleting folder:', error)
-          onToast?.('Failed to delete folder. Please try again.', 'error')
+          notifications.error('Delete Failed', 'Failed to delete folder. Please try again.')
         }
         setConfirmDialog(prev => ({ ...prev, isOpen: false }))
       }

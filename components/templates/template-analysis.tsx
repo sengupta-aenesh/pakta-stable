@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Template, MissingInfoItem } from '@/lib/supabase-client'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
+import { notificationHelpers } from '@/components/notifications/notification.utils'
 // Removed Button import to match contract analysis styling
 import styles from './template-analysis.module.css'
 
@@ -235,6 +237,17 @@ export default function TemplateAnalysis({
               completionToastShownRef.current = true // Mark as shown
               const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
               const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
+              const totalRisks = statusData.riskData?.totalRisksFound || 0
+              
+              // Use the new notification system for better UX
+              const notification = notificationHelpers.analysisCompleted(
+                'template',
+                template.id,
+                totalRisks,
+                smartFilteringApplied && duplicatesFiltered > 0 ? duplicatesFiltered : undefined
+              )
+              
+              // For now, still call the old toast for backward compatibility
               if (smartFilteringApplied && duplicatesFiltered > 0) {
                 onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
               } else {

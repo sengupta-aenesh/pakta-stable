@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Contract, contractsApi } from '@/lib/supabase-client'
 import { getCurrentUser } from '@/lib/auth-client'
-import { Button, useToast, Toast, Textarea, TopNavigation } from '@/components/ui'
+import { Button, Textarea, TopNavigation } from '@/components/ui'
 import { foldersApi, Folder } from '@/lib/folders-api'
 import UnifiedSidebar from '@/components/folders/unified-sidebar'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import styles from './contract-creator.module.css'
 
 interface Message {
@@ -35,7 +36,8 @@ export default function ContractCreatorPage() {
   const [contractId, setContractId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
 
   useEffect(() => {
     loadUserAndData()
@@ -74,7 +76,7 @@ export default function ContractCreatorPage() {
       ])
     } catch (error) {
       console.error('Error loading data:', error)
-      toast('Failed to load data', 'error')
+      notifications.error('Operation Failed', 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -192,7 +194,7 @@ export default function ContractCreatorPage() {
                       setMessages(prev => [...prev, { role: 'ai', content: data.data.message }])
                       setStreamingStatus(null)
                       setActiveAgent(null)
-                      toast('Contract created successfully!', 'success')
+                      notifications.success('Success', 'Contract created successfully!')
                     }
                     
                     if (data.type === 'error') {
@@ -233,13 +235,13 @@ export default function ContractCreatorPage() {
           setEditableFields(data.session.editableFields || [])
           setShowSuggestedTerms(false)
           setShowFallbackTerms(false)
-          toast('Contract created successfully!', 'success')
+          notifications.success('Success', 'Contract created successfully!')
         }
       }
 
     } catch (error) {
       console.error('Error sending message:', error)
-      toast('Failed to send message. Please try again.', 'error')
+      notifications.error('Operation Failed', 'Failed to send message. Please try again.')
       setMessages(prev => [...prev, { 
         role: 'ai', 
         content: 'Sorry, I encountered an error. Please try again.' 
@@ -356,7 +358,7 @@ export default function ContractCreatorPage() {
                       setMessages(prev => [...prev, { role: 'ai', content: data.data.message }])
                       setStreamingStatus(null)
                       setActiveAgent(null)
-                      toast('Contract created successfully!', 'success')
+                      notifications.success('Success', 'Contract created successfully!')
                     }
                     
                     if (data.type === 'error') {
@@ -397,13 +399,13 @@ export default function ContractCreatorPage() {
           setEditableFields(data.session.editableFields || [])
           setShowSuggestedTerms(false)
           setShowFallbackTerms(false)
-          toast('Contract created successfully!', 'success')
+          notifications.success('Success', 'Contract created successfully!')
         }
       }
 
     } catch (error) {
       console.error('Error sending message:', error)
-      toast('Failed to send message. Please try again.', 'error')
+      notifications.error('Operation Failed', 'Failed to send message. Please try again.')
       setMessages(prev => [...prev, { 
         role: 'ai', 
         content: 'Sorry, I encountered an error. Please try again.' 
@@ -441,7 +443,7 @@ export default function ContractCreatorPage() {
           user={user}
           showUserSection={true}
           onSignOut={handleSignOut}
-          onToast={toast}
+          // Notification system is used internally
         />
       </div>
 
@@ -683,14 +685,7 @@ export default function ContractCreatorPage() {
 
 
       {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }

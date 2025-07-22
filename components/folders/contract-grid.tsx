@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Contract, contractsApi } from '@/lib/supabase-client'
-import { Button, ConfirmationDialog, useToast, Toast } from '@/components/ui'
+import { Button, ConfirmationDialog } from '@/components/ui'
+import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
 import ContextMenu from './context-menu'
 import FolderSelectionModal from './folder-selection-modal'
 import RenameModal from './rename-modal'
@@ -40,7 +41,8 @@ export default function ContractGrid({
   onBackToAll,
   onNewFolder
 }: ContractGridProps) {
-  const { toast, toasts, removeToast } = useToast()
+  const notifications = useEnhancedNotifications()
+  const { notify } = notifications
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [modalState, setModalState] = useState<{
     type: 'move' | 'copy' | 'rename' | 'delete' | null
@@ -102,13 +104,13 @@ export default function ContractGrid({
     
     try {
       await contractsApi.update(selectedContract.id, { folder_id: folderId })
-      toast('Contract moved successfully', 'success')
+      notifications.success('File Moved', 'Contract moved successfully')
       onContractsUpdate()
       setModalState({ type: null, isOpen: false })
       setSelectedContract(null)
     } catch (error) {
       console.error('Error moving contract:', error)
-      toast('Failed to move contract', 'error')
+      notifications.error('Operation Failed', 'Failed to move contract')
     }
   }
 
@@ -129,13 +131,13 @@ export default function ContractGrid({
       }
       
       await contractsApi.create(newContract)
-      toast('Contract copied successfully', 'success')
+      notifications.success('Success', 'Contract copied successfully')
       onContractsUpdate()
       setModalState({ type: null, isOpen: false })
       setSelectedContract(null)
     } catch (error) {
       console.error('Error copying contract:', error)
-      toast('Failed to copy contract', 'error')
+      notifications.error('Operation Failed', 'Failed to copy contract')
     }
   }
 
@@ -144,13 +146,13 @@ export default function ContractGrid({
     
     try {
       await contractsApi.update(selectedContract.id, { title: newName })
-      toast('Contract renamed successfully', 'success')
+      notifications.success('Success', 'Contract renamed successfully')
       onContractsUpdate()
       setModalState({ type: null, isOpen: false })
       setSelectedContract(null)
     } catch (error) {
       console.error('Error renaming contract:', error)
-      toast('Failed to rename contract', 'error')
+      notifications.error('Operation Failed', 'Failed to rename contract')
     }
   }
 
@@ -159,12 +161,12 @@ export default function ContractGrid({
     
     try {
       await contractsApi.delete(deleteConfirmation.contract.id)
-      toast('Contract deleted successfully', 'success')
+      notifications.success('File Deleted', 'Contract deleted successfully')
       onContractsUpdate()
       setDeleteConfirmation({ isOpen: false, contract: null })
     } catch (error) {
       console.error('Error deleting contract:', error)
-      toast('Failed to delete contract', 'error')
+      notifications.error('Operation Failed', 'Failed to delete contract')
     }
   }
 
@@ -452,14 +454,7 @@ export default function ContractGrid({
       />
 
       {/* Render toasts */}
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
+      {/* Toasts are now handled by the notification system */}
     </div>
   )
 }
