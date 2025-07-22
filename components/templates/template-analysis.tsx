@@ -190,10 +190,13 @@ export default function TemplateAnalysis({
             }
           }, 1500) // Reduced from 2000ms for more responsive updates
         } else if (statusData.status === 'complete') {
-          console.log('🎉 Template analysis completed!')
+          console.log('🎉 Template analysis completed!', { 
+            toastShown: completionToastShownRef.current, 
+            analyzing: analyzing 
+          })
           
-          // Only process completion once
-          if (!completionToastShownRef.current && analyzing) {
+          // Stop polling immediately on completion
+          if (analyzing) {
             // Complete the analysis immediately
             clearProgressSimulation()
             setAnalysisProgress(100)
@@ -227,27 +230,27 @@ export default function TemplateAnalysis({
             onTemplateUpdate(updatedTemplate)
           }
           
-            // Show completion notification
-            completionToastShownRef.current = true // Mark as shown
-            const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
-            const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
-            if (smartFilteringApplied && duplicatesFiltered > 0) {
-              onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
-            } else {
-              onToast('Template analysis completed successfully!', 'success')
+            // Show completion notification only once
+            if (!completionToastShownRef.current) {
+              completionToastShownRef.current = true // Mark as shown
+              const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
+              const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
+              if (smartFilteringApplied && duplicatesFiltered > 0) {
+                onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
+              } else {
+                onToast('Template analysis completed successfully!', 'success')
+              }
             }
           }
+          return // Stop execution here to prevent further polling
         } else if (statusData.status === 'failed') {
           clearProgressSimulation() // Clear simulation on failure
           setAnalyzing(false)
           setAnalysisProgress(0)
           setAnalysisStartTime(null)
           onToast('Template analysis failed. Please try again.', 'error')
-        } else if (analyzing && (statusData.status === 'in_progress' || statusData.status === 'pending')) {
-          // Continue polling while analysis is in progress
-          console.log('⏰ Scheduling next progress check in 1.5 seconds')
-          setTimeout(() => checkAnalysisProgress(), 1500)
         }
+        // Note: Polling is already handled in the isAnalysisRunning block above
       }
     } catch (error) {
       console.error('Failed to check analysis progress:', error)
@@ -642,6 +645,11 @@ export default function TemplateAnalysis({
       onToast('Failed to create template version. Please try again.', 'error')
     }
   }
+
+  // Reset completion toast flag when template changes
+  useEffect(() => {
+    completionToastShownRef.current = false
+  }, [template?.id])
 
   // Load template variables from analysis cache AND user-created variables
   const loadTemplateVariables = useCallback(() => {
