@@ -492,6 +492,14 @@ function TemplateDashboardContent() {
                   risks={templateRisks}
                   onRisksUpdate={handleRisksUpdate}
                   onTemplateUpdate={(updatedTemplate) => {
+                    console.log('📥 Template dashboard received updated template:', {
+                      id: updatedTemplate.id,
+                      title: updatedTemplate.title,
+                      status: updatedTemplate.analysis_status,
+                      hasCache: !!updatedTemplate.analysis_cache,
+                      hasSummary: !!updatedTemplate.analysis_cache?.summary,
+                      hasRisks: !!updatedTemplate.analysis_cache?.risks
+                    })
                     setSelectedTemplate(updatedTemplate)
                     setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
                     

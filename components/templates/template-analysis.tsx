@@ -44,6 +44,19 @@ export default function TemplateAnalysis({
   const completionToastShownRef = useRef<boolean>(false)
   const [templateVariables, setTemplateVariables] = useState<MissingInfoItem[]>([])
   const [isCreatingVersion, setIsCreatingVersion] = useState(false)
+  
+  // Debug template prop
+  console.log('🔍 TemplateAnalysis component:', {
+    templateId: template?.id,
+    templateTitle: template?.title,
+    analysisStatus: template?.analysis_status,
+    analysisProgress: template?.analysis_progress,
+    hasAnalysisCache: !!template?.analysis_cache,
+    hasSummary: !!template?.analysis_cache?.summary,
+    hasRisks: !!template?.analysis_cache?.risks,
+    hasComplete: !!template?.analysis_cache?.complete,
+    risksPassedIn: risks?.length || 0
+  })
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
   const [showOccurrencesList, setShowOccurrencesList] = useState(false)
   const [showCustomVariableModal, setShowCustomVariableModal] = useState(false)
@@ -218,6 +231,7 @@ export default function TemplateAnalysis({
                 hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
                 variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
               })
+              console.log('📤 Calling onTemplateUpdate with refreshed template')
               onTemplateUpdate(refreshedTemplate)
             } else {
               console.error('Failed to refresh template data')
@@ -290,6 +304,7 @@ export default function TemplateAnalysis({
       // Start progress simulation immediately for better UX
       console.log('🎬 Calling startProgressSimulation from handleAnalyzeTemplate')
       startProgressSimulation()
+      console.log('✅ Progress simulation started')
 
       const response = await fetch('/api/template/auto-analyze', {
         method: 'POST',
