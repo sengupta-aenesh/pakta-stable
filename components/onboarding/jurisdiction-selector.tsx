@@ -90,8 +90,8 @@ export default function JurisdictionSelector({
     <div className={styles.container} ref={containerRef}>
       {label && <label className={styles.label}>{label}</label>}
       
-      {/* Selected Jurisdictions Tags */}
-      {selectedJurisdictionData.length > 0 && (
+      {/* Selected Jurisdictions Tags - Only show for multiple selections */}
+      {selectedJurisdictionData.length > 0 && maxSelections !== 1 && (
         <div className={styles.selectedTags}>
           {selectedJurisdictionData.map(({ key, data }) => (
             <div key={key} className={styles.tag}>
@@ -120,10 +120,25 @@ export default function JurisdictionSelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
-            placeholder={placeholder}
+            placeholder={
+              maxSelections === 1 && selectedJurisdictionData.length > 0
+                ? `${selectedJurisdictionData[0].data.flag} ${selectedJurisdictionData[0].data.name}`
+                : placeholder
+            }
             className={styles.searchInput}
-            disabled={maxSelections ? selectedJurisdictions.length >= maxSelections : false}
+            disabled={maxSelections === 1 && selectedJurisdictions.length >= maxSelections && searchQuery === ''}
           />
+          {/* Clear button for single selections */}
+          {maxSelections === 1 && selectedJurisdictionData.length > 0 && (
+            <button
+              type="button"
+              onClick={() => handleJurisdictionRemove(selectedJurisdictions[0])}
+              className={styles.clearButton}
+              aria-label="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
         
         {/* Dropdown Results */}
@@ -167,7 +182,7 @@ export default function JurisdictionSelector({
         )}
       </div>
 
-      {maxSelections && (
+      {maxSelections && maxSelections > 1 && (
         <div className={styles.hint}>
           {selectedJurisdictions.length}/{maxSelections} selected
         </div>

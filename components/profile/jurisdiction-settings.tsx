@@ -139,17 +139,24 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
 
       {showAddModal && (
         <div className={styles.modal} onClick={() => setShowAddModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div 
+            className={`${styles.modalContent} ${styles.modalContentJurisdiction}`} 
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3>Add Additional Jurisdiction</h3>
-            <SingleJurisdictionSelector
-              value=""
-              onChange={handleAddJurisdiction}
-              excludeJurisdictions={[primaryJurisdiction, ...additionalJurisdictions.map(j => j.code || j.name)]}
-              placeholder="Select jurisdiction"
-            />
-            <button onClick={() => setShowAddModal(false)} className={styles.cancelButton}>
-              Cancel
-            </button>
+            <div className={styles.modalBody}>
+              <SingleJurisdictionSelector
+                value=""
+                onChange={handleAddJurisdiction}
+                excludeJurisdictions={[primaryJurisdiction, ...additionalJurisdictions.map(j => j.code || j.name)]}
+                placeholder="Select jurisdiction"
+              />
+            </div>
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowAddModal(false)} className={styles.cancelButton}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
