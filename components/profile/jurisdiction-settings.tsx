@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { UserProfile } from '@/lib/services/subscription'
 import { Button } from '@/components/ui'
 import SingleJurisdictionSelector from './single-jurisdiction-selector'
@@ -37,34 +37,59 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
     return entry ? entry[0] : 'united-states'
   }
   
+  // Helper to extract jurisdiction code from various data formats
+  const extractJurisdictionCode = (item: any): string => {
+    if (typeof item === 'string') return item
+    if (item && typeof item === 'object') {
+      return item.code || item.name || 'united-states'
+    }
+    return 'united-states'
+  }
+  
   const [primaryJurisdiction, setPrimaryJurisdiction] = useState(
     getJurisdictionKey(profile.primary_jurisdiction)
   )
   const [additionalJurisdictions, setAdditionalJurisdictions] = useState<AdditionalJurisdiction[]>(
     Array.isArray(profile.additional_jurisdictions) 
       ? profile.additional_jurisdictions.map(j => {
-          if (typeof j === 'string') {
-            return { code: j, name: j, purpose: 'other' as const, active: true }
+          const jurisdictionCode = extractJurisdictionCode(j)
+          return { 
+            code: jurisdictionCode, 
+            name: jurisdictionCode, 
+            purpose: 'other' as const, 
+            active: true 
           }
-          // Clean up old data format - ensure code and name are jurisdiction keys
-          const jurisdiction = j as AdditionalJurisdiction
-          const code = jurisdiction.code || jurisdiction.name
-          // If the code is a valid jurisdiction key, use it
-          if (jurisdictionData[code]) {
-            return { ...jurisdiction, code, name: code }
-          }
-          return jurisdiction
         })
       : []
   )
   const [showAddModal, setShowAddModal] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  
+  // Check if data needs cleanup on mount
+  useEffect(() => {
+    const needsCleanup = profile.additional_jurisdictions?.some(j => 
+      typeof j !== 'string' && j !== null && j !== undefined
+    )
+    
+    if (needsCleanup) {
+      // Auto-save cleaned data
+      const cleanedJurisdictions = profile.additional_jurisdictions
+        ?.map(j => extractJurisdictionCode(j))
+        .filter(code => jurisdictionData[code]) // Only keep valid jurisdiction codes
+      
+      onUpdate({
+        additional_jurisdictions: cleanedJurisdictions || []
+      })
+    }
+  }, []) // Only run on mount
 
   const handleSave = async () => {
-    // Save the key format to database for consistency
+    // Save only jurisdiction codes as strings to match TEXT[] database type
+    const jurisdictionCodes = additionalJurisdictions.map(j => j.code || j.name)
+    
     await onUpdate({
       primary_jurisdiction: primaryJurisdiction,
-      additional_jurisdictions: additionalJurisdictions,
+      additional_jurisdictions: jurisdictionCodes,
     })
     setHasChanges(false)
   }
@@ -202,17 +227,13 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
               setAdditionalJurisdictions(
                 Array.isArray(profile.additional_jurisdictions) 
                   ? profile.additional_jurisdictions.map(j => {
-                      if (typeof j === 'string') {
-                        return { code: j, name: j, purpose: 'other' as const, active: true }
+                      const jurisdictionCode = extractJurisdictionCode(j)
+                      return { 
+                        code: jurisdictionCode, 
+                        name: jurisdictionCode, 
+                        purpose: 'other' as const, 
+                        active: true 
                       }
-                      // Clean up old data format - ensure code and name are jurisdiction keys
-                      const jurisdiction = j as AdditionalJurisdiction
-                      const code = jurisdiction.code || jurisdiction.name
-                      // If the code is a valid jurisdiction key, use it
-                      if (jurisdictionData[code]) {
-                        return { ...jurisdiction, code, name: code }
-                      }
-                      return jurisdiction
                     })
                   : []
               )
