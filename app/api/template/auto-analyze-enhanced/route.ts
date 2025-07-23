@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { apiErrorHandler } from '@/lib/api-error-handler'
 import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields, compareTemplateRisks } from '@/lib/openai'
-import { templatesApi } from '@/lib/supabase-client'
+import { templatesApi } from '@/lib/supabase'
 import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 import { jurisdictionResearch, JurisdictionContext } from '@/lib/services/jurisdiction-research'
 import { normalizeJurisdiction } from '@/lib/jurisdiction-utils'
@@ -209,7 +209,7 @@ async function performEnhancedTemplateAnalysis(templateId: string, template: any
     const errorMessage = (error as Error).message
     console.error('Template analysis error:', errorMessage)
     
-    await templatesApi.updateAnalysisStatus(templateId, {
+    await templatesApi.update(templateId, {
       analysis_status: 'failed',
       analysis_progress: 0,
       analysis_error: errorMessage,
@@ -227,9 +227,10 @@ async function updateTemplateAnalysisStatus(
   error?: string | null,
   message?: string
 ) {
-  await templatesApi.updateAnalysisStatus(templateId, {
+  await templatesApi.update(templateId, {
     analysis_status: status,
     analysis_progress: progress,
-    analysis_error: error
+    analysis_error: error,
+    last_analyzed_at: new Date().toISOString()
   })
 }

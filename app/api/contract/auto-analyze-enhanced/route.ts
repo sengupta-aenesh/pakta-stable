@@ -185,7 +185,7 @@ export async function performEnhancedSequentialAnalysis(contractId: string, cont
     const contract = await contractsApi.getById(contractId)
     const retryCount = (contract?.analysis_retry_count || 0) + 1
     
-    await contractsApi.updateAnalysisStatus(contractId, {
+    await contractsApi.update(contractId, {
       analysis_status: 'failed',
       analysis_progress: 0,
       analysis_error: errorMessage,
@@ -218,11 +218,11 @@ async function updateAnalysisStatus(
   error?: string | null,
   message?: string
 ) {
-  await contractsApi.updateAnalysisStatus(contractId, {
+  await contractsApi.update(contractId, {
     analysis_status: status,
     analysis_progress: progress,
     analysis_error: error,
-    analysis_message: message
+    last_analyzed_at: new Date().toISOString()
   })
 }
 
