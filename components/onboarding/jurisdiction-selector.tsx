@@ -64,12 +64,18 @@ export default function JurisdictionSelector({
     const key = Object.keys(jurisdictionData).find(k => jurisdictionData[k] === jurisdiction)
     if (!key) return
 
-    if (maxSelections && selectedJurisdictions.length >= maxSelections) {
-      return
+    if (maxSelections === 1) {
+      // For single selection, replace the current selection
+      onJurisdictionsChange([key])
+    } else {
+      // For multiple selections, add to the list if not at max
+      if (maxSelections && selectedJurisdictions.length >= maxSelections) {
+        return
+      }
+      const newJurisdictions = [...selectedJurisdictions, key]
+      onJurisdictionsChange(newJurisdictions)
     }
-
-    const newJurisdictions = [...selectedJurisdictions, key]
-    onJurisdictionsChange(newJurisdictions)
+    
     setSearchQuery('')
     setIsOpen(false)
   }
@@ -126,7 +132,7 @@ export default function JurisdictionSelector({
                 : placeholder
             }
             className={styles.searchInput}
-            disabled={maxSelections === 1 && selectedJurisdictions.length >= maxSelections && searchQuery === ''}
+            disabled={false}
           />
           {/* Clear button for single selections */}
           {maxSelections === 1 && selectedJurisdictionData.length > 0 && (

@@ -137,20 +137,26 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
           </p>
         ) : (
           <div className={styles.jurisdictionList}>
-            {additionalJurisdictions.map((jurisdiction, index) => (
-              <div key={index} className={styles.jurisdictionTag}>
-                <span>{jurisdiction.name}</span>
-                <button
-                  onClick={() => handleRemoveJurisdiction(index)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            ))}
+            {additionalJurisdictions.map((jurisdiction, index) => {
+              const jurisdictionKey = jurisdiction.code || jurisdiction.name
+              const jurisdictionInfo = jurisdictionData[jurisdictionKey]
+              const displayName = jurisdictionInfo ? `${jurisdictionInfo.flag} ${jurisdictionInfo.name}` : jurisdiction.name
+              
+              return (
+                <div key={index} className={styles.jurisdictionTag}>
+                  <span>{displayName}</span>
+                  <button
+                    onClick={() => handleRemoveJurisdiction(index)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
