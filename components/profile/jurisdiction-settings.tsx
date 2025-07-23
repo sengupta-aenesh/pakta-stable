@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { UserProfile } from '@/lib/services/subscription'
 import { Button } from '@/components/ui'
-import JurisdictionSelector from '@/components/onboarding/jurisdiction-selector'
+import SingleJurisdictionSelector from './single-jurisdiction-selector'
 import styles from './profile-components.module.css'
 
 interface JurisdictionSettingsProps {
@@ -22,7 +22,7 @@ interface AdditionalJurisdiction {
 }
 
 export default function JurisdictionSettings({ profile, onUpdate, saving }: JurisdictionSettingsProps) {
-  const [primaryJurisdiction, setPrimaryJurisdiction] = useState(profile.primary_jurisdiction || 'United States')
+  const [primaryJurisdiction, setPrimaryJurisdiction] = useState(profile.primary_jurisdiction || 'united-states')
   const [additionalJurisdictions, setAdditionalJurisdictions] = useState<AdditionalJurisdiction[]>(
     Array.isArray(profile.additional_jurisdictions) 
       ? profile.additional_jurisdictions.map(j => 
@@ -86,10 +86,10 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
         </div>
         <div className={styles.formGroup}>
           <label className={styles.label}>Your company operates in:</label>
-          <JurisdictionSelector
+          <SingleJurisdictionSelector
             value={primaryJurisdiction}
             onChange={handlePrimaryChange}
-            excludeJurisdictions={additionalJurisdictions.map(j => j.name)}
+            excludeJurisdictions={additionalJurisdictions.map(j => j.code || j.name)}
             placeholder="Select primary jurisdiction"
           />
           <p className={styles.helperText}>
@@ -141,10 +141,10 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
         <div className={styles.modal} onClick={() => setShowAddModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3>Add Additional Jurisdiction</h3>
-            <JurisdictionSelector
+            <SingleJurisdictionSelector
               value=""
               onChange={handleAddJurisdiction}
-              excludeJurisdictions={[primaryJurisdiction, ...additionalJurisdictions.map(j => j.name)]}
+              excludeJurisdictions={[primaryJurisdiction, ...additionalJurisdictions.map(j => j.code || j.name)]}
               placeholder="Select jurisdiction"
             />
             <button onClick={() => setShowAddModal(false)} className={styles.cancelButton}>
@@ -159,7 +159,7 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
           <Button
             variant="ghost"
             onClick={() => {
-              setPrimaryJurisdiction(profile.primary_jurisdiction || 'United States')
+              setPrimaryJurisdiction(profile.primary_jurisdiction || 'united-states')
               setAdditionalJurisdictions(
                 Array.isArray(profile.additional_jurisdictions) 
                   ? profile.additional_jurisdictions.map(j => 

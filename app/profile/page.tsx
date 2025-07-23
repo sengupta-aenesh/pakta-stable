@@ -9,10 +9,9 @@ import { useEnhancedNotifications } from '@/components/notifications/notificatio
 import PersonalInfo from '@/components/profile/personal-info'
 import CompanyDetails from '@/components/profile/company-details'
 import JurisdictionSettings from '@/components/profile/jurisdiction-settings'
-import LegalPreferences from '@/components/profile/legal-preferences'
 import styles from './profile.module.css'
 
-type ProfileTab = 'personal' | 'company' | 'jurisdictions' | 'legal'
+type ProfileTab = 'personal' | 'company' | 'jurisdictions'
 
 export default function ProfilePage() {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -84,7 +83,6 @@ export default function ProfilePage() {
     { id: 'personal' as ProfileTab, label: 'Personal Information' },
     { id: 'company' as ProfileTab, label: 'Company Details' },
     { id: 'jurisdictions' as ProfileTab, label: 'Jurisdiction Settings' },
-    { id: 'legal' as ProfileTab, label: 'Legal Preferences' },
   ]
 
   if (loading) {
@@ -151,13 +149,6 @@ export default function ProfilePage() {
             />
           )}
           
-          {activeTab === 'legal' && profile && (
-            <LegalPreferences 
-              profile={profile}
-              onUpdate={handleProfileUpdate}
-              saving={saving}
-            />
-          )}
         </div>
       </div>
     </div>
