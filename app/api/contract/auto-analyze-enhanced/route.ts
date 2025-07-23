@@ -128,13 +128,27 @@ export async function performEnhancedSequentialAnalysis(contractId: string, cont
 
     // Process and cache risk analysis
     if (risks) {
+      // Map enhanced risk structure to standard RiskFactor structure expected by UI
+      const mappedRisks = (risks.risks || []).map((risk: any, index: number) => ({
+        id: `risk-${index}`,
+        clause: risk.location || "Not specified", // Map location to clause
+        clauseLocation: risk.title || "Not specified", // Use title as clause location
+        riskLevel: risk.severity || 'medium', // Map severity to riskLevel
+        riskScore: mapSeverityToScore(risk.severity), // Calculate risk score from severity
+        category: risk.category || 'general',
+        explanation: risk.description || "No description provided", // Map description to explanation
+        suggestion: risk.recommendation || "Review with legal counsel", // Map recommendation to suggestion
+        legalPrecedent: risk.jurisdictionSpecific,
+        affectedParty: "Both parties" // Default value since enhanced analysis doesn't provide this
+      }))
+
       const riskAnalysisData: any = {
         overallRiskScore: calculateRiskScore(risks),
-        totalRisksFound: risks.risks?.length || 0,
-        highRiskCount: risks.risks?.filter(r => r.severity === 'high').length || 0,
-        mediumRiskCount: risks.risks?.filter(r => r.severity === 'medium').length || 0,
-        lowRiskCount: risks.risks?.filter(r => r.severity === 'low').length || 0,
-        risks: risks.risks || [],
+        totalRisksFound: mappedRisks.length,
+        highRiskCount: mappedRisks.filter(r => r.riskLevel === 'high').length,
+        mediumRiskCount: mappedRisks.filter(r => r.riskLevel === 'medium').length,
+        lowRiskCount: mappedRisks.filter(r => r.riskLevel === 'low').length,
+        risks: mappedRisks,
         recommendations: risks.missingProtections || [],
         executiveSummary: risks.riskSummary?.mostCritical || 'Risk analysis completed',
         jurisdictionAnalysis: risks.jurisdictionAnalysis
@@ -196,6 +210,20 @@ export async function performEnhancedSequentialAnalysis(contractId: string, cont
   }
 }
 
+// Map severity to risk score (1-10 scale)
+function mapSeverityToScore(severity: string): number {
+  switch (severity) {
+    case 'high':
+      return 8 // High severity = 8-10 risk score
+    case 'medium':
+      return 5 // Medium severity = 4-7 risk score
+    case 'low':
+      return 2 // Low severity = 1-3 risk score
+    default:
+      return 5 // Default to medium
+  }
+}
+
 // Calculate risk score based on severity counts
 function calculateRiskScore(risks: any): number {
   const highCount = risks.risks?.filter((r: any) => r.severity === 'high').length || 0
@@ -224,6 +252,29 @@ async function updateAnalysisStatus(
     analysis_error: error,
     last_analyzed_at: new Date().toISOString()
   })
+}
+
+// Helper function to map severity to numeric score
+function mapSeverityToScore(severity: string): number {
+  switch (severity?.toLowerCase()) {
+    case 'high':
+      return 8
+    case 'medium':
+      return 5
+    case 'low':
+      return 3
+    default:
+      return 5
+  }
+}
+
+// Helper function to calculate overall risk score
+function calculateRiskScore(risks: any): number {
+  if (!risks.risks || risks.risks.length === 0) return 0
+  
+  const scores = risks.risks.map((r: any) => mapSeverityToScore(r.severity))
+  const average = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
+  return Math.round(average * 10) / 10 // Round to 1 decimal place
 }
 
 async function performWithRetry<T>(

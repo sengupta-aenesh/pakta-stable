@@ -216,6 +216,9 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
     
     const result = JSON.parse(response.choices[0].message.content || "{}")
     
+    // Debug logging to understand what's being returned
+    console.log('🔍 Raw AI response - first 2 risks:', JSON.stringify(result.risks?.slice(0, 2), null, 2))
+    
     // Process and structure the risks with enhanced validation
     const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => {
       // Validate and clean the clause text for better mapping
@@ -227,7 +230,7 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
       clause = clause.replace(/^\s*[-•]\s*/, '') // Remove leading bullets
       clause = clause.replace(/\s+/g, ' ') // Normalize whitespace
       
-      return {
+      const processedRisk = {
         id: `risk-${index}`,
         clause: clause,
         clauseLocation: risk.clauseLocation || "Not specified",
@@ -239,6 +242,18 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
         legalPrecedent: risk.legalPrecedent,
         affectedParty: risk.affectedParty || "All parties"
       }
+      
+      // Debug specific empty fields
+      if (!clause || !risk.explanation || !risk.suggestion) {
+        console.warn(`⚠️ Risk ${index} has empty fields:`, {
+          hasClause: !!clause,
+          hasExplanation: !!risk.explanation,
+          hasSuggestion: !!risk.suggestion,
+          rawRisk: risk
+        })
+      }
+      
+      return processedRisk
     })
     
     // Count risks by level
@@ -457,6 +472,9 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
   
   const result = JSON.parse(response.choices[0].message.content || "{}")
   
+  // Debug logging for single-pass analysis
+  console.log('🔍 [Single-pass] Raw AI response - first 2 risks:', JSON.stringify(result.risks?.slice(0, 2), null, 2))
+  
   // Process and structure the risks
   const risks: RiskFactor[] = (result.risks || []).map((risk: any, index: number) => {
     let clause = (risk.clause || "").trim()
@@ -465,7 +483,7 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
     clause = clause.replace(/^\s*[-•]\s*/, '')
     clause = clause.replace(/\s+/g, ' ')
     
-    return {
+    const processedRisk = {
       id: `risk-${index}`,
       clause: clause,
       clauseLocation: risk.clauseLocation || "Not specified",
@@ -477,6 +495,18 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
       legalPrecedent: risk.legalPrecedent,
       affectedParty: risk.affectedParty || "All parties"
     }
+    
+    // Debug specific empty fields in single-pass
+    if (!clause || !risk.explanation || !risk.suggestion) {
+      console.warn(`⚠️ [Single-pass] Risk ${index} has empty fields:`, {
+        hasClause: !!clause,
+        hasExplanation: !!risk.explanation,
+        hasSuggestion: !!risk.suggestion,
+        rawRisk: risk
+      })
+    }
+    
+    return processedRisk
   })
   
   const highRiskCount = risks.filter(r => r.riskLevel === 'high').length
