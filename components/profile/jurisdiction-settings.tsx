@@ -42,11 +42,19 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
   )
   const [additionalJurisdictions, setAdditionalJurisdictions] = useState<AdditionalJurisdiction[]>(
     Array.isArray(profile.additional_jurisdictions) 
-      ? profile.additional_jurisdictions.map(j => 
-          typeof j === 'string' 
-            ? { code: j, name: j, purpose: 'other' as const, active: true }
-            : j as AdditionalJurisdiction
-        )
+      ? profile.additional_jurisdictions.map(j => {
+          if (typeof j === 'string') {
+            return { code: j, name: j, purpose: 'other' as const, active: true }
+          }
+          // Clean up old data format - ensure code and name are jurisdiction keys
+          const jurisdiction = j as AdditionalJurisdiction
+          const code = jurisdiction.code || jurisdiction.name
+          // If the code is a valid jurisdiction key, use it
+          if (jurisdictionData[code]) {
+            return { ...jurisdiction, code, name: code }
+          }
+          return jurisdiction
+        })
       : []
   )
   const [showAddModal, setShowAddModal] = useState(false)
@@ -193,11 +201,19 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
               setPrimaryJurisdiction(getJurisdictionKey(profile.primary_jurisdiction))
               setAdditionalJurisdictions(
                 Array.isArray(profile.additional_jurisdictions) 
-                  ? profile.additional_jurisdictions.map(j => 
-                      typeof j === 'string' 
-                        ? { code: j, name: j, purpose: 'other' as const, active: true }
-                        : j as AdditionalJurisdiction
-                    )
+                  ? profile.additional_jurisdictions.map(j => {
+                      if (typeof j === 'string') {
+                        return { code: j, name: j, purpose: 'other' as const, active: true }
+                      }
+                      // Clean up old data format - ensure code and name are jurisdiction keys
+                      const jurisdiction = j as AdditionalJurisdiction
+                      const code = jurisdiction.code || jurisdiction.name
+                      // If the code is a valid jurisdiction key, use it
+                      if (jurisdictionData[code]) {
+                        return { ...jurisdiction, code, name: code }
+                      }
+                      return jurisdiction
+                    })
                   : []
               )
               setHasChanges(false)
