@@ -65,7 +65,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
   }
 })
 
-async function performEnhancedTemplateAnalysis(templateId: string, template: any, userId: string) {
+export async function performEnhancedTemplateAnalysis(templateId: string, template: any, userId: string) {
   try {
     // Step 1: Fetch user profile for jurisdiction context
     await updateTemplateAnalysisStatus(templateId, 'in_progress', 5, null, 'Loading jurisdiction settings...')

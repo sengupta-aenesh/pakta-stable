@@ -998,11 +998,11 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
                     data-risk-card-id={risk.id || `risk-${index}`}
                   >
                     <div className={styles.riskHeader}>
-                      <span className={`${styles.riskDot} ${styles[risk.riskLevel]}`}></span>
+                      <span className={`${styles.riskDot} ${styles[risk.riskLevel || 'medium']}`}></span>
                       <span className={styles.riskCategory}>
                         Risk {index + 1} of {risks.length} • {risk.category} (Severity: {risk.riskScore}/10)
                       </span>
-                      <span className={styles.riskLevel}>{risk.riskLevel.toUpperCase()}</span>
+                      <span className={styles.riskLevel}>{(risk.riskLevel || 'medium').toUpperCase()}</span>
                       <svg 
                         width="16" 
                         height="16" 
