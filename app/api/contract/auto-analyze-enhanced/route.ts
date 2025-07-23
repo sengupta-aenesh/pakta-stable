@@ -254,29 +254,6 @@ async function updateAnalysisStatus(
   })
 }
 
-// Helper function to map severity to numeric score
-function mapSeverityToScore(severity: string): number {
-  switch (severity?.toLowerCase()) {
-    case 'high':
-      return 8
-    case 'medium':
-      return 5
-    case 'low':
-      return 3
-    default:
-      return 5
-  }
-}
-
-// Helper function to calculate overall risk score
-function calculateRiskScore(risks: any): number {
-  if (!risks.risks || risks.risks.length === 0) return 0
-  
-  const scores = risks.risks.map((r: any) => mapSeverityToScore(r.severity))
-  const average = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
-  return Math.round(average * 10) / 10 // Round to 1 decimal place
-}
-
 async function performWithRetry<T>(
   operation: () => Promise<T>,
   maxRetries: number,
