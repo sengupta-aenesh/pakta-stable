@@ -49,6 +49,8 @@ export function ContractAnalysis({ contract, onMobileViewChange, mobileView, onR
 
   // Helper function to get progress description
   const getProgressDescription = (progress: number): string => {
+    if (progress < 10) return "Loading jurisdiction settings..."
+    if (progress < 15) return "Searching jurisdiction requirements..."
     if (progress < 30) return "Reading and understanding your contract..."
     if (progress < 60) return "Identifying key terms and clauses..."
     if (progress < 80) return "Analyzing risks and compliance issues..."

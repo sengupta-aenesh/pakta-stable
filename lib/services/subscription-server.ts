@@ -1,43 +1,17 @@
-'use client'
-
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { SUBSCRIPTION_TIERS, canUseFeature, getTierByName } from '@/lib/subscription-tiers';
 import type { SubscriptionFeatures } from '@/lib/subscription-tiers';
+import type { UserProfile, UsageStats } from './subscription';
 
-export interface UserProfile {
-  id: string;
-  subscription_tier: string;
-  subscription_status: string;
-  subscription_start_date: string | null;
-  subscription_end_date: string | null;
-  trial_end_date: string | null;
-  // Payment gateway fields removed - now feature-only tiers
-  monthly_contract_count: number;
-  last_contract_reset: string;
-  created_at: string;
-  updated_at: string;
-  // Profile fields
-  organization_type?: string;
-  industry?: string;
-  company_size?: string;
-  primary_jurisdiction?: string;
-  additional_jurisdictions?: any[];
-  regulatory_requirements?: string[];
-  risk_tolerance?: string;
-  has_legal_counsel?: boolean;
-  legal_context?: any;
-}
+export class SubscriptionServiceServer {
+  private supabase;
 
-export interface UsageStats {
-  contracts_uploaded_this_month: number;
-  ai_analysis_this_month: number;
-  ai_chat_messages_this_month: number;
-  folders_created: number;
-}
+  constructor() {
+    this.supabase = createClient();
+  }
 
-export class SubscriptionService {
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    const supabase = createClient();
+    const supabase = await this.supabase;
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -53,7 +27,7 @@ export class SubscriptionService {
   }
 
   async createUserProfile(userId: string): Promise<UserProfile | null> {
-    const supabase = createClient();
+    const supabase = await this.supabase;
     const { data, error } = await supabase
       .from('profiles')
       .insert({
@@ -77,6 +51,7 @@ export class SubscriptionService {
     tier: string,
     status: string
   ): Promise<boolean> {
+    const supabase = await this.supabase;
     const updates: any = {
       subscription_tier: tier,
       subscription_status: status,
@@ -87,7 +62,6 @@ export class SubscriptionService {
       updates.subscription_start_date = new Date().toISOString();
     }
 
-    const supabase = createClient();
     const { error } = await supabase
       .from('profiles')
       .update(updates)
@@ -110,7 +84,7 @@ export class SubscriptionService {
     action: string,
     metadata?: any
   ): Promise<void> {
-    const supabase = createClient();
+    const supabase = await this.supabase;
     await supabase
       .from('subscription_history')
       .insert({
@@ -126,7 +100,7 @@ export class SubscriptionService {
     feature: string,
     metadata?: any
   ): Promise<void> {
-    const supabase = createClient();
+    const supabase = await this.supabase;
     await supabase
       .from('usage_tracking')
       .insert({
@@ -137,12 +111,12 @@ export class SubscriptionService {
   }
 
   async getUsageStats(userId: string): Promise<UsageStats> {
+    const supabase = await this.supabase;
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
     // Get contract uploads
-    const supabase = createClient();
     const { data: uploads } = await supabase
       .from('usage_tracking')
       .select('*')
@@ -243,7 +217,7 @@ export class SubscriptionService {
   }
 
   async cancelSubscription(userId: string): Promise<boolean> {
-    const supabase = createClient();
+    const supabase = await this.supabase;
     const { error } = await supabase
       .from('profiles')
       .update({

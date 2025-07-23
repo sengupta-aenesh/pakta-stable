@@ -4,6 +4,7 @@ import { apiErrorHandler } from '@/lib/api-error-handler'
 import { captureContractError, addSentryBreadcrumb, setSentryUser } from '@/lib/sentry-utils'
 import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields, compareTemplateRisks } from '@/lib/openai'
 import { templatesApi } from '@/lib/supabase'
+import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 
 export const POST = apiErrorHandler(async (request: NextRequest) => {
   const user = await getCurrentUser()
@@ -64,7 +65,7 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     // Start the analysis process
     await updateAnalysisStatus(templateId, 'in_progress', 0)
     
-    const analysisResult = await performSequentialTemplateAnalysis(templateId, template.content, user.id)
+    const analysisResult = await performSequentialTemplateAnalysis(templateId, template, user.id)
     
     return NextResponse.json(analysisResult)
 
@@ -82,11 +83,32 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
   }
 })
 
-export async function performSequentialTemplateAnalysis(templateId: string, content: string, userId: string) {
+export async function performSequentialTemplateAnalysis(templateId: string, template: any, userId: string) {
   const maxRetries = 2
   let currentRetryCount = 0
 
   try {
+    // Check if user has jurisdiction configuration
+    const subscriptionService = new SubscriptionServiceServer()
+    const userProfile = await subscriptionService.getUserProfile(userId)
+    const hasJurisdictionConfig = !!(userProfile.primary_jurisdiction || userProfile.additional_jurisdictions?.length > 0)
+    
+    // If user has jurisdiction configuration, use enhanced analysis
+    if (hasJurisdictionConfig) {
+      addSentryBreadcrumb('Using enhanced jurisdiction-aware template analysis', 'template', 'info', { 
+        templateId,
+        primaryJurisdiction: userProfile.primary_jurisdiction 
+      })
+      
+      // Redirect to enhanced analysis function
+      const { performEnhancedTemplateAnalysis } = await import('../auto-analyze-enhanced/route')
+      return await performEnhancedTemplateAnalysis(templateId, template, userId)
+    }
+    
+    // Otherwise, continue with standard analysis
+    addSentryBreadcrumb('Using standard template analysis (no jurisdiction config)', 'template', 'info', { templateId })
+    const content = template.content
+    
     // Step 1: Summary Analysis (Progress: 0% -> 33%)
     addSentryBreadcrumb('Starting template summary analysis', 'template', 'info', { templateId })
     await updateAnalysisStatus(templateId, 'in_progress', 10, null, 'Starting summary analysis...')

@@ -3,7 +3,9 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { apiErrorHandler } from '@/lib/api-error-handler'
 import { captureContractError, addSentryBreadcrumb, setSentryUser } from '@/lib/sentry-utils'
 import { summarizeContract, identifyRiskyTerms, extractMissingInfo } from '@/lib/openai'
+import { performJurisdictionAwareAnalysis } from '@/lib/openai-enhanced'
 import { contractsApi } from '@/lib/supabase'
+import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 
 export const POST = apiErrorHandler(async (request: NextRequest) => {
   const user = await getCurrentUser()
@@ -87,6 +89,26 @@ export async function performSequentialAnalysis(contractId: string, content: str
   let currentRetryCount = 0
 
   try {
+    // Check if user has jurisdiction configuration
+    const subscriptionService = new SubscriptionServiceServer()
+    const userProfile = await subscriptionService.getUserProfile(userId)
+    const hasJurisdictionConfig = !!(userProfile.primary_jurisdiction || userProfile.additional_jurisdictions?.length > 0)
+    
+    // If user has jurisdiction configuration, use enhanced analysis
+    if (hasJurisdictionConfig) {
+      addSentryBreadcrumb('Using enhanced jurisdiction-aware analysis', 'contract', 'info', { 
+        contractId,
+        primaryJurisdiction: userProfile.primary_jurisdiction 
+      })
+      
+      // Redirect to enhanced analysis function
+      const { performEnhancedSequentialAnalysis } = await import('../auto-analyze-enhanced/route')
+      return await performEnhancedSequentialAnalysis(contractId, content, userId)
+    }
+    
+    // Otherwise, continue with standard analysis
+    addSentryBreadcrumb('Using standard analysis (no jurisdiction config)', 'contract', 'info', { contractId })
+    
     // Step 1: Summary Analysis (Progress: 0% -> 33%)
     addSentryBreadcrumb('Starting summary analysis', 'contract', 'info', { contractId })
     await updateAnalysisStatus(contractId, 'in_progress', 10, null, 'Starting summary analysis...')
