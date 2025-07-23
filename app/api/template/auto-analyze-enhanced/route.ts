@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { apiErrorHandler } from '@/lib/api-error-handler'
-import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields, compareTemplateRisks } from '@/lib/openai'
+import { extractTemplateFields, compareTemplateRisks } from '@/lib/openai'
+import { summarizeTemplateWithJurisdiction, identifyTemplateRisksWithJurisdiction, type AnalysisContext } from '@/lib/openai-enhanced'
 import { templatesApi } from '@/lib/supabase'
 import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 import { jurisdictionResearch, JurisdictionContext } from '@/lib/services/jurisdiction-research'
@@ -102,12 +103,14 @@ export async function performEnhancedTemplateAnalysis(templateId: string, templa
     // Step 2: Summary Analysis (Progress: 10% -> 33%)
     await updateTemplateAnalysisStatus(templateId, 'in_progress', 15, null, 'Analyzing template structure...')
     
-    // Enhance prompts with jurisdiction context
-    const enhancedContent = jurisdictionResearchText 
-      ? `JURISDICTION CONTEXT:\n${jurisdictionResearchText}\n\nTEMPLATE CONTENT:\n${template.content}`
-      : template.content
+    // Create analysis context for enhanced analysis
+    const analysisContext: AnalysisContext = {
+      userProfile,
+      jurisdictions: jurisdictionContext!,
+      jurisdictionResearch: jurisdictionResearchText
+    }
     
-    const summaryResult = await summarizeTemplate(enhancedContent)
+    const summaryResult = await summarizeTemplateWithJurisdiction(template.content, analysisContext)
     
     // Cache summary result
     await templatesApi.updateAnalysisCache(templateId, 'summary', summaryResult)
@@ -116,7 +119,7 @@ export async function performEnhancedTemplateAnalysis(templateId: string, templa
     // Step 3: Risk Analysis (Progress: 33% -> 66%)
     await updateTemplateAnalysisStatus(templateId, 'in_progress', 40, null, 'Analyzing template risks...')
     
-    const riskResult = await identifyTemplateRisks(enhancedContent)
+    const riskResult = await identifyTemplateRisksWithJurisdiction(template.content, analysisContext)
     
     // If reanalysis, compare with resolved risks
     let filteredRisks = riskResult.risks || []

@@ -128,33 +128,22 @@ export async function performEnhancedSequentialAnalysis(contractId: string, cont
 
     // Process and cache risk analysis
     if (risks) {
-      // Map enhanced risk structure to standard RiskFactor structure expected by UI
-      const mappedRisks = (risks.risks || []).map((risk: any, index: number) => ({
-        id: `risk-${index}`,
-        clause: risk.location || "Not specified", // Map location to clause
-        clauseLocation: risk.title || "Not specified", // Use title as clause location
-        riskLevel: risk.severity || 'medium', // Map severity to riskLevel
-        riskScore: mapSeverityToScore(risk.severity), // Calculate risk score from severity
-        category: risk.category || 'general',
-        explanation: risk.description || "No description provided", // Map description to explanation
-        suggestion: risk.recommendation || "Review with legal counsel", // Map recommendation to suggestion
-        legalPrecedent: risk.jurisdictionSpecific,
-        affectedParty: "Both parties" // Default value since enhanced analysis doesn't provide this
-      }))
-
+      // The enhanced analysis now returns properly formatted risks
       const riskAnalysisData: any = {
-        overallRiskScore: calculateRiskScore(risks),
-        totalRisksFound: mappedRisks.length,
-        highRiskCount: mappedRisks.filter(r => r.riskLevel === 'high').length,
-        mediumRiskCount: mappedRisks.filter(r => r.riskLevel === 'medium').length,
-        lowRiskCount: mappedRisks.filter(r => r.riskLevel === 'low').length,
-        risks: mappedRisks,
-        recommendations: risks.missingProtections || [],
-        executiveSummary: risks.riskSummary?.mostCritical || 'Risk analysis completed',
-        jurisdictionAnalysis: risks.jurisdictionAnalysis
+        overallRiskScore: risks.overallRiskScore,
+        totalRisksFound: risks.totalRisksFound,
+        highRiskCount: risks.highRiskCount,
+        mediumRiskCount: risks.mediumRiskCount,
+        lowRiskCount: risks.lowRiskCount,
+        risks: risks.risks,
+        recommendations: risks.recommendations,
+        executiveSummary: risks.executiveSummary,
+        jurisdictionAnalysis: risks.jurisdictionAnalysis,
+        missingProtections: risks.missingProtections,
+        jurisdictionConflicts: risks.jurisdictionConflicts
       }
       await contractsApi.updateAnalysisCache(contractId, 'risks', riskAnalysisData)
-      await updateAnalysisStatus(contractId, 'risks_complete', 66, null, 'Risk analysis complete')
+      await updateAnalysisStatus(contractId, 'risks_complete', 66, null, `Risk analysis complete - ${risks.totalRisksFound} risks found`)
     }
 
     // Step 4: Complete Analysis (Progress: 66% -> 100%)
@@ -210,35 +199,7 @@ export async function performEnhancedSequentialAnalysis(contractId: string, cont
   }
 }
 
-// Map severity to risk score (1-10 scale)
-function mapSeverityToScore(severity: string): number {
-  switch (severity) {
-    case 'high':
-      return 8 // High severity = 8-10 risk score
-    case 'medium':
-      return 5 // Medium severity = 4-7 risk score
-    case 'low':
-      return 2 // Low severity = 1-3 risk score
-    default:
-      return 5 // Default to medium
-  }
-}
-
-// Calculate risk score based on severity counts
-function calculateRiskScore(risks: any): number {
-  const highCount = risks.risks?.filter((r: any) => r.severity === 'high').length || 0
-  const mediumCount = risks.risks?.filter((r: any) => r.severity === 'medium').length || 0
-  const lowCount = risks.risks?.filter((r: any) => r.severity === 'low').length || 0
-  
-  // Weighted score: high=3, medium=2, low=1
-  const totalWeight = (highCount * 3) + (mediumCount * 2) + (lowCount * 1)
-  const maxPossibleWeight = risks.risks?.length * 3 || 1
-  
-  // Convert to 0-100 scale
-  return Math.round((totalWeight / maxPossibleWeight) * 100)
-}
-
-// Helper functions (updateAnalysisStatus, performWithRetry) remain the same as original
+// Helper functions
 async function updateAnalysisStatus(
   contractId: string, 
   status: string, 
