@@ -1,0 +1,110 @@
+/* Profile Menu Styles */
+.profileButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+  margin-left: 8px;
+}
+
+.profileButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.avatarText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 0.5px;
+}
+
+/* Dropdown Content */
+.dropdownContent {
+  min-width: 220px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+}
+
+.userInfo {
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
+}
+
+.userEmail {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.userTier {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.menuIcon {
+  margin-right: 8px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.signOutItem {
+  color: #dc2626;
+}
+
+.signOutItem .menuIcon {
+  color: #dc2626;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .avatarText {
+    font-size: 11px;
+  }
+  
+  .dropdownContent {
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profileButton {
+    margin-left: 4px;
+  }
+  
+  .avatar {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .avatarText {
+    font-size: 10px;
+  }
+}

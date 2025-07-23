@@ -369,6 +369,8 @@ function DashboardContent() {
         currentPage="analysis"
         contractTitle={selectedContract?.title || ''}
         onContractTitleChange={selectedContract ? handleTitleInputChange : undefined}
+        user={user}
+        onSignOut={handleSignOut}
       />
 
       {/* Trial Status - only render container if needed */}

@@ -155,7 +155,11 @@ export default function FoldersPage() {
   return (
     <div className={styles.dashboardLayout}>
       {/* iOS-Style Top Navigation */}
-      <TopNavigation currentPage="folders" />
+      <TopNavigation 
+        currentPage="folders" 
+        user={user}
+        onSignOut={handleSignOut}
+      />
 
       {/* Left Sidebar - Folder Tree */}
       <div data-sidebar-ref>

@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import NotificationBell from '../notifications/NotificationBell'
+import ProfileMenu from './profile-menu'
+import { AuthUser } from '@/lib/auth-client'
 import styles from './top-navigation.module.css'
 
 interface TopNavigationProps {
@@ -9,13 +11,17 @@ interface TopNavigationProps {
   contractTitle?: string
   onContractTitleChange?: (title: string) => void
   showLogo?: boolean
+  user?: AuthUser | null
+  onSignOut?: () => void
 }
 
 export default function TopNavigation({ 
   currentPage = 'folders', 
   contractTitle,
   onContractTitleChange,
-  showLogo = true 
+  showLogo = true,
+  user,
+  onSignOut
 }: TopNavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -119,6 +125,11 @@ export default function TopNavigation({
           <div className={styles.notificationWrapper}>
             <NotificationBell />
           </div>
+          
+          {/* Profile Menu */}
+          {user && (
+            <ProfileMenu user={user} onSignOut={onSignOut} />
+          )}
         </div>
       </div>
     </div>

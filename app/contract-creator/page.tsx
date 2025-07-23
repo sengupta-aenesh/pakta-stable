@@ -428,7 +428,11 @@ export default function ContractCreatorPage() {
   return (
     <div className={styles.creatorLayout}>
       {/* iOS-Style Top Navigation */}
-      <TopNavigation currentPage="create" />
+      <TopNavigation 
+        currentPage="create" 
+        user={user}
+        onSignOut={handleSignOut}
+      />
 
       {/* Left Sidebar - Folder Tree */}
       <div>

@@ -392,6 +392,8 @@ function TemplateDashboardContent() {
         currentPage="template-dashboard"
         contractTitle={selectedTemplate?.title || ''}
         onContractTitleChange={selectedTemplate ? handleTitleInputChange : undefined}
+        user={user}
+        onSignOut={handleSignOut}
       />
 
       {/* Trial Status */}
