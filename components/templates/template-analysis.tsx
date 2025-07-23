@@ -55,7 +55,11 @@ export default function TemplateAnalysis({
     hasSummary: !!template?.analysis_cache?.summary,
     hasRisks: !!template?.analysis_cache?.risks,
     hasComplete: !!template?.analysis_cache?.complete,
-    risksPassedIn: risks?.length || 0
+    risksPassedIn: risks?.length || 0,
+    templateProp: template,
+    isTemplateNull: template === null,
+    isTemplateUndefined: template === undefined,
+    templateType: typeof template
   })
   const [selectedVariable, setSelectedVariable] = useState<MissingInfoItem | null>(null)
   const [showOccurrencesList, setShowOccurrencesList] = useState(false)
@@ -318,22 +322,52 @@ export default function TemplateAnalysis({
       })
 
       if (!response.ok) {
-        throw new Error('Failed to start template analysis')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Template analysis API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        })
+        throw new Error(errorData.error || `Failed to start template analysis (${response.status})`)
       }
 
       const result = await response.json()
       
-      if (result.success) {
+      // Check if the result has the expected structure
+      console.log('Analysis API response:', result)
+      
+      if (result.success || result.status === 'complete' || result.status === 'in_progress') {
         // Don't start polling immediately - let the progress simulation run
-        console.log('✅ Analysis started successfully')
+        console.log('✅ Analysis started successfully', {
+          success: result.success,
+          status: result.status,
+          message: result.message
+        })
         // The polling will be handled by the useEffect that watches 'analyzing' state
       } else {
-        throw new Error(result.message || 'Analysis failed')
+        throw new Error(result.message || result.error || 'Analysis failed')
       }
     } catch (error) {
       console.error('Template analysis error:', error)
       clearProgressSimulation() // Clear simulation on error
-      onToast('Template analysis failed. Please try again.', 'error')
+      
+      // Provide more specific error messages
+      let errorMessage = 'Template analysis failed. '
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          errorMessage = 'Session expired. Please refresh the page and try again.'
+        } else if (error.message.includes('400')) {
+          errorMessage = 'Template data is invalid. Please check the template content.'
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Template not found. Please refresh the page.'
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Server error. Please try again later.'
+        } else {
+          errorMessage += error.message
+        }
+      }
+      
+      onToast(errorMessage, 'error')
       setAnalyzing(false)
       setAnalysisProgress(0)
       setAnalysisStartTime(null)
@@ -354,6 +388,14 @@ export default function TemplateAnalysis({
 
   const statusInfo = getAnalysisStatus()
   const hasAnalysis = template.analysis_cache?.summary || template.analysis_cache?.risks
+  
+  console.log('📊 Analysis status check:', {
+    statusInfo,
+    hasAnalysis,
+    analysisCache: template.analysis_cache,
+    activeTab,
+    analyzing
+  })
 
   // Handle clicking on a risk to scroll to it in the template
   const handleRiskClick = (risk: any) => {
@@ -924,8 +966,36 @@ export default function TemplateAnalysis({
     }
   }
 
+  // Early return if no template is provided
+  if (!template) {
+    console.error('❌ TemplateAnalysis: No template provided')
+    return (
+      <div className={styles.analysisContainer}>
+        <div className={styles.emptyState}>
+          <p>No template selected. Please select a template from the sidebar.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Validate template has required properties
+  if (!template.id || !template.content) {
+    console.error('❌ TemplateAnalysis: Template missing required properties', {
+      hasId: !!template.id,
+      hasContent: !!template.content,
+      contentLength: template.content?.length || 0
+    })
+    return (
+      <div className={styles.analysisContainer}>
+        <div className={styles.emptyState}>
+          <p>Template is missing required data. Please try refreshing the page.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className={styles.analysisContainer}>
+    <div className={styles.analysisContainer} data-testid="template-analysis-container">
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleSection}>
@@ -1001,6 +1071,7 @@ export default function TemplateAnalysis({
       <div className={styles.tabContent}>
         {activeTab === 'summary' && (
           <div className={styles.summaryTab}>
+            {console.log('📦 Summary Tab Render:', { hasAnalysis, analysisCache: template.analysis_cache, summary: template.analysis_cache?.summary })}
             {hasAnalysis ? (
               <div className={styles.summaryContent}>
                 <h3>Template Summary</h3>

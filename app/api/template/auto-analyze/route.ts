@@ -7,19 +7,28 @@ import { templatesApi } from '@/lib/supabase'
 import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 
 export const POST = apiErrorHandler(async (request: NextRequest) => {
+  console.log('🚀 Template auto-analyze endpoint called')
+  
   const user = await getCurrentUser()
   if (!user) {
+    console.error('❌ Template auto-analyze: User not authenticated')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  
+  console.log('✅ User authenticated:', user.email)
 
   setSentryUser({
     id: user.id,
     email: user.email
   })
 
-  const { templateId, forceRefresh = false } = await request.json()
+  const body = await request.json()
+  const { templateId, forceRefresh = false } = body
+  
+  console.log('📋 Request body:', { templateId, forceRefresh })
 
   if (!templateId) {
+    console.error('❌ Template ID is missing')
     return NextResponse.json({ error: 'Template ID is required' }, { status: 400 })
   }
 
@@ -31,12 +40,23 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
 
   try {
     // Get template details
+    console.log('🔍 Fetching template:', templateId)
     const template = await templatesApi.getById(templateId)
     if (!template) {
+      console.error('❌ Template not found:', templateId)
       return NextResponse.json({ error: 'Template not found' }, { status: 404 })
     }
+    
+    console.log('✅ Template found:', {
+      id: template.id,
+      title: template.title,
+      hasContent: !!template.content,
+      contentLength: template.content?.length || 0,
+      analysisStatus: template.analysis_status
+    })
 
     if (!template.content || template.content.trim().length === 0) {
+      console.error('❌ Template has no content')
       return NextResponse.json({ error: 'Template has no content to analyze' }, { status: 400 })
     }
 
