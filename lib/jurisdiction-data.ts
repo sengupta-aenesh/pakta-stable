@@ -11,6 +11,7 @@ export interface JurisdictionData {
 }
 
 export const jurisdictionData: Record<string, JurisdictionData> = {
+  // North America
   'united-states': {
     name: 'United States',
     code: 'US',
@@ -45,53 +46,6 @@ export const jurisdictionData: Record<string, JurisdictionData> = {
         value: 'non-profit',
         label: 'Non-Profit Corporation',
         description: 'Tax-exempt organization for charitable purposes'
-      },
-      {
-        value: 'benefit-corp',
-        label: 'Benefit Corporation (B-Corp)',
-        description: 'For-profit with social/environmental mission'
-      }
-    ]
-  },
-  'united-kingdom': {
-    name: 'United Kingdom',
-    code: 'GB',
-    flag: '🇬🇧',
-    companyTypes: [
-      {
-        value: 'private-limited',
-        label: 'Private Limited Company (Ltd)',
-        description: 'Limited liability, shares not publicly traded'
-      },
-      {
-        value: 'public-limited',
-        label: 'Public Limited Company (PLC)',
-        description: 'Can offer shares to the public, minimum £50k capital'
-      },
-      {
-        value: 'partnership',
-        label: 'Partnership',
-        description: 'Unincorporated association of partners'
-      },
-      {
-        value: 'llp',
-        label: 'Limited Liability Partnership (LLP)',
-        description: 'Partnership with limited liability protection'
-      },
-      {
-        value: 'sole-trader',
-        label: 'Sole Trader',
-        description: 'Self-employed individual running their own business'
-      },
-      {
-        value: 'cic',
-        label: 'Community Interest Company (CIC)',
-        description: 'Limited company for community benefit'
-      },
-      {
-        value: 'charity',
-        label: 'Charity',
-        description: 'Registered charity for public benefit'
       }
     ]
   },
@@ -102,218 +56,118 @@ export const jurisdictionData: Record<string, JurisdictionData> = {
     companyTypes: [
       {
         value: 'corporation',
-        label: 'Corporation (Corp/Inc/Ltd)',
-        description: 'Incorporated federally or provincially'
+        label: 'Corporation',
+        description: 'Federal or provincial incorporation available'
       },
       {
         value: 'partnership',
         label: 'Partnership',
-        description: 'General or limited partnership'
+        description: 'General or limited partnership structure'
       },
       {
         value: 'sole-proprietorship',
         label: 'Sole Proprietorship',
-        description: 'Unincorporated business owned by one person'
+        description: 'Individual doing business under their own name'
       },
       {
         value: 'cooperative',
         label: 'Cooperative',
-        description: 'Member-owned and democratically controlled'
-      },
-      {
-        value: 'non-profit',
-        label: 'Non-Profit Corporation',
-        description: 'Incorporated for non-profit purposes'
-      },
-      {
-        value: 'unlimited-liability',
-        label: 'Unlimited Liability Company (ULC)',
-        description: 'Corporate structure without limited liability'
+        description: 'Member-owned business organization'
       }
     ]
   },
-  'australia': {
-    name: 'Australia',
-    code: 'AU',
-    flag: '🇦🇺',
+  'mexico': {
+    name: 'Mexico',
+    code: 'MX',
+    flag: '🇲🇽',
     companyTypes: [
       {
-        value: 'proprietary-limited',
-        label: 'Proprietary Limited Company (Pty Ltd)',
-        description: 'Private company with limited liability'
+        value: 'sa-de-cv',
+        label: 'S.A. de C.V.',
+        description: 'Sociedad Anónima de Capital Variable'
       },
       {
-        value: 'public-company',
-        label: 'Public Company Limited (Ltd)',
-        description: 'Can raise capital from the public'
-      },
-      {
-        value: 'partnership',
-        label: 'Partnership',
-        description: 'Unincorporated association of partners'
-      },
-      {
-        value: 'sole-trader',
-        label: 'Sole Trader',
-        description: 'Individual trading under their own name or business name'
-      },
-      {
-        value: 'trust',
-        label: 'Trust',
-        description: 'Trustee holds assets for beneficiaries'
-      },
-      {
-        value: 'company-limited-by-guarantee',
-        label: 'Company Limited by Guarantee',
-        description: 'Non-profit structure with member guarantees'
+        value: 'srl-de-cv',
+        label: 'S. de R.L. de C.V.',
+        description: 'Sociedad de Responsabilidad Limitada'
       }
     ]
   },
-  'singapore': {
-    name: 'Singapore',
-    code: 'SG',
-    flag: '🇸🇬',
+  
+  // Asia
+  'china': {
+    name: 'China',
+    code: 'CN',
+    flag: '🇨🇳',
     companyTypes: [
       {
-        value: 'private-limited',
-        label: 'Private Limited Company (Pte Ltd)',
-        description: 'Most common business structure in Singapore'
+        value: 'wfoe',
+        label: 'WFOE',
+        description: 'Wholly Foreign-Owned Enterprise'
       },
       {
-        value: 'public-company',
-        label: 'Public Company Limited by Shares',
-        description: 'Can offer shares to the public'
+        value: 'llc',
+        label: 'Limited Liability Company',
+        description: 'Chinese LLC structure'
       },
       {
-        value: 'partnership',
-        label: 'Partnership',
-        description: 'Business owned by 2-20 partners'
+        value: 'jv',
+        label: 'Joint Venture',
+        description: 'Partnership with Chinese entity'
       },
       {
-        value: 'sole-proprietorship',
-        label: 'Sole Proprietorship',
-        description: 'Business owned by one person'
-      },
-      {
-        value: 'llp',
-        label: 'Limited Liability Partnership (LLP)',
-        description: 'Partnership with limited liability'
-      },
-      {
-        value: 'company-limited-by-guarantee',
-        label: 'Company Limited by Guarantee',
-        description: 'Non-profit company structure'
+        value: 'rep-office',
+        label: 'Representative Office',
+        description: 'Non-profit generating presence'
       }
     ]
   },
-  'germany': {
-    name: 'Germany',
-    code: 'DE',
-    flag: '🇩🇪',
+  'japan': {
+    name: 'Japan',
+    code: 'JP',
+    flag: '🇯🇵',
     companyTypes: [
       {
-        value: 'gmbh',
-        label: 'Gesellschaft mit beschränkter Haftung (GmbH)',
-        description: 'Private limited liability company'
+        value: 'kk',
+        label: 'Kabushiki Kaisha (KK)',
+        description: 'Stock company, most common for foreign businesses'
       },
       {
-        value: 'ag',
-        label: 'Aktiengesellschaft (AG)',
-        description: 'Stock corporation, can be publicly traded'
+        value: 'gk',
+        label: 'Godo Kaisha (GK)',
+        description: 'Japanese LLC, simpler than KK'
       },
       {
-        value: 'ug',
-        label: 'Unternehmergesellschaft (UG)',
-        description: 'Mini-GmbH with lower capital requirements'
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Extension of foreign company'
       },
       {
-        value: 'kg',
-        label: 'Kommanditgesellschaft (KG)',
-        description: 'Limited partnership'
-      },
-      {
-        value: 'ohg',
-        label: 'Offene Handelsgesellschaft (OHG)',
-        description: 'General partnership'
-      },
-      {
-        value: 'einzelunternehmen',
-        label: 'Einzelunternehmen',
-        description: 'Sole proprietorship'
+        value: 'rep-office',
+        label: 'Representative Office',
+        description: 'Market research and liaison only'
       }
     ]
   },
-  'france': {
-    name: 'France',
-    code: 'FR',
-    flag: '🇫🇷',
+  'south-korea': {
+    name: 'South Korea',
+    code: 'KR',
+    flag: '🇰🇷',
     companyTypes: [
       {
-        value: 'sarl',
-        label: 'Société à Responsabilité Limitée (SARL)',
-        description: 'Private limited liability company'
+        value: 'yuhan-hoesa',
+        label: 'Yuhan Hoesa',
+        description: 'Limited liability company'
       },
       {
-        value: 'sas',
-        label: 'Société par Actions Simplifiée (SAS)',
-        description: 'Simplified joint stock company'
+        value: 'jusik-hoesa',
+        label: 'Jusik Hoesa',
+        description: 'Stock company'
       },
       {
-        value: 'sa',
-        label: 'Société Anonyme (SA)',
-        description: 'Public limited company'
-      },
-      {
-        value: 'eurl',
-        label: 'Entreprise Unipersonnelle à Responsabilité Limitée (EURL)',
-        description: 'Single-member limited liability company'
-      },
-      {
-        value: 'sasu',
-        label: 'Société par Actions Simplifiée Unipersonnelle (SASU)',
-        description: 'Single-member simplified joint stock company'
-      },
-      {
-        value: 'ei',
-        label: 'Entreprise Individuelle (EI)',
-        description: 'Sole proprietorship'
-      }
-    ]
-  },
-  'netherlands': {
-    name: 'Netherlands',
-    code: 'NL',
-    flag: '🇳🇱',
-    companyTypes: [
-      {
-        value: 'bv',
-        label: 'Besloten Vennootschap (BV)',
-        description: 'Private limited liability company'
-      },
-      {
-        value: 'nv',
-        label: 'Naamloze Vennootschap (NV)',
-        description: 'Public limited company'
-      },
-      {
-        value: 'vof',
-        label: 'Vennootschap onder Firma (VOF)',
-        description: 'General partnership'
-      },
-      {
-        value: 'cv',
-        label: 'Commanditaire Vennootschap (CV)',
-        description: 'Limited partnership'
-      },
-      {
-        value: 'eenmanszaak',
-        label: 'Eenmanszaak',
-        description: 'Sole proprietorship'
-      },
-      {
-        value: 'stichting',
-        label: 'Stichting',
-        description: 'Foundation (non-profit)'
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Extension of foreign company'
       }
     ]
   },
@@ -324,104 +178,421 @@ export const jurisdictionData: Record<string, JurisdictionData> = {
     companyTypes: [
       {
         value: 'private-limited',
-        label: 'Private Limited Company (Pvt Ltd)',
-        description: 'Most popular corporate structure'
+        label: 'Private Limited Company',
+        description: 'Most common, minimum 2 shareholders'
       },
       {
         value: 'public-limited',
         label: 'Public Limited Company',
-        description: 'Can raise funds from the public'
+        description: 'Can raise funds from public, minimum 7 shareholders'
       },
       {
         value: 'llp',
-        label: 'Limited Liability Partnership (LLP)',
-        description: 'Partnership with limited liability'
+        label: 'Limited Liability Partnership',
+        description: 'Hybrid of partnership and company'
       },
       {
-        value: 'partnership',
-        label: 'Partnership Firm',
-        description: 'Traditional partnership structure'
+        value: 'one-person',
+        label: 'One Person Company',
+        description: 'Single shareholder company'
       },
       {
-        value: 'sole-proprietorship',
-        label: 'Sole Proprietorship',
-        description: 'Simplest form of business ownership'
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Extension of foreign company with restrictions'
       },
       {
-        value: 'one-person-company',
-        label: 'One Person Company (OPC)',
-        description: 'Corporate structure for single entrepreneur'
-      },
-      {
-        value: 'section-8',
-        label: 'Section 8 Company',
-        description: 'Non-profit company for charitable purposes'
+        value: 'liaison',
+        label: 'Liaison Office',
+        description: 'Representative office, no commercial activities'
       }
     ]
   },
-  'japan': {
-    name: 'Japan',
-    code: 'JP',
-    flag: '🇯🇵',
+  
+  // Southeast Asia
+  'singapore': {
+    name: 'Singapore',
+    code: 'SG',
+    flag: '🇸🇬',
     companyTypes: [
       {
-        value: 'kabushiki-kaisha',
-        label: 'Kabushiki Kaisha (KK)',
-        description: 'Stock company, most common corporate form'
+        value: 'private-limited',
+        label: 'Private Limited Company',
+        description: 'Most popular, limited liability'
       },
       {
-        value: 'godo-kaisha',
-        label: 'Godo Kaisha (GK)',
+        value: 'public-limited',
+        label: 'Public Limited Company',
+        description: 'Can offer shares to public'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Singapore branch of foreign company'
+      },
+      {
+        value: 'rep-office',
+        label: 'Representative Office',
+        description: 'Temporary setup for market research'
+      }
+    ]
+  },
+  'malaysia': {
+    name: 'Malaysia',
+    code: 'MY',
+    flag: '🇲🇾',
+    companyTypes: [
+      {
+        value: 'sdn-bhd',
+        label: 'Sdn Bhd',
+        description: 'Private limited company'
+      },
+      {
+        value: 'bhd',
+        label: 'Bhd',
+        description: 'Public limited company'
+      },
+      {
+        value: 'llp',
+        label: 'LLP',
+        description: 'Limited liability partnership'
+      }
+    ]
+  },
+  'thailand': {
+    name: 'Thailand',
+    code: 'TH',
+    flag: '🇹🇭',
+    companyTypes: [
+      {
+        value: 'limited-company',
+        label: 'Limited Company',
+        description: 'Thai limited company'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Foreign company branch'
+      },
+      {
+        value: 'rep-office',
+        label: 'Representative Office',
+        description: 'Non-trading office'
+      }
+    ]
+  },
+  'vietnam': {
+    name: 'Vietnam',
+    code: 'VN',
+    flag: '🇻🇳',
+    companyTypes: [
+      {
+        value: 'llc',
+        label: 'Limited Liability Company',
+        description: 'Most common for foreign investors'
+      },
+      {
+        value: 'jsc',
+        label: 'Joint Stock Company',
+        description: 'Can issue shares'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Branch of foreign company'
+      }
+    ]
+  },
+  'indonesia': {
+    name: 'Indonesia',
+    code: 'ID',
+    flag: '🇮🇩',
+    companyTypes: [
+      {
+        value: 'pt-pma',
+        label: 'PT PMA',
+        description: 'Foreign investment company'
+      },
+      {
+        value: 'pt',
+        label: 'PT',
         description: 'Limited liability company'
       },
       {
-        value: 'gomei-kaisha',
-        label: 'Gomei Kaisha',
-        description: 'General partnership company'
+        value: 'rep-office',
+        label: 'Representative Office',
+        description: 'KPPA/KP3A for market research'
+      }
+    ]
+  },
+  'philippines': {
+    name: 'Philippines',
+    code: 'PH',
+    flag: '🇵🇭',
+    companyTypes: [
+      {
+        value: 'corporation',
+        label: 'Corporation',
+        description: 'Stock corporation'
       },
       {
-        value: 'goshi-kaisha',
-        label: 'Goshi Kaisha',
-        description: 'Limited partnership company'
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Foreign company branch'
       },
       {
-        value: 'sole-proprietorship',
-        label: 'Sole Proprietorship (Kojin Jigyo)',
-        description: 'Individual business'
+        value: 'rep-office',
+        label: 'Representative Office',
+        description: 'Non-income generating'
+      }
+    ]
+  },
+  
+  // Middle East
+  'united-arab-emirates': {
+    name: 'United Arab Emirates',
+    code: 'AE',
+    flag: '🇦🇪',
+    companyTypes: [
+      {
+        value: 'llc',
+        label: 'LLC',
+        description: 'Limited liability company'
+      },
+      {
+        value: 'free-zone',
+        label: 'Free Zone Company',
+        description: '100% foreign ownership in free zones'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Foreign company branch'
+      }
+    ]
+  },
+  'saudi-arabia': {
+    name: 'Saudi Arabia',
+    code: 'SA',
+    flag: '🇸🇦',
+    companyTypes: [
+      {
+        value: 'llc',
+        label: 'Limited Liability Company',
+        description: 'Most common for foreign investors'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Foreign company branch'
+      },
+      {
+        value: 'joint-venture',
+        label: 'Joint Venture',
+        description: 'Partnership with Saudi entity'
+      }
+    ]
+  },
+  'israel': {
+    name: 'Israel',
+    code: 'IL',
+    flag: '🇮🇱',
+    companyTypes: [
+      {
+        value: 'private-company',
+        label: 'Private Company Ltd',
+        description: 'Most common business structure'
+      },
+      {
+        value: 'public-company',
+        label: 'Public Company',
+        description: 'Can offer shares to public'
+      },
+      {
+        value: 'partnership',
+        label: 'Partnership',
+        description: 'General or limited partnership'
+      }
+    ]
+  },
+  
+  // Africa
+  'south-africa': {
+    name: 'South Africa',
+    code: 'ZA',
+    flag: '🇿🇦',
+    companyTypes: [
+      {
+        value: 'pty-ltd',
+        label: 'Pty Ltd',
+        description: 'Private company'
+      },
+      {
+        value: 'public-company',
+        label: 'Ltd',
+        description: 'Public company'
+      },
+      {
+        value: 'cc',
+        label: 'Close Corporation',
+        description: 'Simpler than company (being phased out)'
+      }
+    ]
+  },
+  'nigeria': {
+    name: 'Nigeria',
+    code: 'NG',
+    flag: '🇳🇬',
+    companyTypes: [
+      {
+        value: 'private-limited',
+        label: 'Private Limited Company',
+        description: 'Limited by shares'
+      },
+      {
+        value: 'public-limited',
+        label: 'Public Limited Company',
+        description: 'PLC - can offer shares publicly'
+      },
+      {
+        value: 'limited-by-guarantee',
+        label: 'Limited by Guarantee',
+        description: 'Usually for non-profits'
+      }
+    ]
+  },
+  'kenya': {
+    name: 'Kenya',
+    code: 'KE',
+    flag: '🇰🇪',
+    companyTypes: [
+      {
+        value: 'private-limited',
+        label: 'Private Limited Company',
+        description: 'Most common business structure'
+      },
+      {
+        value: 'public-limited',
+        label: 'Public Limited Company',
+        description: 'Can offer shares to public'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Foreign company branch'
+      }
+    ]
+  },
+  'egypt': {
+    name: 'Egypt',
+    code: 'EG',
+    flag: '🇪🇬',
+    companyTypes: [
+      {
+        value: 'llc',
+        label: 'Limited Liability Company',
+        description: 'Most flexible for foreign investors'
+      },
+      {
+        value: 'jsc',
+        label: 'Joint Stock Company',
+        description: 'Can be listed on stock exchange'
+      },
+      {
+        value: 'branch',
+        label: 'Branch Office',
+        description: 'Extension of foreign company'
+      }
+    ]
+  },
+  'morocco': {
+    name: 'Morocco',
+    code: 'MA',
+    flag: '🇲🇦',
+    companyTypes: [
+      {
+        value: 'sarl',
+        label: 'SARL',
+        description: 'Limited liability company'
+      },
+      {
+        value: 'sa',
+        label: 'SA',
+        description: 'Public limited company'
+      }
+    ]
+  },
+  
+  // Oceania
+  'australia': {
+    name: 'Australia',
+    code: 'AU',
+    flag: '🇦🇺',
+    companyTypes: [
+      {
+        value: 'pty-ltd',
+        label: 'Proprietary Limited (Pty Ltd)',
+        description: 'Private company, most common structure'
+      },
+      {
+        value: 'public-company',
+        label: 'Public Company',
+        description: 'Can offer shares to the public'
+      },
+      {
+        value: 'partnership',
+        label: 'Partnership',
+        description: 'Two or more people in business together'
+      },
+      {
+        value: 'sole-trader',
+        label: 'Sole Trader',
+        description: 'Individual trading on their own'
+      },
+      {
+        value: 'trust',
+        label: 'Trust',
+        description: 'Trustee manages for beneficiaries'
+      }
+    ]
+  },
+  'new-zealand': {
+    name: 'New Zealand',
+    code: 'NZ',
+    flag: '🇳🇿',
+    companyTypes: [
+      {
+        value: 'limited-company',
+        label: 'Limited Company',
+        description: 'Most common business structure'
+      },
+      {
+        value: 'partnership',
+        label: 'Partnership',
+        description: 'General or limited partnership'
+      },
+      {
+        value: 'sole-trader',
+        label: 'Sole Trader',
+        description: 'Individual business owner'
       }
     ]
   }
 }
 
+export function searchJurisdictions(query: string): JurisdictionData[] {
+  const searchTerm = query.toLowerCase()
+  return Object.values(jurisdictionData).filter(jurisdiction => 
+    jurisdiction.name.toLowerCase().includes(searchTerm) ||
+    jurisdiction.code.toLowerCase().includes(searchTerm)
+  )
+}
+
 export const popularJurisdictions = [
   'united-states',
-  'united-kingdom', 
-  'canada',
-  'australia',
-  'singapore',
-  'germany',
-  'france',
-  'netherlands',
+  'singapore', 
   'india',
-  'japan'
+  'united-arab-emirates',
+  'canada',
+  'australia'
 ]
-
-export const allJurisdictions = Object.keys(jurisdictionData)
-
-export function getJurisdictionByKey(key: string): JurisdictionData | null {
-  return jurisdictionData[key] || null
-}
-
-export function searchJurisdictions(query: string): JurisdictionData[] {
-  if (!query.trim()) return []
-  
-  const searchTerm = query.toLowerCase()
-  return Object.entries(jurisdictionData)
-    .filter(([key, data]) => 
-      data.name.toLowerCase().includes(searchTerm) ||
-      data.code.toLowerCase().includes(searchTerm) ||
-      key.includes(searchTerm)
-    )
-    .map(([key, data]) => data)
-    .slice(0, 10) // Limit results
-}

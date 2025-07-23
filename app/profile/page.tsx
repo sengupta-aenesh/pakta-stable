@@ -59,12 +59,13 @@ export default function ProfilePage() {
     setSaving(true)
     try {
       // Update profile in database
-      const { error } = await import('@/lib/supabase-client').then(m => 
-        m.supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', user.id)
-      )
+      const { createClient } = await import('@/lib/supabase-client')
+      const supabase = createClient()
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
       
       if (error) throw error
       
