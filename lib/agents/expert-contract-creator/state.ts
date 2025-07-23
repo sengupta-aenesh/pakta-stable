@@ -39,7 +39,7 @@ export const ExpertContractCreatorState = Annotation.Root({
     default: () => 'moderate',
   }),
   jurisdiction: Annotation<string>({
-    default: () => "United States",
+    default: () => "united-states",
   }),
   crossBorderConsiderations: Annotation<string[]>({
     default: () => [],

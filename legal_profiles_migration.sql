@@ -5,7 +5,7 @@
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS organization_type TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS industry TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS company_size TEXT;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS primary_jurisdiction TEXT DEFAULT 'United States';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS primary_jurisdiction TEXT DEFAULT 'united-states';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS additional_jurisdictions TEXT[] DEFAULT '{}';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS regulatory_requirements TEXT[] DEFAULT '{}';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS risk_tolerance TEXT DEFAULT 'medium';

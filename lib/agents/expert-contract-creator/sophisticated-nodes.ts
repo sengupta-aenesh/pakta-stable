@@ -412,8 +412,8 @@ export async function jurisdictionIntelligenceAgent(state: typeof ExpertContract
     
     // Analyze jurisdiction requirements
     const jurisdictionInput = JSON.stringify({
-      primaryJurisdiction: userProfile?.primaryJurisdiction || "United States",
-      additionalJurisdictions: userProfile?.additionalJurisdictions || [],
+      primaryJurisdiction: userProfile?.primary_jurisdiction || "united-states",
+      additionalJurisdictions: userProfile?.additional_jurisdictions || [],
       contractType: contractType
     });
     
@@ -478,8 +478,8 @@ Respond in JSON format:
       
       // Fallback: Basic jurisdiction guidance
       jurisdictionGuidance = {
-        governingLaw: state.jurisdiction || "United States",
-        disputeJurisdiction: state.jurisdiction || "United States", 
+        governingLaw: state.jurisdiction || "united-states",
+        disputeJurisdiction: state.jurisdiction || "united-states", 
         complianceRequirements: ["Standard contract law compliance"],
         crossBorderConsiderations: [],
         riskFactors: ["Standard commercial contract risks"],
@@ -972,7 +972,7 @@ Proceeding to section ${nextSectionIndex + 1}/${plannedSections.length}...`)],
 
 CONTRACT CONTEXT:
 - Type: ${state.contractType}
-- Jurisdiction: ${state.jurisdiction || "United States"}
+- Jurisdiction: ${state.jurisdiction || "united-states"}
 - Complexity: ${state.contractComplexity}
 - Using Placeholders: ${usingPlaceholders}
 - Client Profile: ${JSON.stringify(userProfile || {}, null, 2)}
@@ -986,7 +986,7 @@ SECTION TO DRAFT:
 
 INSTRUCTIONS:
 1. Draft ONLY this section with comprehensive detail
-2. Use precise legal language appropriate for ${state.jurisdiction || "United States"}
+2. Use precise legal language appropriate for ${state.jurisdiction || "united-states"}
 3. Include all necessary sub-clauses and provisions
 4. ${usingPlaceholders ? 
    "Use [PLACEHOLDER NAME] format for missing information - use ALL CAPS in brackets" : 
@@ -1122,7 +1122,7 @@ I've successfully created your comprehensive ${state.contractType} agreement usi
 • ${finalContract.length} characters of professional legal content
 • ${plannedSections.length} expertly crafted sections
 • ${editableFields.length} customizable fields
-• Full ${state.jurisdiction || "United States"} legal compliance
+• Full ${state.jurisdiction || "united-states"} legal compliance
 
 Your contract is now ready for final legal review and quality assessment by our senior legal team.`)],
     };

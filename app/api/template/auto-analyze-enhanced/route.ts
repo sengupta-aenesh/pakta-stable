@@ -5,6 +5,7 @@ import { summarizeTemplate, identifyTemplateRisks, extractTemplateFields, compar
 import { templatesApi } from '@/lib/supabase-client'
 import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 import { jurisdictionResearch, JurisdictionContext } from '@/lib/services/jurisdiction-research'
+import { normalizeJurisdiction } from '@/lib/jurisdiction-utils'
 
 export const POST = apiErrorHandler(async (request: NextRequest) => {
   const user = await getCurrentUser()
@@ -78,7 +79,7 @@ async function performEnhancedTemplateAnalysis(templateId: string, template: any
     
     if (userProfile.primary_jurisdiction || userProfile.additional_jurisdictions?.length > 0) {
       jurisdictionContext = {
-        primary: userProfile.primary_jurisdiction || 'United States',
+        primary: userProfile.primary_jurisdiction || 'united-states',
         additional: Array.isArray(userProfile.additional_jurisdictions) 
           ? userProfile.additional_jurisdictions.map(j => 
               typeof j === 'string' 

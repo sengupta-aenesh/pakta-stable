@@ -23,7 +23,7 @@ User Request: "${userRequest}"
 Analyze and determine:
 1. Contract Type (e.g., employment, service agreement, NDA, rental, partnership, etc.)
 2. Contract Complexity (simple/moderate/complex)
-3. Jurisdiction (if mentioned, otherwise default to "United States")
+3. Jurisdiction (if mentioned, otherwise default to "united-states")
 4. Key Requirements mentioned in the request
 5. Missing information that would be needed
 

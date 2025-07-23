@@ -582,7 +582,7 @@ function ProAccessStep({ onNext, user }: { onNext: (contractId?: string) => void
         organizationType: 'Corporation', // placeholder
         industry: 'Technology', // placeholder
         companySize: '11-50 employees', // placeholder
-        primaryJurisdiction: 'United States', // placeholder
+        primaryJurisdiction: 'united-states', // placeholder
         additionalJurisdictions: [], // placeholder
         regulatoryRequirements: [], // placeholder
         riskTolerance: 'medium', // placeholder

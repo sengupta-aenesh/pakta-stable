@@ -7,6 +7,7 @@ import OpenAI from 'openai'
 import type { ContractSummary, RiskAnalysis, RiskFactor } from './types'
 import { JurisdictionContext, jurisdictionResearch } from './services/jurisdiction-research'
 import { UserProfile } from './services/subscription'
+import { normalizeJurisdiction, getJurisdictionName } from './jurisdiction-utils'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -258,9 +259,9 @@ export async function performJurisdictionAwareAnalysis(
   risks?: RiskAnalysis
   jurisdictionResearch?: string
 }> {
-  // Prepare jurisdiction context
+  // Prepare jurisdiction context with normalization
   const jurisdictions: JurisdictionContext = {
-    primary: userProfile.primary_jurisdiction || 'United States',
+    primary: normalizeJurisdiction(userProfile.primary_jurisdiction),
     additional: Array.isArray(userProfile.additional_jurisdictions) 
       ? userProfile.additional_jurisdictions.map(j => 
           typeof j === 'string' 

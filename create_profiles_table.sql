@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS organization_type TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS industry TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS company_size TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS primary_jurisdiction TEXT DEFAULT 'United States';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS primary_jurisdiction TEXT DEFAULT 'united-states';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS additional_jurisdictions TEXT[] DEFAULT '{}';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS regulatory_requirements TEXT[] DEFAULT '{}';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS risk_tolerance TEXT DEFAULT 'medium';

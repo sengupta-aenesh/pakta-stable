@@ -40,7 +40,7 @@ export const templateDiscoveryTool = new DynamicTool({
           extractedClauses: generateExtractedClauses(contractType),
           validationStatus: qualityScore > 85 ? 'validated' : 'pending',
           legalCompliance: {
-            jurisdictionSpecific: jurisdiction !== "United States",
+            jurisdictionSpecific: jurisdiction !== "united-states",
             regulatoryCompliance: true,
             industryStandards: true,
             recentUpdates: true

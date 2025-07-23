@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { UserProfile } from '@/lib/services/subscription'
 import { Button } from '@/components/ui'
 import SingleJurisdictionSelector from './single-jurisdiction-selector'
+import { jurisdictionData } from '@/lib/jurisdiction-data'
 import styles from './profile-components.module.css'
 
 interface JurisdictionSettingsProps {
@@ -22,7 +23,23 @@ interface AdditionalJurisdiction {
 }
 
 export default function JurisdictionSettings({ profile, onUpdate, saving }: JurisdictionSettingsProps) {
-  const [primaryJurisdiction, setPrimaryJurisdiction] = useState(profile.primary_jurisdiction || 'united-states')
+  // Convert display name to key if needed
+  const getJurisdictionKey = (value: string | undefined): string => {
+    if (!value) return 'united-states'
+    
+    // Check if it's already a key
+    if (jurisdictionData[value]) return value
+    
+    // Otherwise, find the key by matching the name
+    const entry = Object.entries(jurisdictionData).find(
+      ([_, data]) => data.name === value
+    )
+    return entry ? entry[0] : 'united-states'
+  }
+  
+  const [primaryJurisdiction, setPrimaryJurisdiction] = useState(
+    getJurisdictionKey(profile.primary_jurisdiction)
+  )
   const [additionalJurisdictions, setAdditionalJurisdictions] = useState<AdditionalJurisdiction[]>(
     Array.isArray(profile.additional_jurisdictions) 
       ? profile.additional_jurisdictions.map(j => 
@@ -36,6 +53,7 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
   const [hasChanges, setHasChanges] = useState(false)
 
   const handleSave = async () => {
+    // Save the key format to database for consistency
     await onUpdate({
       primary_jurisdiction: primaryJurisdiction,
       additional_jurisdictions: additionalJurisdictions,
@@ -166,7 +184,7 @@ export default function JurisdictionSettings({ profile, onUpdate, saving }: Juri
           <Button
             variant="ghost"
             onClick={() => {
-              setPrimaryJurisdiction(profile.primary_jurisdiction || 'united-states')
+              setPrimaryJurisdiction(getJurisdictionKey(profile.primary_jurisdiction))
               setAdditionalJurisdictions(
                 Array.isArray(profile.additional_jurisdictions) 
                   ? profile.additional_jurisdictions.map(j => 
