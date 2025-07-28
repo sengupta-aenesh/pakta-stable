@@ -203,8 +203,9 @@ export default function TemplateAnalysis({
             analyzing: analyzing 
           })
           
-          // Stop polling immediately on completion
-          if (analyzing) {
+          // Only handle completion if we're actually analyzing
+          // This prevents double-completion from stale status checks
+          if (analyzing && statusData.templateId === template?.id) {
             // Complete the analysis immediately
             clearProgressSimulation()
             setAnalysisProgress(100)
@@ -225,6 +226,11 @@ export default function TemplateAnalysis({
               })
               console.log('📤 Calling onTemplateUpdate with refreshed template')
               onTemplateUpdate(refreshedTemplate)
+              
+              // Force reload variables after analysis completes
+              setTimeout(() => {
+                loadTemplateVariables()
+              }, 100)
             } else {
               console.error('Failed to refresh template data')
               // Fallback to basic update
@@ -780,17 +786,21 @@ export default function TemplateAnalysis({
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null
     let timeoutFallback: NodeJS.Timeout | null = null
+    let initialDelay: NodeJS.Timeout | null = null
     
     if (analyzing) {
       console.log('📊 Setting up analysis progress polling...')
-      // Start checking immediately
-      checkAnalysisProgress()
-      
-      // Then poll every 1.5 seconds
-      pollInterval = setInterval(() => {
-        console.log('⏰ Polling for analysis progress...')
+      // IMPORTANT: Don't check immediately - wait for API to reset status
+      // Start polling after a delay to allow API to reset status
+      initialDelay = setTimeout(() => {
         checkAnalysisProgress()
-      }, 1500) // Poll every 1.5 seconds
+        
+        // Then poll every 1.5 seconds
+        pollInterval = setInterval(() => {
+          console.log('⏰ Polling for analysis progress...')
+          checkAnalysisProgress()
+        }, 1500) // Poll every 1.5 seconds
+      }, 2000) // Wait 2 seconds before first check
       
       // Set a fallback timeout to ensure analysis completes within 2 minutes
       timeoutFallback = setTimeout(() => {
@@ -806,6 +816,9 @@ export default function TemplateAnalysis({
     }
     
     return () => {
+      if (initialDelay) {
+        clearTimeout(initialDelay)
+      }
       if (pollInterval) {
         console.log('🧹 Clearing analysis polling interval')
         clearInterval(pollInterval)

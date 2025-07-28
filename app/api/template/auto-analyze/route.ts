@@ -73,14 +73,21 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
       })
     }
     
-    // If forceRefresh is true, reset the analysis status
+    // If forceRefresh is true, reset the analysis status and clear cache
     if (forceRefresh) {
-      console.log('🔄 Force refresh requested, resetting analysis status')
-      await updateAnalysisStatus(templateId, 'pending', 0)
+      console.log('🔄 Force refresh requested, resetting analysis status and clearing cache')
+      await templatesApi.update(templateId, {
+        analysis_status: 'pending',
+        analysis_progress: 0,
+        analysis_cache: {},
+        analysis_error: null
+      })
+      // Re-fetch template to get updated status
+      template = await templatesApi.getById(templateId)
     }
 
     // Check if analysis is currently in progress
-    if (template.analysis_status === 'in_progress') {
+    if (!forceRefresh && template.analysis_status === 'in_progress') {
       return NextResponse.json({ 
         message: 'Analysis already in progress',
         progress: template.analysis_progress || 0,
@@ -91,20 +98,21 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     // Start the analysis process
     await updateAnalysisStatus(templateId, 'in_progress', 5)
     
+    // Start analysis in background
+    performSequentialTemplateAnalysis(templateId, template, user.id)
+      .then(result => {
+        console.log('✅ Template analysis completed successfully')
+      })
+      .catch(error => {
+        console.error('❌ Template analysis failed:', error)
+        updateAnalysisStatus(templateId, 'failed', 0, error.message)
+      })
+    
     // Return immediately with in_progress status
-    // The actual analysis will continue in the background
-    const analysisPromise = performSequentialTemplateAnalysis(templateId, template, user.id)
-    
-    // Don't await - let it run in background
-    analysisPromise.catch(error => {
-      console.error('Background analysis failed:', error)
-      updateAnalysisStatus(templateId, 'failed', 0, error.message)
-    })
-    
     return NextResponse.json({
       status: 'in_progress',
       progress: 5,
-      message: 'Template analysis started'
+      message: 'Template analysis started successfully'
     })
 
   } catch (error) {
@@ -257,15 +265,9 @@ export async function performSequentialTemplateAnalysis(templateId: string, temp
       success: true,
       progress: 100,
       status: 'complete',
-      message: `Template analysis completed successfully - template fields, risks${duplicatesFiltered > 0 ? ` (${duplicatesFiltered} duplicates filtered)` : ''}, and version control analyzed`,
+      message: 'Template analysis completed successfully - template fields and variables analyzed',
       results: {
         summary: summaryResult,
-        risks: {
-          ...riskResult,
-          risks: finalRisks,
-          smartFilteringApplied: resolvedRisks.length > 0,
-          duplicatesFiltered: duplicatesFiltered
-        },
         complete: completeResult
       }
     }
