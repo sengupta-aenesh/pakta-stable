@@ -1393,3 +1393,96 @@
 .analyzeButton {
   /* Additional styling for analyze button if needed */
 }
+
+/* Version Creation Section */
+.versionCreation {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+}
+
+.versionCreationHeader {
+  margin-bottom: 1.5rem;
+}
+
+.versionCreationTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 0.5rem 0;
+}
+
+.versionCreationDescription {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin: 0;
+}
+
+.versionCreationForm {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.versionNameInput {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: white;
+  color: #111827;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.versionNameInput:focus {
+  outline: none;
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+}
+
+.versionNameInput::placeholder {
+  color: #9CA3AF;
+}
+
+.createVersionButton {
+  padding: 0.75rem 1.5rem;
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.createVersionButton:hover:not(:disabled) {
+  background: #1F2937;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.createVersionButton:disabled {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Mobile responsive version creation */
+@media (max-width: 640px) {
+  .versionCreationForm {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .versionNameInput,
+  .createVersionButton {
+    width: 100%;
+  }
+}

@@ -370,19 +370,33 @@ export default function TemplateAnalysisSimple({
                 </div>
 
                 <div className={styles.versionCreation}>
-                  <input
-                    type="text"
-                    className={styles.versionNameInput}
-                    placeholder="Enter version name (e.g., 'Acme Corp Agreement')"
-                    value={versionName}
-                    onChange={(e) => setVersionName(e.target.value)}
-                  />
-                  <Button
-                    onClick={handleCreateVersion}
-                    disabled={!versionName.trim()}
-                  >
-                    Create Template Version
-                  </Button>
+                  <div className={styles.versionCreationHeader}>
+                    <h3 className={styles.versionCreationTitle}>Create Template Version</h3>
+                    <p className={styles.versionCreationDescription}>
+                      Give this version a name to identify it later
+                    </p>
+                  </div>
+                  <div className={styles.versionCreationForm}>
+                    <input
+                      type="text"
+                      className={styles.versionNameInput}
+                      placeholder="e.g., 'Acme Corp Service Agreement' or 'Q1 2024 Template'"
+                      value={versionName}
+                      onChange={(e) => setVersionName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && versionName.trim()) {
+                          handleCreateVersion()
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleCreateVersion}
+                      disabled={!versionName.trim()}
+                      className={styles.createVersionButton}
+                    >
+                      Create Version
+                    </Button>
+                  </div>
                 </div>
               </>
             ) : (
