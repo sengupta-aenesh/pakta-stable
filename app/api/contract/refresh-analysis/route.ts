@@ -48,13 +48,13 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
       analysis_cache: {} // Clear existing cache to force refresh
     })
 
-    // Import the analysis function to avoid auth header issues
-    const { performSequentialAnalysis } = await import('../auto-analyze/route')
+    // Import the enhanced analysis function with superior risk detection
+    const { performEnhancedSequentialAnalysis } = await import('../auto-analyze-enhanced/route')
     
-    console.log('🚀 Starting background analysis for contract:', contractId)
+    console.log('🚀 Starting enhanced background analysis for contract:', contractId)
     
-    // Start the analysis in the background (don't await to avoid timeout)  
-    performSequentialAnalysis(contractId, contract.content, user.id).catch(error => {
+    // Start the enhanced analysis in the background (don't await to avoid timeout)  
+    performEnhancedSequentialAnalysis(contractId, contract.content, user.id).catch(error => {
       console.error('❌ Background analysis failed for contract:', contractId, error)
       // Update contract status to failed
       contractsApi.update(contractId, {
