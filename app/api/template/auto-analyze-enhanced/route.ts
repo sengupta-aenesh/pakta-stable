@@ -39,6 +39,12 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
         status: 'complete'
       })
     }
+    
+    // If forceRefresh is true, reset the analysis status
+    if (forceRefresh) {
+      console.log('🔄 Force refresh requested, resetting analysis status')
+      await updateTemplateAnalysisStatus(templateId, 'pending', 0)
+    }
 
     // Check if analysis is currently in progress
     if (template.analysis_status === 'in_progress') {
@@ -50,11 +56,23 @@ export const POST = apiErrorHandler(async (request: NextRequest) => {
     }
 
     // Start the analysis process
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 0)
+    await updateTemplateAnalysisStatus(templateId, 'in_progress', 5)
     
-    const analysisResult = await performEnhancedTemplateAnalysis(templateId, template, user.id)
+    // Return immediately with in_progress status
+    // The actual analysis will continue in the background
+    const analysisPromise = performEnhancedTemplateAnalysis(templateId, template, user.id)
     
-    return NextResponse.json(analysisResult)
+    // Don't await - let it run in background
+    analysisPromise.catch(error => {
+      console.error('Background analysis failed:', error)
+      updateTemplateAnalysisStatus(templateId, 'failed', 0, error.message)
+    })
+    
+    return NextResponse.json({
+      status: 'in_progress',
+      progress: 5,
+      message: 'Template analysis started'
+    })
 
   } catch (error) {
     console.error('Template auto-analysis error:', error)
