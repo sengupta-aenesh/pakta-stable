@@ -322,14 +322,50 @@ export default function TemplateAnalysis({
       // Check if the result has the expected structure
       console.log('Analysis API response:', result)
       
-      if (result.success || result.status === 'complete' || result.status === 'in_progress') {
-        // Don't start polling immediately - let the progress simulation run
+      if (result.status === 'complete') {
+        // Analysis completed immediately (synchronous processing)
+        console.log('🎉 Analysis completed immediately!', result)
+        
+        // Clear any progress simulation
+        clearProgressSimulation()
+        setAnalysisProgress(100)
+        setAnalyzing(false)
+        setAnalysisStartTime(null)
+        
+        // Refresh template data immediately
+        try {
+          console.log('🔄 Refreshing template data after immediate completion...')
+          const refreshResponse = await fetch(`/api/template/${template.id}`)
+          if (refreshResponse.ok) {
+            const refreshedTemplate = await refreshResponse.json()
+            console.log('✅ Template data refreshed:', {
+              id: refreshedTemplate.id,
+              status: refreshedTemplate.analysis_status,
+              hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
+              variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
+            })
+            onTemplateUpdate(refreshedTemplate)
+            
+            // Force reload variables after analysis completes
+            setTimeout(() => {
+              loadTemplateVariables()
+            }, 100)
+          }
+        } catch (error) {
+          console.error('Error refreshing template after immediate completion:', error)
+        }
+        
+        onToast('Template analysis completed successfully!', 'success')
+        
+      } else if (result.status === 'in_progress') {
+        // Analysis will complete asynchronously - let polling handle it
         console.log('✅ Analysis started successfully', {
-          success: result.success,
           status: result.status,
           message: result.message
         })
         // The polling will be handled by the useEffect that watches 'analyzing' state
+      } else if (result.status === 'failed') {
+        throw new Error(result.error || 'Analysis failed')
       } else {
         throw new Error(result.message || result.error || 'Analysis failed')
       }
@@ -790,17 +826,14 @@ export default function TemplateAnalysis({
     
     if (analyzing) {
       console.log('📊 Setting up analysis progress polling...')
-      // IMPORTANT: Don't check immediately - wait for API to reset status
-      // Start polling after a delay to allow API to reset status
-      initialDelay = setTimeout(() => {
+      // Check immediately for synchronous completion
+      checkAnalysisProgress()
+      
+      // Then poll every 1.5 seconds
+      pollInterval = setInterval(() => {
+        console.log('⏰ Polling for analysis progress...')
         checkAnalysisProgress()
-        
-        // Then poll every 1.5 seconds
-        pollInterval = setInterval(() => {
-          console.log('⏰ Polling for analysis progress...')
-          checkAnalysisProgress()
-        }, 1500) // Poll every 1.5 seconds
-      }, 2000) // Wait 2 seconds before first check
+      }, 1500) // Poll every 1.5 seconds
       
       // Set a fallback timeout to ensure analysis completes within 2 minutes
       timeoutFallback = setTimeout(() => {

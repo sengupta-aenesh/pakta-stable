@@ -9,7 +9,7 @@ import { Template, templatesApi, TemplateFolder, templateFoldersApi } from '@/li
 import { getCurrentUser } from '@/lib/auth-client'
 import { Button, TopNavigation } from '@/components/ui'
 import UnifiedSidebar from '@/components/folders/unified-sidebar'
-import TemplateAnalysis from '@/components/templates/template-analysis'
+import TemplateAnalysisSimple from '@/components/templates/template-analysis-simple'
 import InteractiveTemplateEditor from '@/components/templates/interactive-template-editor'
 import TrialStatus from '@/components/subscription/trial-status'
 import { useEnhancedNotifications } from '@/components/notifications/notification.hooks'
@@ -214,8 +214,7 @@ function TemplateDashboardContent() {
       await templatesApi.update(selectedTemplate.id, { content: safeContent })
       // Update the local template state
       setSelectedTemplate(prev => prev ? { ...prev, content: safeContent } : null)
-      // Clear risks and variables cache when content changes as they may no longer be accurate
-      setTemplateRisks([])
+      // Clear variables cache when content changes as they may no longer be accurate
       setTemplateVariables([])
       notifications.success('Success', 'Template updated successfully')
     } catch (error) {
@@ -411,7 +410,7 @@ function TemplateDashboardContent() {
 
               {/* Analysis Panel */}
               <div className={`${styles.analysisPanel} ${mobileView === 'analysis' ? styles.mobileVisible : styles.mobileHidden}`}>
-                <TemplateAnalysis
+                <TemplateAnalysisSimple
                   template={selectedTemplate}
                   onTemplateUpdate={(updatedTemplate) => {
                     console.log('📥 Template dashboard received updated template:', {

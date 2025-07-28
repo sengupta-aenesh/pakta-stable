@@ -1,226 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth-server'
-import { apiErrorHandler } from '@/lib/api-error-handler'
-import { extractTemplateFields } from '@/lib/openai'
-import { summarizeTemplateWithJurisdiction, type AnalysisContext } from '@/lib/openai-enhanced'
-import { templatesApi } from '@/lib/supabase'
-import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
-import { jurisdictionResearch, JurisdictionContext } from '@/lib/services/jurisdiction-research'
-import { normalizeJurisdiction } from '@/lib/jurisdiction-utils'
 
-export const POST = apiErrorHandler(async (request: NextRequest) => {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { templateId, forceRefresh = false } = await request.json()
-
-  if (!templateId) {
-    return NextResponse.json({ error: 'Template ID is required' }, { status: 400 })
-  }
-
-  try {
-    // Get template details
-    const template = await templatesApi.getById(templateId)
-    if (!template) {
-      return NextResponse.json({ error: 'Template not found' }, { status: 404 })
-    }
-
-    if (!template.content || template.content.trim().length === 0) {
-      return NextResponse.json({ error: 'Template has no content to analyze' }, { status: 400 })
-    }
-
-    // Check if analysis is already complete and not forcing refresh
-    if (!forceRefresh && template.analysis_status === 'complete' && template.analysis_cache) {
-      return NextResponse.json({ 
-        message: 'Analysis already complete',
-        progress: 100,
-        status: 'complete'
-      })
-    }
-    
-    // If forceRefresh is true, reset the analysis status and clear cache
-    if (forceRefresh) {
-      console.log('🔄 Force refresh requested, resetting analysis status and clearing cache')
-      await templatesApi.update(templateId, {
-        analysis_status: 'pending',
-        analysis_progress: 0,
-        analysis_cache: {},
-        analysis_error: null
-      })
-      // Re-fetch template to get updated status
-      template = await templatesApi.getById(templateId)
-    }
-
-    // Check if analysis is currently in progress
-    if (!forceRefresh && template.analysis_status === 'in_progress') {
-      return NextResponse.json({ 
-        message: 'Analysis already in progress',
-        progress: template.analysis_progress || 0,
-        status: 'in_progress'
-      })
-    }
-
-    // Start the analysis process
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 5)
-    
-    // Start analysis in background
-    performEnhancedTemplateAnalysis(templateId, template, user.id)
-      .then(result => {
-        console.log('✅ Enhanced template analysis completed successfully')
-      })
-      .catch(error => {
-        console.error('❌ Enhanced template analysis failed:', error)
-        updateTemplateAnalysisStatus(templateId, 'failed', 0, error.message)
-      })
-    
-    // Return immediately with in_progress status
-    return NextResponse.json({
-      status: 'in_progress',
-      progress: 5,
-      message: 'Enhanced template analysis started successfully'
-    })
-
-  } catch (error) {
-    console.error('Template auto-analysis error:', error)
-    
-    // Update status to failed
-    await updateTemplateAnalysisStatus(templateId, 'failed', 0, (error as Error).message)
-    
-    throw error
-  }
-})
-
-export async function performEnhancedTemplateAnalysis(templateId: string, template: any, userId: string) {
-  try {
-    // Step 1: Fetch user profile for jurisdiction context
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 5, null, 'Loading jurisdiction settings...')
-    
-    const subscriptionService = new SubscriptionServiceServer()
-    const userProfile = await subscriptionService.getUserProfile(userId)
-    
-    // Prepare jurisdiction context
-    let jurisdictionContext: JurisdictionContext | null = null
-    let jurisdictionResearchText = ''
-    
-    if (userProfile.primary_jurisdiction || userProfile.additional_jurisdictions?.length > 0) {
-      jurisdictionContext = {
-        primary: userProfile.primary_jurisdiction || 'united-states',
-        additional: Array.isArray(userProfile.additional_jurisdictions) 
-          ? userProfile.additional_jurisdictions.map(j => 
-              typeof j === 'string' 
-                ? { code: j, name: j, purpose: 'general' }
-                : j as any
-            )
-          : []
-      }
-      
-      // Perform jurisdiction research for templates
-      await updateTemplateAnalysisStatus(templateId, 'in_progress', 10, null, 'Searching template jurisdiction requirements...')
-      const { research } = await jurisdictionResearch.researchJurisdictionRequirements(
-        jurisdictionContext,
-        'template',
-        template.content
-      )
-      jurisdictionResearchText = jurisdictionResearch.formatResearchForAI(research)
-    }
-
-    // Step 2: Summary Analysis (Progress: 10% -> 33%)
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 15, null, 'Analyzing template structure...')
-    
-    // Create analysis context for enhanced analysis
-    const analysisContext: AnalysisContext = {
-      userProfile,
-      jurisdictions: jurisdictionContext!,
-      jurisdictionResearch: jurisdictionResearchText
-    }
-    
-    const summaryResult = await summarizeTemplateWithJurisdiction(template.content, analysisContext)
-    
-    // Cache summary result
-    await templatesApi.updateAnalysisCache(templateId, 'summary', summaryResult)
-    await updateTemplateAnalysisStatus(templateId, 'summary_complete', 50, null, 'Summary analysis complete')
-
-    // Skip risk analysis - go directly to template fields extraction
-    // Step 3: Template Fields Extraction (Progress: 50% -> 90%)
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 75, null, 'Extracting template fields and variables...')
-    
-    const fieldsResult = await extractTemplateFields(template.content)
-    
-    // Cache fields result
-    await templatesApi.updateAnalysisCache(templateId, 'fields', fieldsResult)
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 90, null, 'Template fields extracted')
-
-    // Step 5: Normalize template content with detected variables
-    if (fieldsResult.detectedVariables && fieldsResult.detectedVariables.length > 0) {
-      await updateTemplateAnalysisStatus(templateId, 'in_progress', 95, null, 'Normalizing template variables...')
-      
-      let normalizedContent = template.content
-      
-      // Sort variables by position (descending) to replace from end to start
-      const sortedVariables = [...fieldsResult.detectedVariables].sort((a, b) => 
-        (b.occurrences[0]?.position || 0) - (a.occurrences[0]?.position || 0)
-      )
-      
-      // Replace each variable with standardized format
-      for (const variable of sortedVariables) {
-        const standardizedName = `{{${variable.name}}}`
-        
-        // Replace all occurrences
-        for (const occurrence of variable.occurrences) {
-          if (occurrence.position !== undefined && occurrence.length !== undefined) {
-            const before = normalizedContent.substring(0, occurrence.position)
-            const after = normalizedContent.substring(occurrence.position + occurrence.length)
-            normalizedContent = before + standardizedName + after
-          }
-        }
-      }
-      
-      // Update template content if it changed
-      if (normalizedContent !== template.content) {
-        await templatesApi.update(templateId, { 
-          content: normalizedContent 
-        })
-      }
-    }
-
-    // Mark analysis as complete
-    await updateTemplateAnalysisStatus(templateId, 'complete', 100, null, 'Analysis complete')
-
-    return { 
-      message: 'Analysis completed successfully',
-      progress: 100,
-      status: 'complete',
-      hadJurisdictionContext: !!jurisdictionResearchText
-    }
-
-  } catch (error) {
-    const errorMessage = (error as Error).message
-    console.error('Template analysis error:', errorMessage)
-    
-    await templatesApi.update(templateId, {
-      analysis_status: 'failed',
-      analysis_progress: 0,
-      analysis_error: errorMessage,
-      analysis_retry_count: (template.analysis_retry_count || 0) + 1
-    })
-    
-    throw error
-  }
-}
-
-async function updateTemplateAnalysisStatus(
-  templateId: string, 
-  status: string, 
-  progress: number, 
-  error?: string | null,
-  message?: string
-) {
-  await templatesApi.update(templateId, {
-    analysis_status: status,
-    analysis_progress: progress,
-    analysis_error: error,
-    last_analyzed_at: new Date().toISOString()
+// Redirect to the simplified analysis endpoint
+// Enhanced analysis is now handled within the simple endpoint
+export async function POST(request: NextRequest) {
+  console.log('🔄 Redirecting enhanced analysis to simplified template analysis')
+  
+  const body = await request.json()
+  
+  // Forward the request to the new simplified endpoint
+  const baseUrl = request.nextUrl.origin
+  const response = await fetch(`${baseUrl}/api/template/analyze-simple`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // Forward cookies for authentication
+      'Cookie': request.headers.get('cookie') || ''
+    },
+    body: JSON.stringify(body)
   })
+  
+  const data = await response.json()
+  
+  return NextResponse.json(data, { status: response.status })
 }
