@@ -71,13 +71,13 @@ export default function TemplateAnalysis({
     currentStepRef.current = 0
     
     const progressSteps = [
-      { step: 5, message: 'Analyzing template structure...', delay: 1500 },
-      { step: 15, message: 'Identifying template variables...', delay: 2000 },
-      { step: 30, message: 'Processing template content...', delay: 2000 },
-      { step: 45, message: 'Analyzing template structure...', delay: 2500 },
-      { step: 65, message: 'Analyzing template patterns...', delay: 2000 },
-      { step: 80, message: 'Finalizing analysis...', delay: 2000 },
-      { step: 90, message: 'Completing analysis...', delay: 1500 }
+      { step: 10, message: 'Starting template analysis...', delay: 1500 },
+      { step: 25, message: 'Analyzing template structure...', delay: 2000 },
+      { step: 40, message: 'Processing template content...', delay: 2000 },
+      { step: 55, message: 'Identifying template variables...', delay: 2500 },
+      { step: 70, message: 'Extracting template fields...', delay: 2000 },
+      { step: 85, message: 'Finalizing analysis...', delay: 2000 },
+      { step: 95, message: 'Completing analysis...', delay: 1500 }
     ]
     
     const simulateProgress = () => {
@@ -111,9 +111,9 @@ export default function TemplateAnalysis({
     
     // Start simulation with first progress update immediately
     console.log('📊 Starting progress simulation immediately')
-    setAnalysisProgress(5)
-    setCurrentProgressStep(5)
-    currentStepRef.current = 1 // Start at step 1 since we already set 5%
+    setAnalysisProgress(progressSteps[0].step)
+    setCurrentProgressStep(progressSteps[0].step)
+    currentStepRef.current = 1 // Start at step 1 since we already set first step
     
     // Schedule the second step
     const nextTimeout = setTimeout(() => {
@@ -191,16 +191,12 @@ export default function TemplateAnalysis({
         // Check if analysis is still running
         const isAnalysisRunning = statusData.status === 'in_progress' || 
                                  statusData.status === 'pending' || 
-                                 statusData.status === 'summary_complete' || 
                                  statusData.status === 'summary_complete'
         
         if (isAnalysisRunning && template?.id === statusData.templateId) {
-          // Continue checking progress more frequently
-          setTimeout(() => {
-            if (template?.id === statusData.templateId) {
-              checkAnalysisProgress()
-            }
-          }, 1500) // Reduced from 2000ms for more responsive updates
+          // Analysis is still running, don't do anything here
+          // The polling interval will handle the next check
+          console.log('📊 Analysis still in progress, continuing to poll...')
         } else if (statusData.status === 'complete') {
           console.log('🎉 Template analysis completed!', { 
             toastShown: completionToastShownRef.current, 
@@ -245,24 +241,16 @@ export default function TemplateAnalysis({
             // Show completion notification only once
             if (!completionToastShownRef.current) {
               completionToastShownRef.current = true // Mark as shown
-              const duplicatesFiltered = statusData.riskData?.duplicatesFiltered || 0
-              const smartFilteringApplied = statusData.riskData?.smartFilteringApplied || false
-              const totalRisks = statusData.riskData?.totalRisksFound || 0
               
-              // Use the new notification system for better UX
+              // Simple completion notification for templates
               const notification = notificationHelpers.analysisCompleted(
                 'template',
                 template.id,
-                totalRisks,
-                smartFilteringApplied && duplicatesFiltered > 0 ? duplicatesFiltered : undefined
+                0,  // No risks for templates
+                undefined
               )
               
-              // For now, still call the old toast for backward compatibility
-              if (smartFilteringApplied && duplicatesFiltered > 0) {
-                onToast(`Template analysis completed! 🎯 Smart filtering removed ${duplicatesFiltered} duplicate${duplicatesFiltered !== 1 ? 's' : ''} already resolved.`, 'success')
-              } else {
-                onToast('Template analysis completed successfully!', 'success')
-              }
+              onToast('Template analysis completed successfully!', 'success')
             }
           }
           return // Stop execution here to prevent further polling
@@ -914,13 +902,13 @@ export default function TemplateAnalysis({
             {analysisProgress}% complete
             {analyzing && (
               <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', fontStyle: 'italic' }}>
-                {analysisProgress <= 5 ? 'Analyzing template structure...' :
-                 analysisProgress <= 15 ? 'Identifying template variables...' :
-                 analysisProgress <= 30 ? 'Processing template content...' :
-                 analysisProgress <= 45 ? 'Analyzing template structure...' :
-                 analysisProgress <= 65 ? 'Analyzing template patterns...' :
-                 analysisProgress <= 80 ? 'Finalizing analysis...' :
-                 analysisProgress <= 90 ? 'Completing analysis...' :
+                {analysisProgress <= 10 ? 'Starting template analysis...' :
+                 analysisProgress <= 25 ? 'Analyzing template structure...' :
+                 analysisProgress <= 40 ? 'Processing template content...' :
+                 analysisProgress <= 55 ? 'Identifying template variables...' :
+                 analysisProgress <= 70 ? 'Extracting template fields...' :
+                 analysisProgress <= 85 ? 'Finalizing analysis...' :
+                 analysisProgress <= 95 ? 'Completing analysis...' :
                  analysisProgress < 100 ? 'Almost done...' : 'Complete!'}
               </div>
             )}
