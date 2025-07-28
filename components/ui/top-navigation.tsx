@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 import NotificationBell from '../notifications/NotificationBell'
 import ProfileMenu from './profile-menu'
 import { AuthUser } from '@/lib/auth-client'
@@ -25,6 +26,8 @@ export default function TopNavigation({
 }: TopNavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const [isAppsOpen, setIsAppsOpen] = useState(false)
+  const appsRef = useRef<HTMLDivElement>(null)
 
   const navItems = [
     {
@@ -35,7 +38,10 @@ export default function TopNavigation({
         </svg>
       ),
       label: 'Home',
-      onClick: () => router.push('/folders'),
+      onClick: () => {
+        router.push('/folders')
+        setIsAppsOpen(false)
+      },
       active: currentPage === 'folders'
     },
     {
@@ -45,8 +51,11 @@ export default function TopNavigation({
           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
         </svg>
       ),
-      label: 'Write',
-      onClick: () => router.push('/contract-creator'),
+      label: 'Contract Writer',
+      onClick: () => {
+        router.push('/contract-creator')
+        setIsAppsOpen(false)
+      },
       active: currentPage === 'create'
     },
     {
@@ -56,8 +65,11 @@ export default function TopNavigation({
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8Z"/>
         </svg>
       ),
-      label: 'Analysis',
-      onClick: () => router.push('/dashboard'),
+      label: 'Contract Analysis',
+      onClick: () => {
+        router.push('/dashboard')
+        setIsAppsOpen(false)
+      },
       active: currentPage === 'analysis'
     },
     {
@@ -70,11 +82,31 @@ export default function TopNavigation({
           <path d="M7 15h6"/>
         </svg>
       ),
-      label: 'Templates',
-      onClick: () => router.push('/template-dashboard'),
+      label: 'Template Manager',
+      onClick: () => {
+        router.push('/template-dashboard')
+        setIsAppsOpen(false)
+      },
       active: currentPage === 'template-dashboard'
     }
   ]
+
+  // Get current active app label
+  const activeApp = navItems.find(item => item.active)?.label || 'Apps'
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (appsRef.current && !appsRef.current.contains(event.target as Node)) {
+        setIsAppsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   return (
     <div className={styles.topNav}>
@@ -105,21 +137,59 @@ export default function TopNavigation({
           )}
         </div>
 
-        {/* Right side - navigation icons and notifications */}
+        {/* Right side - Apps dropdown, notifications and profile */}
         <div className={styles.navRight}>
-          {navItems.map((item) => (
+          {/* Apps Dropdown */}
+          <div className={styles.appsDropdown} ref={appsRef}>
             <button
-              key={item.id}
-              onClick={item.onClick}
-              className={`${styles.navItem} ${item.active ? styles.active : ''}`}
-              title={item.label}
+              onClick={() => setIsAppsOpen(!isAppsOpen)}
+              className={`${styles.appsButton} ${isAppsOpen ? styles.active : ''}`}
+              title="Apps"
             >
-              <div className={styles.navIcon}>
-                {item.icon}
+              <div className={styles.appsIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" rx="1" ry="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1" ry="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1" ry="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1" ry="1"/>
+                </svg>
               </div>
-              <span className={styles.navLabel}>{item.label}</span>
+              <span className={styles.appsLabel}>{activeApp}</span>
+              <svg 
+                className={`${styles.chevron} ${isAppsOpen ? styles.chevronUp : ''}`} 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </button>
-          ))}
+            
+            {isAppsOpen && (
+              <div className={styles.appsMenu}>
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={item.onClick}
+                    className={`${styles.appsMenuItem} ${item.active ? styles.active : ''}`}
+                  >
+                    <div className={styles.appsMenuIcon}>
+                      {item.icon}
+                    </div>
+                    <span className={styles.appsMenuLabel}>{item.label}</span>
+                    {item.active && (
+                      <svg className={styles.checkmark} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           
           {/* Notification Bell */}
           <div className={styles.notificationWrapper}>
