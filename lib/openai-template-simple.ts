@@ -4,6 +4,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+// Check if API key is configured
+if (!process.env.OPENAI_API_KEY) {
+  console.error('⚠️ OPENAI_API_KEY environment variable is not set!')
+}
+
 export interface TemplateVariable {
   id: string
   label: string
@@ -32,11 +37,14 @@ const TEMPLATE_ANALYSIS_PROMPT = `You are an expert template analyst. Analyze th
 1. Provide a brief summary of what this template is for
 2. Identify ALL variables/placeholders that need to be filled in
 
-Look for patterns like:
-- [Company_Name], [Date], [Amount], etc.
-- Blanks or underscores: ______
-- Placeholders: {{name}}, \${variable}
-- Any text that clearly needs to be replaced
+IMPORTANT: Look for these specific patterns:
+- Square brackets: [Company Name], [Date], [Amount], [Service Provider Name], etc.
+- Underscores: ______ (blanks to be filled)
+- Curly braces: {{name}}, {variable}
+- Dollar syntax: \${variable}
+- Any placeholder text that clearly needs customization
+
+CRITICAL: Find EVERY instance of square brackets [like this] - these are template variables!
 
 For each variable found, track ALL occurrences with their exact position.
 
@@ -68,6 +76,9 @@ Respond with this exact JSON structure:
 
 export async function analyzeTemplate(content: string): Promise<TemplateAnalysisResult> {
   console.log('🚀 Starting simplified template analysis, content length:', content.length)
+  
+  // Log first 200 characters of content to verify we're getting actual template content
+  console.log('📝 Template preview:', content.substring(0, 200) + '...')
   
   try {
     // For very large templates, we need to be smart about what we send
@@ -101,6 +112,7 @@ export async function analyzeTemplate(content: string): Promise<TemplateAnalysis
       }
     }
     
+    console.log('🤖 Calling OpenAI API...')
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -110,14 +122,28 @@ export async function analyzeTemplate(content: string): Promise<TemplateAnalysis
         },
         {
           role: "user",
-          content: `Analyze this template and identify ALL variables:\n\n${analysisContent}`
+          content: `Analyze this template and identify ALL variables that need to be filled in.
+
+EXAMPLE: In text like "This Agreement is entered into on [Date] between [Company Name]", you should identify:
+- Variable: "Date" (from [Date])
+- Variable: "Company Name" (from [Company Name])
+
+Find ALL such variables in square brackets [like this] or other placeholder formats.
+
+TEMPLATE TO ANALYZE:
+${analysisContent}`
         }
       ],
       response_format: { type: "json_object" },
       temperature: 0.3, // Lower temperature for more consistent results
     })
     
-    const result = JSON.parse(response.choices[0].message.content || '{}')
+    console.log('🎉 OpenAI API response received')
+    
+    const rawContent = response.choices[0].message.content || '{}'
+    console.log('📝 Raw AI response:', rawContent.substring(0, 500) + '...')
+    
+    const result = JSON.parse(rawContent)
     
     // If we used partial content, we need to find actual positions in full content
     if (isPartial && result.variables) {
@@ -160,7 +186,8 @@ export async function analyzeTemplate(content: string): Promise<TemplateAnalysis
     
     console.log('✅ Template analysis complete:', {
       variableCount: result.variables?.length || 0,
-      templateType: result.summary?.templateType
+      templateType: result.summary?.templateType,
+      variables: result.variables?.map(v => ({ label: v.label, occurrences: v.occurrences?.length || 0 }))
     })
     
     return result as TemplateAnalysisResult

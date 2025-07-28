@@ -39,18 +39,37 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    // Update status to analyzing
+    // If force refresh, clear the cache first
+    if (forceRefresh) {
+      console.log('🔄 Force refresh requested, clearing cache...')
+      await templatesApi.update(templateId, {
+        analysis_cache: null,
+        analysis_status: 'pending',
+        analysis_progress: 0
+      })
+    }
+    
+    // Update status to in_progress
     await templatesApi.update(templateId, {
-      analysis_status: 'analyzing',
+      analysis_status: 'in_progress',
       analysis_progress: 10,
       analysis_error: null
     })
     
     try {
       console.log('🔍 Starting template analysis...')
+      console.log('Template details:', {
+        id: templateId,
+        contentLength: template.content.length,
+        hasContent: !!template.content
+      })
       
       // Perform the analysis
       const analysisResult = await analyzeTemplate(template.content)
+      console.log('🎯 Analysis result received:', {
+        hasVariables: analysisResult.variables?.length > 0,
+        variableCount: analysisResult.variables?.length || 0
+      })
       
       // Normalize the template content if variables were found
       let normalizedContent = template.content
@@ -97,16 +116,21 @@ export async function POST(request: NextRequest) {
         last_analyzed_at: new Date().toISOString()
       })
       
-      console.log('✅ Template analysis complete')
+      console.log('✅ Template analysis complete, variables detected:', formattedCache.complete.missingInfo.length)
       
       return NextResponse.json({
         status: 'complete',
         cached: false,
-        data: formattedCache
+        data: formattedCache,
+        variableCount: formattedCache.complete.missingInfo.length
       })
       
     } catch (analysisError) {
       console.error('❌ Analysis failed:', analysisError)
+      console.error('Error details:', {
+        message: (analysisError as Error).message,
+        stack: (analysisError as Error).stack
+      })
       
       // Update status to failed
       await templatesApi.update(templateId, {
