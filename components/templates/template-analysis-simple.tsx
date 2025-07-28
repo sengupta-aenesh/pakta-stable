@@ -138,7 +138,7 @@ export default function TemplateAnalysisSimple({
     setShowOccurrencesModal(true)
   }
 
-  const handleOccurrenceClick = (occurrence: any) => {
+  const handleOccurrenceClick = (occurrence: any, occurrenceIndex: number) => {
     if (!occurrence) return
     
     // Close the modal immediately for better UX
@@ -153,28 +153,65 @@ export default function TemplateAnalysisSimple({
         return
       }
       
-      // Create a temporary highlight element for this occurrence
+      // Get the text we're looking for
+      // If the template has been normalized, the text might be in {{Variable_Name}} format
+      const searchText = occurrence.text || `{{${selectedVariable.label.replace(/\s+/g, '_')}}}`
+      if (!searchText) {
+        onToast('No text to search for', 'error')
+        return
+      }
+      
+      console.log('🔍 Searching for occurrence:', { 
+        text: searchText, 
+        index: occurrenceIndex,
+        position: occurrence.position 
+      })
+      
+      // Get all the text content from the editor to find exact positions
+      const editorText = templateEditor.textContent || ''
+      console.log('📝 Editor text preview:', editorText.substring(0, 200) + '...')
+      
+      // Find all occurrences of the search text
+      const allMatches: Array<{ index: number }> = []
+      let searchIndex = 0
+      while (searchIndex < editorText.length) {
+        const foundIndex = editorText.indexOf(searchText, searchIndex)
+        if (foundIndex === -1) break
+        allMatches.push({ index: foundIndex })
+        searchIndex = foundIndex + 1
+      }
+      
+      console.log(`Found ${allMatches.length} total matches for "${searchText}"`)
+      
+      if (occurrenceIndex >= allMatches.length) {
+        console.error('Occurrence index out of bounds:', occurrenceIndex, 'total:', allMatches.length)
+        onToast('Could not find this specific occurrence', 'error')
+        return
+      }
+      
+      const targetMatch = allMatches[occurrenceIndex]
+      
+      // Now find the text node that contains this position
       const walker = document.createTreeWalker(
         templateEditor,
         NodeFilter.SHOW_TEXT,
         null
       )
       
-      let currentNode: Node | null
       let currentPosition = 0
       let targetNode: Node | null = null
       let targetOffset = 0
       
-      // Walk through text nodes to find the occurrence position
-      while (currentNode = walker.nextNode()) {
+      while (walker.nextNode()) {
+        const currentNode = walker.currentNode
         const nodeText = currentNode.textContent || ''
         const nodeLength = nodeText.length
         
         // Check if our target position falls within this text node
-        if (occurrence.position >= currentPosition && 
-            occurrence.position < currentPosition + nodeLength) {
+        if (targetMatch.index >= currentPosition && 
+            targetMatch.index < currentPosition + nodeLength) {
           targetNode = currentNode
-          targetOffset = occurrence.position - currentPosition
+          targetOffset = targetMatch.index - currentPosition
           break
         }
         
@@ -182,17 +219,15 @@ export default function TemplateAnalysisSimple({
       }
       
       if (targetNode && targetNode.parentElement) {
-        // Create a temporary highlight span
-        const range = document.createRange()
-        const endOffset = Math.min(
-          targetOffset + occurrence.length,
-          targetNode.textContent?.length || 0
-        )
+        console.log('✅ Found target node at offset:', targetOffset)
         
         try {
+          // Create a range for the found text
+          const range = document.createRange()
           range.setStart(targetNode, targetOffset)
-          range.setEnd(targetNode, endOffset)
+          range.setEnd(targetNode, targetOffset + searchText.length)
           
+          // Create highlight element
           const highlight = document.createElement('span')
           highlight.style.cssText = `
             background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
@@ -202,16 +237,21 @@ export default function TemplateAnalysisSimple({
             animation: variableHighlight 2s ease-in-out;
           `
           
-          // Add CSS animation
-          const style = document.createElement('style')
-          style.textContent = `
-            @keyframes variableHighlight {
-              0%, 100% { opacity: 1; transform: scale(1); }
-              50% { opacity: 0.8; transform: scale(1.02); }
-            }
-          `
-          document.head.appendChild(style)
+          // Add CSS animation if not already added
+          const animationId = 'variableHighlightAnimation'
+          if (!document.getElementById(animationId)) {
+            const style = document.createElement('style')
+            style.id = animationId
+            style.textContent = `
+              @keyframes variableHighlight {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.8; transform: scale(1.02); }
+              }
+            `
+            document.head.appendChild(style)
+          }
           
+          // Wrap the text in highlight
           range.surroundContents(highlight)
           
           // Scroll to the highlighted element
@@ -225,7 +265,6 @@ export default function TemplateAnalysisSimple({
               parent.replaceChild(document.createTextNode(text), highlight)
               parent.normalize()
             }
-            style.remove()
           }, 4000)
           
           onToast('Scrolled to occurrence', 'success')
@@ -237,7 +276,12 @@ export default function TemplateAnalysisSimple({
           }
         }
       } else {
-        onToast('Could not find text position in template', 'error')
+        console.error('❌ Could not find occurrence:', { 
+          searchText, 
+          occurrenceIndex, 
+          matchCount 
+        })
+        onToast('Could not find this occurrence in the template', 'error')
       }
     }, 100)
   }
@@ -426,7 +470,7 @@ export default function TemplateAnalysisSimple({
                 <div
                   key={index}
                   className={styles.occurrenceItem}
-                  onClick={() => handleOccurrenceClick(occurrence)}
+                  onClick={() => handleOccurrenceClick(occurrence, index)}
                 >
                   <span className={styles.occurrenceIndex}>#{index + 1}</span>
                   <span className={styles.occurrenceContext}>
