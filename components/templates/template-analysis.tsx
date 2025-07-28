@@ -49,9 +49,7 @@ export default function TemplateAnalysis({
     analysisProgress: template?.analysis_progress,
     hasAnalysisCache: !!template?.analysis_cache,
     hasSummary: !!template?.analysis_cache?.summary,
-    hasRisks: !!template?.analysis_cache?.risks,
     hasComplete: !!template?.analysis_cache?.complete,
-    risksPassedIn: risks?.length || 0,
     templateProp: template,
     isTemplateNull: template === null,
     isTemplateUndefined: template === undefined,
@@ -76,7 +74,7 @@ export default function TemplateAnalysis({
       { step: 5, message: 'Analyzing template structure...', delay: 1500 },
       { step: 15, message: 'Identifying template variables...', delay: 2000 },
       { step: 30, message: 'Processing template content...', delay: 2000 },
-      { step: 45, message: 'Detecting potential risks...', delay: 2500 },
+      { step: 45, message: 'Analyzing template structure...', delay: 2500 },
       { step: 65, message: 'Analyzing template patterns...', delay: 2000 },
       { step: 80, message: 'Finalizing analysis...', delay: 2000 },
       { step: 90, message: 'Completing analysis...', delay: 1500 }
@@ -145,7 +143,6 @@ export default function TemplateAnalysis({
         console.log('✅ Template data refreshed:', {
           id: refreshedTemplate.id,
           status: refreshedTemplate.analysis_status,
-          hasRisks: !!refreshedTemplate.analysis_cache?.risks,
           hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
           variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
         })
@@ -195,7 +192,7 @@ export default function TemplateAnalysis({
         const isAnalysisRunning = statusData.status === 'in_progress' || 
                                  statusData.status === 'pending' || 
                                  statusData.status === 'summary_complete' || 
-                                 statusData.status === 'risks_complete'
+                                 statusData.status === 'summary_complete'
         
         if (isAnalysisRunning && template?.id === statusData.templateId) {
           // Continue checking progress more frequently
@@ -227,8 +224,7 @@ export default function TemplateAnalysis({
               console.log('✅ Template data refreshed:', {
                 id: refreshedTemplate.id,
                 status: refreshedTemplate.analysis_status,
-                hasRisks: !!refreshedTemplate.analysis_cache?.risks,
-                hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
+                      hasVariables: !!refreshedTemplate.analysis_cache?.complete?.missingInfo,
                 variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
               })
               console.log('📤 Calling onTemplateUpdate with refreshed template')
@@ -383,7 +379,7 @@ export default function TemplateAnalysis({
   }
 
   const statusInfo = getAnalysisStatus()
-  const hasAnalysis = template.analysis_cache?.summary || template.analysis_cache?.risks
+  const hasAnalysis = template.analysis_cache?.summary
   
   console.log('📊 Analysis status check:', {
     statusInfo,
@@ -921,7 +917,7 @@ export default function TemplateAnalysis({
                 {analysisProgress <= 5 ? 'Analyzing template structure...' :
                  analysisProgress <= 15 ? 'Identifying template variables...' :
                  analysisProgress <= 30 ? 'Processing template content...' :
-                 analysisProgress <= 45 ? 'Detecting potential risks...' :
+                 analysisProgress <= 45 ? 'Analyzing template structure...' :
                  analysisProgress <= 65 ? 'Analyzing template patterns...' :
                  analysisProgress <= 80 ? 'Finalizing analysis...' :
                  analysisProgress <= 90 ? 'Completing analysis...' :

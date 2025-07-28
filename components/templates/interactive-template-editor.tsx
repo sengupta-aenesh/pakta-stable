@@ -1379,7 +1379,7 @@ export default function InteractiveTemplateEditor({
             <span className={styles.selectionHint}>
               {variableSelectionEnabled 
                 ? 'Select text in the template below to create variables'
-                : 'Click "Done Editing" to refresh risk analysis'
+                : 'Click "Done Editing" to save changes'
               }
             </span>
             {variableSelectionEnabled && (

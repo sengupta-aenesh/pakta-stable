@@ -453,7 +453,7 @@ function TemplateDashboardContent() {
                 
                 <h2 className={styles.welcomeTitle}>Select a Template to Begin</h2>
                 <p className={styles.welcomeDescription}>
-                  Choose a template from the sidebar to start analyzing, managing risks, and creating versions.
+                  Choose a template from the sidebar to start analyzing and creating versions.
                 </p>
                 
                 {templates.length === 0 ? (
