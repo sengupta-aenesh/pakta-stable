@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { apiErrorHandler } from '@/lib/api-error-handler'
-import { extractTemplateFields, compareTemplateRisks } from '@/lib/openai'
-import { summarizeTemplateWithJurisdiction, identifyTemplateRisksWithJurisdiction, type AnalysisContext } from '@/lib/openai-enhanced'
+import { extractTemplateFields } from '@/lib/openai'
+import { summarizeTemplateWithJurisdiction, type AnalysisContext } from '@/lib/openai-enhanced'
 import { templatesApi } from '@/lib/supabase'
 import { SubscriptionServiceServer } from '@/lib/services/subscription-server'
 import { jurisdictionResearch, JurisdictionContext } from '@/lib/services/jurisdiction-research'
@@ -114,49 +114,10 @@ export async function performEnhancedTemplateAnalysis(templateId: string, templa
     
     // Cache summary result
     await templatesApi.updateAnalysisCache(templateId, 'summary', summaryResult)
-    await updateTemplateAnalysisStatus(templateId, 'summary_complete', 33, null, 'Summary analysis complete')
+    await updateTemplateAnalysisStatus(templateId, 'summary_complete', 50, null, 'Summary analysis complete')
 
-    // Step 3: Risk Analysis (Progress: 33% -> 66%)
-    await updateTemplateAnalysisStatus(templateId, 'in_progress', 40, null, 'Analyzing template risks...')
-    
-    const riskResult = await identifyTemplateRisksWithJurisdiction(template.content, analysisContext)
-    
-    // If reanalysis, compare with resolved risks
-    let filteredRisks = riskResult.risks || []
-    let smartFilterInfo = null
-    
-    if (template.resolved_risks && template.resolved_risks.length > 0) {
-      await updateTemplateAnalysisStatus(templateId, 'in_progress', 50, null, 'Comparing risks with resolved history...')
-      
-      const comparisonResult = await compareTemplateRisks(
-        riskResult.risks || [],
-        template.resolved_risks
-      )
-      
-      filteredRisks = comparisonResult.uniqueRisks
-      smartFilterInfo = {
-        originalCount: riskResult.risks?.length || 0,
-        filteredCount: filteredRisks.length,
-        duplicatesRemoved: (riskResult.risks?.length || 0) - filteredRisks.length
-      }
-    }
-    
-    // Cache risk result with jurisdiction context
-    const riskAnalysisData = {
-      ...riskResult,
-      risks: filteredRisks,
-      smartFilterInfo,
-      jurisdictionAnalysis: jurisdictionContext ? {
-        primary: jurisdictionContext.primary,
-        additional: jurisdictionContext.additional.map(j => j.name),
-        hasJurisdictionContext: true
-      } : null
-    }
-    
-    await templatesApi.updateAnalysisCache(templateId, 'risks', riskAnalysisData)
-    await updateTemplateAnalysisStatus(templateId, 'risks_complete', 66, null, 'Risk analysis complete')
-
-    // Step 4: Template Fields Extraction (Progress: 66% -> 90%)
+    // Skip risk analysis - go directly to template fields extraction
+    // Step 3: Template Fields Extraction (Progress: 50% -> 90%)
     await updateTemplateAnalysisStatus(templateId, 'in_progress', 75, null, 'Extracting template fields and variables...')
     
     const fieldsResult = await extractTemplateFields(template.content)

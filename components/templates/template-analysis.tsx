@@ -9,8 +9,6 @@ import styles from './template-analysis.module.css'
 
 interface TemplateAnalysisProps {
   template: Template
-  risks: any[]
-  onRisksUpdate: (risks: any[]) => void
   onTemplateUpdate: (template: Template) => void
   onVariablesUpdate?: (variables: Array<{
     id: string
@@ -25,15 +23,13 @@ interface TemplateAnalysisProps {
 
 export default function TemplateAnalysis({
   template,
-  risks,
-  onRisksUpdate,
   onTemplateUpdate,
   onVariablesUpdate,
   onVersionCreate,
   onToast,
   isEditMode = false
 }: TemplateAnalysisProps) {
-  const [activeTab, setActiveTab] = useState<'summary' | 'variables' | 'risks'>('summary')
+  const [activeTab, setActiveTab] = useState<'summary' | 'variables'>('summary')
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [progressSimulation, setProgressSimulation] = useState<NodeJS.Timeout | null>(null)
@@ -397,43 +393,8 @@ export default function TemplateAnalysis({
     analyzing
   })
 
-  // Handle clicking on a risk to scroll to it in the template
-  const handleRiskClick = (risk: any) => {
-    // Check if the global scroll function is available
-    if (typeof window !== 'undefined' && (window as any).scrollToTemplateRisk) {
-      (window as any).scrollToTemplateRisk(risk.id || '')
-    }
-    
-    // Switch to editor view on mobile when risk is clicked
-    if (window.innerWidth <= 768) {
-      // Template dashboard doesn't have mobile view switching currently
-      // This could be added later if needed
-    }
-  }
 
-  // Function to scroll to and highlight a specific risk card
-  const scrollToRiskCard = useCallback((riskId: string) => {
-    const riskElement = document.querySelector(`[data-risk-card-id="${riskId}"]`)
-    if (riskElement) {
-      riskElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      })
-      
-      // Add temporary emphasis to the risk card
-      riskElement.classList.add(styles.emphasizedRiskCard || 'emphasized')
-      setTimeout(() => {
-        riskElement.classList.remove(styles.emphasizedRiskCard || 'emphasized')
-      }, 3000)
-    }
-  }, [])
 
-  // Expose scrollToRiskCard function globally
-  useEffect(() => {
-    if (template) {
-      (window as any).scrollToTemplateRiskCard = scrollToRiskCard
-    }
-  }, [scrollToRiskCard, template])
 
   // Handle variable input changes
   const handleVariableChange = (id: string, value: string) => {
@@ -891,80 +852,6 @@ export default function TemplateAnalysis({
     }
   }, [template, loadTemplateVariables])
 
-  // Handle risk resolution (new feature for templates)
-  const handleResolveRisk = async (riskId: string) => {
-    try {
-      console.log('🔧 Resolving template risk:', { riskId, totalRisks: risks.length })
-      console.log('📊 Available risk IDs:', risks.map(r => r.id))
-
-      // Find the risk to resolve with more flexible matching
-      let riskToResolve = risks.find(risk => risk.id === riskId)
-      
-      // If not found by exact ID, try by index-based ID
-      if (!riskToResolve && riskId.includes('template-risk-')) {
-        const index = parseInt(riskId.split('template-risk-')[1])
-        riskToResolve = risks[index]
-        console.log('📍 Found risk by index fallback:', { index, found: !!riskToResolve })
-      }
-      
-      if (!riskToResolve) {
-        console.error('❌ Risk not found for resolution:', riskId)
-        onToast('Risk not found for resolution', 'error')
-        return
-      }
-
-      console.log('✅ Found risk to resolve:', { id: riskToResolve.id, category: riskToResolve.category })
-
-      // Add to resolved risks
-      const currentResolvedRisks = template.resolved_risks || []
-      const updatedResolvedRisks = [...currentResolvedRisks, { 
-        ...riskToResolve, 
-        resolvedAt: new Date().toISOString(),
-        resolvedBy: 'user'
-      }]
-
-      console.log('📝 Updating template with resolved risks:', { 
-        templateId: template.id,
-        currentResolvedCount: currentResolvedRisks.length,
-        newResolvedCount: updatedResolvedRisks.length
-      })
-
-      // Update template with resolved risk
-      const response = await fetch(`/api/template/${template.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          resolved_risks: updatedResolvedRisks
-        }),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ API Error:', { status: response.status, error: errorText })
-        throw new Error(`API request failed: ${response.status} - ${errorText}`)
-      }
-
-      const updatedTemplate = await response.json()
-      console.log('✅ Template updated successfully:', { 
-        id: updatedTemplate.id,
-        resolvedRisksCount: updatedTemplate.resolved_risks?.length || 0
-      })
-      
-      onTemplateUpdate(updatedTemplate)
-
-      // Update risks display (remove resolved risk)
-      const updatedRisks = risks.filter(risk => risk.id !== riskToResolve.id)
-      console.log('📊 Updated risks display:', { before: risks.length, after: updatedRisks.length })
-      onRisksUpdate(updatedRisks)
-
-      onToast('Template risk marked as resolved', 'success')
-    } catch (error) {
-      console.error('❌ Error resolving template risk:', error)
-      onToast(`Failed to resolve risk: ${error.message}`, 'error')
-    }
-  }
 
   // Early return if no template is provided
   if (!template) {
@@ -1058,12 +945,6 @@ export default function TemplateAnalysis({
           onClick={() => setActiveTab('variables')}
         >
           Variables
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'risks' ? styles.active : ''}`}
-          onClick={() => setActiveTab('risks')}
-        >
-          Risk Analysis
         </button>
       </div>
 
@@ -1232,157 +1113,6 @@ export default function TemplateAnalysis({
           </div>
         )}
 
-        {activeTab === 'risks' && (
-          <div className={styles.risks}>
-            <div className={styles.riskAnalysisHeader}>
-              <h3 className={styles.riskAnalysisTitle}>Template Risk Analysis</h3>
-              
-              
-              <div className={styles.overallRiskScore}>
-                <span className={styles.overallScoreLabel}>Overall Risk Score</span>
-                <span className={styles.overallScoreValue}>
-                  {risks.length > 0 
-                    ? Math.min(Math.round(risks.reduce((sum, risk) => sum + Math.min(Math.max(risk.riskScore || 5, 1), 10), 0) / risks.length), 10)
-                    : 0}/10
-                </span>
-              </div>
-              
-              <div className={styles.riskSummary}>
-                <div className={styles.riskCount}>
-                  <span className={styles.totalRisks}>{risks.length}</span>
-                  <span className={styles.totalRisksLabel}>risks identified</span>
-                </div>
-                
-                <div className={styles.riskBreakdown}>
-                  <div className={styles.riskBreakdownItem}>
-                    <span className={`${styles.riskDot} ${styles.high}`}></span>
-                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'high').length}</span>
-                    <span className={styles.riskBreakdownLabel}>high</span>
-                  </div>
-                  <div className={styles.riskBreakdownItem}>
-                    <span className={`${styles.riskDot} ${styles.medium}`}></span>
-                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'medium').length}</span>
-                    <span className={styles.riskBreakdownLabel}>medium</span>
-                  </div>
-                  <div className={styles.riskBreakdownItem}>
-                    <span className={`${styles.riskDot} ${styles.low}`}></span>
-                    <span className={styles.riskBreakdownNumber}>{risks.filter(r => r.riskLevel === 'low').length}</span>
-                    <span className={styles.riskBreakdownLabel}>low</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {risks.length > 0 ? (
-              <div className={styles.risksList}>
-                {risks.map((risk, index) => (
-                  <div 
-                    key={risk.id || index} 
-                    className={`${styles.riskItem} ${styles.clickableRisk}`}
-                    onClick={() => handleRiskClick(risk)}
-                    data-risk-card-id={risk.id || `template-risk-${index}`}
-                  >
-                    <div className={styles.riskHeader}>
-                      <span className={`${styles.riskDot} ${styles[risk.riskLevel || 'medium']}`}></span>
-                      <span className={styles.riskCategory}>
-                        Template Risk {index + 1} of {risks.length} • {risk.category || 'General'} (Severity: {risk.riskScore || 5}/10)
-                      </span>
-                      <span className={styles.riskLevel}>{(risk.riskLevel || 'medium').toUpperCase()}</span>
-                      <svg 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2"
-                        className={styles.scrollIcon}
-                      >
-                        <path d="M9 18l6-6-6-6"/>
-                      </svg>
-                    </div>
-                    <p className={styles.riskDescription}>{risk.explanation || 'No explanation provided'}</p>
-                    <blockquote className={styles.riskQuote}>"{risk.clause || 'No clause identified'}"</blockquote>
-                    <p className={styles.riskDetails}>
-                      <strong>Location:</strong> {risk.clauseLocation || 'Not specified'}
-                      {risk.affectedParty && (
-                        <> | <strong>Affects:</strong> {risk.affectedParty}</>
-                      )}
-                    </p>
-                    <p className={styles.riskMitigation}>
-                      <strong>Recommendation:</strong> {risk.suggestion || 'No recommendation provided'}
-                    </p>
-                    {risk.legalPrecedent && (
-                      <p className={styles.riskPrecedent}>
-                        <strong>Legal Context:</strong> {risk.legalPrecedent}
-                      </p>
-                    )}
-                    <div className={styles.riskActions}>
-                      <button
-                        className={styles.resolveButton}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleResolveRisk(risk.id || `template-risk-${index}`)
-                        }}
-                        title="Mark this template risk as resolved"
-                      >
-                        ✓ Resolve
-                      </button>
-                    </div>
-                    <div className={styles.scrollHint}>
-                      <span>Click to scroll to text in template</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: '1', minHeight: '250px', color: '#6b7280', textAlign: 'center', gap: '16px' }}>
-                {hasAnalysis ? (
-                  <>
-                    <div style={{ fontSize: '48px' }}>✅</div>
-                    <div>
-                      <p style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#374151' }}>No Active Risks Found</p>
-                      <p style={{ fontSize: '14px', fontStyle: 'italic', margin: '0', lineHeight: '1.5' }}>
-                        {template.analysis_cache?.risks?.smartFilteringApplied 
-                          ? `All risks have been resolved or filtered as duplicates. ${template.analysis_cache.risks.duplicatesFiltered || 0} duplicate${(template.analysis_cache.risks.duplicatesFiltered || 0) !== 1 ? 's' : ''} were automatically filtered.`
-                          : 'All risks have been resolved or no risks were detected in this template.'
-                        }
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: '48px' }}>🔍</div>
-                    <div>
-                      <p style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#374151' }}>No Risk Analysis Yet</p>
-                      <p style={{ fontSize: '14px', fontStyle: 'italic', margin: '0', lineHeight: '1.5' }}>Run analysis to identify potential template risks and get AI-powered insights.</p>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Resolved Risks Section */}
-            {template.resolved_risks && template.resolved_risks.length > 0 && (
-              <div className={styles.resolvedRisksSection}>
-                <h3>Resolved Template Risks ({template.resolved_risks.length})</h3>
-                <div className={styles.resolvedRisksList}>
-                  {template.resolved_risks.map((resolvedRisk, index) => (
-                    <div key={index} className={styles.resolvedRiskCard}>
-                      <div className={styles.resolvedHeader}>
-                        <span className={styles.resolvedBadge}>RESOLVED</span>
-                        <span className={styles.resolvedDate}>
-                          {new Date(resolvedRisk.resolvedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <h5>{resolvedRisk.category}</h5>
-                      <p>{resolvedRisk.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
       </div>
 

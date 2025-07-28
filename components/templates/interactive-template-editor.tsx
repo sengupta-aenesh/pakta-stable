@@ -102,7 +102,6 @@ interface TextSelection {
 
 interface InteractiveTemplateEditorProps {
   template: Template | null
-  risks: RiskFactor[]
   templateVariables?: Array<{
     id: string
     label: string
@@ -114,8 +113,6 @@ interface InteractiveTemplateEditorProps {
     }>
   }>
   onContentChange: (content: string) => void
-  onRiskClick?: (riskId: string) => void
-  onHighlightClick?: (riskId: string) => void
   onComment?: (text: string, position: TextPosition) => void
   onReanalyzeRisks?: (() => Promise<void>) | null
   onRegisterUpdateFunction?: (updateFunction: (content: string | null) => void) => void
@@ -136,11 +133,8 @@ interface InteractiveTemplateEditorProps {
 
 export default function InteractiveTemplateEditor({
   template,
-  risks,
   templateVariables,
   onContentChange,
-  onRiskClick,
-  onHighlightClick,
   onComment,
   onReanalyzeRisks,
   onRegisterUpdateFunction,
@@ -434,52 +428,10 @@ export default function InteractiveTemplateEditor({
     return { start: 0, end: Math.min(clause.length, text.length) }
   }, [])
 
-  // Load pre-mapped risks from backend
+  // Clear risk highlights since we're removing risk analysis
   useEffect(() => {
-    console.log('🔍 Loading template risk highlights:', { 
-      contentLength: content.length, 
-      risksCount: risks.length,
-      currentHighlights: riskHighlights.length,
-      isEditing
-    })
-    
-    if (content && risks.length > 0) {
-      console.log('📍 Using cached template risk data...')
-      const cachedHighlights: RiskHighlight[] = risks.map((risk, index) => {
-        const clause = risk.clause || ''
-        const position = findSimpleTextPosition(content, clause)
-        
-        // Debug logging for template highlighting
-        console.log(`🔍 Template Risk ${index + 1}:`, {
-          clause: clause.substring(0, 100) + (clause.length > 100 ? '...' : ''),
-          position,
-          found: position.start !== 0 || position.end !== clause.length
-        })
-        
-        return {
-          id: risk.id || `template-risk-${index}`,
-          clause: clause,
-          clauseLocation: risk.clauseLocation || '',
-          riskLevel: risk.riskLevel || 'medium',
-          riskScore: risk.riskScore || 5,
-          category: risk.category || 'General',
-          explanation: risk.explanation || '',
-          suggestion: risk.suggestion || '',
-          legalPrecedent: risk.legalPrecedent,
-          affectedParty: risk.affectedParty || '',
-          // Use robust text search for position
-          textPosition: position,
-          elementId: `template-risk-highlight-${risk.id || index}`
-        }
-      })
-      
-      console.log('✅ Setting template risk highlights:', cachedHighlights.length, 'highlights loaded')
-      setRiskHighlights(cachedHighlights)
-    } else {
-      console.log('❌ Clearing template risk highlights - no content or risks')
-      setRiskHighlights([])
-    }
-  }, [content, risks, findSimpleTextPosition])
+    setRiskHighlights([])
+  }, [content])
 
   // Apply variable replacement to content (only in version mode)
   // Note: Template content is already normalized in the database after analysis
@@ -553,137 +505,21 @@ export default function InteractiveTemplateEditor({
     
     const displayContent = getFormattedContent()
     
-    console.log('🎨 Rendering template content with highlights:', { 
+    console.log('🎨 Rendering template content:', { 
       contentLength: displayContent.length, 
-      highlightsCount: riskHighlights.length,
       isEditing
     })
     
-    if (riskHighlights.length === 0) {
-      console.log('📄 Rendering plain template content (no highlights)')
-      return displayContent.split('\n').map((line, index) => (
-        <React.Fragment key={index}>
-          {line}
-          {index < displayContent.split('\n').length - 1 && <br />}
-        </React.Fragment>
-      ))
-    }
-    
-    console.log('🌈 Rendering highlighted template content with', riskHighlights.length, 'highlights')
+    // Always render plain content since we removed risk highlighting
+    console.log('📄 Rendering plain template content')
+    return displayContent.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < displayContent.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ))
+  }, [content, getFormattedContent])
 
-    // Re-map risk positions to the beautified content for accurate highlighting
-    const remappedHighlights = riskHighlights.map(highlight => ({
-      ...highlight,
-      textPosition: findSimpleTextPosition(displayContent, highlight.clause || '')
-    }))
-
-    const parts: React.ReactElement[] = []
-    let lastIndex = 0
-
-    remappedHighlights.forEach((highlight, index) => {
-      const { start, end } = highlight.textPosition
-      
-      // Add text before this highlight
-      if (lastIndex < start) {
-        const beforeText = displayContent.substring(lastIndex, start)
-        parts.push(
-          <React.Fragment key={`text-${index}`}>
-            {beforeText.split('\n').map((line, lineIndex) => (
-              <React.Fragment key={`${index}-${lineIndex}`}>
-                {line}
-                {lineIndex < beforeText.split('\n').length - 1 && <br />}
-              </React.Fragment>
-            ))}
-          </React.Fragment>
-        )
-      }
-      
-      // Add the highlighted risk text
-      const highlightText = displayContent.substring(start, end)
-      parts.push(
-        <span
-          key={highlight.elementId}
-          id={highlight.elementId}
-          className={`${styles.riskHighlight} ${styles[highlight.riskLevel]}`}
-          onClick={(e) => {
-            // Only handle click if no text is selected
-            const selection = window.getSelection()
-            if (!selection || selection.toString().trim().length === 0) {
-              e.stopPropagation()
-              handleHighlightTextClick(highlight)
-            }
-          }}
-          title={`${highlight.category} Risk: ${highlight.explanation.substring(0, 100)}... (Click to view risk details)`}
-          data-risk-id={highlight.id}
-        >
-          {highlightText.split('\n').map((line, lineIndex) => (
-            <React.Fragment key={`highlight-${index}-${lineIndex}`}>
-              {line}
-              {lineIndex < highlightText.split('\n').length - 1 && <br />}
-            </React.Fragment>
-          ))}
-        </span>
-      )
-      
-      lastIndex = end
-    })
-    
-    // Add remaining text
-    if (lastIndex < displayContent.length) {
-      const remainingText = displayContent.substring(lastIndex)
-      parts.push(
-        <React.Fragment key="text-end">
-          {remainingText.split('\n').map((line, lineIndex) => (
-            <React.Fragment key={`end-${lineIndex}`}>
-              {line}
-              {lineIndex < remainingText.split('\n').length - 1 && <br />}
-            </React.Fragment>
-          ))}
-        </React.Fragment>
-      )
-    }
-    
-    return parts
-  }, [content, riskHighlights, getFormattedContent, findSimpleTextPosition])
-
-  // Handle clicking on risk highlights (from risk panel)
-  const handleRiskHighlightClick = (highlight: RiskHighlight) => {
-    if (onRiskClick) {
-      onRiskClick(highlight.id || '')
-    }
-  }
-
-  // Handle clicking on highlighted text in the editor
-  const handleHighlightTextClick = (highlight: RiskHighlight) => {
-    if (onHighlightClick) {
-      onHighlightClick(highlight.id || '')
-    }
-  }
-
-  // Scroll to specific risk highlight
-  const scrollToRisk = useCallback((riskId: string) => {
-    const element = document.getElementById(`template-risk-highlight-${riskId}`)
-    if (element) {
-      element.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      })
-      
-      // Add temporary emphasis animation
-      element.classList.add(styles.emphasized)
-      setTimeout(() => {
-        element.classList.remove(styles.emphasized)
-      }, 2000)
-    }
-  }, [])
-
-  // Expose scrollToRisk function to parent components
-  useEffect(() => {
-    if (template) {
-      // Store reference for external access
-      (window as any).scrollToTemplateRisk = scrollToRisk
-    }
-  }, [scrollToRisk, template])
 
   // Handle variable creation from selected text
   const handleCreateVariableFromSelection = useCallback((selectedText: string, position: { start: number; end: number }) => {
@@ -1507,11 +1343,6 @@ export default function InteractiveTemplateEditor({
         
         {!isEditing && (
           <div className={styles.riskInfo}>
-            {riskHighlights.length > 0 && (
-              <span className={styles.riskCount}>
-                {riskHighlights.length} risk{riskHighlights.length !== 1 ? 's' : ''} highlighted
-              </span>
-            )}
             {isVersionMode ? (
               <span className={styles.selectionHint} style={{ color: '#059669', fontWeight: '600' }}>
                 ✅ Version Mode: Viewing template with your variable inputs applied
@@ -1777,9 +1608,3 @@ export default function InteractiveTemplateEditor({
   )
 }
 
-// Export the scrollToRisk function for external use
-export const scrollToTemplateRisk = (riskId: string) => {
-  if (typeof window !== 'undefined' && (window as any).scrollToTemplateRisk) {
-    (window as any).scrollToTemplateRisk(riskId)
-  }
-}

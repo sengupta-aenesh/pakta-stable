@@ -22,7 +22,6 @@ function TemplateDashboardContent() {
   const [templateFolders, setTemplateFolders] = useState<TemplateFolder[]>([])
   const [selectedTemplateFolder, setSelectedTemplateFolder] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
-  const [templateRisks, setTemplateRisks] = useState<any[]>([])
   const [templateVariables, setTemplateVariables] = useState<Array<{
     id: string
     label: string
@@ -83,9 +82,6 @@ function TemplateDashboardContent() {
       currentSelected: selectedTemplate?.id || 'none'
     })
     
-    // Clear previous template data immediately to prevent conflicts
-    setTemplateRisks([])
-    
     // Only update URL if this is a manual selection (not from URL monitoring)
     if (!fromURL) {
       const newUrl = new URL(window.location.href)
@@ -96,64 +92,15 @@ function TemplateDashboardContent() {
     // Set the new template
     setSelectedTemplate(template)
     
-    // Load cached risks from RiskAnalysis object
+    // Log analysis cache structure for debugging
     console.log('🔍 Template analysis cache structure:', {
       hasAnalysisCache: !!template.analysis_cache,
       analysisStatus: template.analysis_status,
       analysisProgress: template.analysis_progress,
       cacheKeys: template.analysis_cache ? Object.keys(template.analysis_cache) : [],
-      hasRisks: !!template.analysis_cache?.risks,
       hasSummary: !!template.analysis_cache?.summary,
-      hasComplete: !!template.analysis_cache?.complete,
-      risksStructure: template.analysis_cache?.risks ? (Array.isArray(template.analysis_cache.risks) ? 'array' : 'object') : 'none'
+      hasComplete: !!template.analysis_cache?.complete
     })
-
-    // Only load risks if analysis is complete
-    if (template.analysis_status === 'complete' && template.analysis_cache?.risks) {
-      const riskAnalysis = template.analysis_cache.risks
-      const cachedRisks = Array.isArray(riskAnalysis) 
-        ? riskAnalysis  // Fallback for old direct array format
-        : riskAnalysis.risks || []  // New RiskAnalysis object format
-      
-      // Filter out resolved risks
-      const resolvedRisks = template.resolved_risks || []
-      const filteredRisks = cachedRisks.filter(risk => {
-        // Check if this risk matches any resolved risk
-        const isResolved = resolvedRisks.some(resolved => {
-          // Match by exact ID first
-          if (risk.id === resolved.id) return true
-          
-          // Match by category and similar explanation
-          if (risk.category === resolved.category) {
-            // Check if explanations are similar (first 50 chars or key phrases)
-            const riskExplanation = risk.explanation?.toLowerCase() || ''
-            const resolvedExplanation = resolved.explanation?.toLowerCase() || ''
-            
-            // Simple similarity check
-            return riskExplanation.includes(resolvedExplanation.substring(0, 30)) ||
-                   resolvedExplanation.includes(riskExplanation.substring(0, 30))
-          }
-          
-          return false
-        })
-        
-        return !isResolved
-      })
-      
-      console.log('📥 Loading cached risks with filtering:', {
-        totalRisks: cachedRisks.length,
-        resolvedRisks: resolvedRisks.length,
-        filteredRisks: filteredRisks.length,
-        filtered: cachedRisks.length - filteredRisks.length
-      })
-      setTemplateRisks(filteredRisks)
-    } else {
-      console.log('⚠️ No risks found in analysis cache or analysis not complete:', {
-        status: template.analysis_status,
-        hasRisks: !!template.analysis_cache?.risks
-      })
-      setTemplateRisks([])
-    }
     
     // On mobile, switch to analysis view when template is selected
     if (window.innerWidth <= 768) {
@@ -237,15 +184,6 @@ function TemplateDashboardContent() {
     router.push('/auth/login')
   }
 
-  // Handle risks update from analysis component
-  const handleRisksUpdate = useCallback((risks: any[]) => {
-    // When risks are updated (e.g., after resolving a risk), 
-    // they should already be filtered by the analysis component
-    console.log('📝 Risks update from analysis component:', {
-      risksCount: risks.length
-    })
-    setTemplateRisks(risks)
-  }, [])
 
   // Handle version creation - switch to version mode
   const handleVersionCreate = useCallback((variables: Array<{ id: string; label: string; value: string; fieldType: string }>, versionName: string) => {
@@ -452,28 +390,11 @@ function TemplateDashboardContent() {
                 })}
                 <InteractiveTemplateEditor
                   template={selectedTemplate}
-                  risks={templateRisks}
                   templateVariables={templateVariables}
                   isVersionMode={isVersionMode}
                   versionData={versionData}
                   onBackToOriginal={handleBackToOriginal}
                   onContentChange={handleTemplateContentChange}
-                  onRiskClick={(riskId) => {
-                    // Switch to analysis view on mobile when risk is clicked
-                    if (window.innerWidth <= 768) {
-                      setMobileView('analysis')
-                    }
-                  }}
-                  onHighlightClick={(riskId) => {
-                    // Scroll to risk card in analysis panel
-                    if (typeof window !== 'undefined' && (window as any).scrollToTemplateRiskCard) {
-                      (window as any).scrollToTemplateRiskCard(riskId)
-                    }
-                    // Switch to analysis view on mobile when highlighted text is clicked
-                    if (window.innerWidth <= 768) {
-                      setMobileView('analysis')
-                    }
-                  }}
                   onComment={(text, position) => {
                     // Handle comment creation for templates
                     const comment = prompt(`Add comment for template: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"\n\nEnter your comment:`)
@@ -492,61 +413,16 @@ function TemplateDashboardContent() {
               <div className={`${styles.analysisPanel} ${mobileView === 'analysis' ? styles.mobileVisible : styles.mobileHidden}`}>
                 <TemplateAnalysis
                   template={selectedTemplate}
-                  risks={templateRisks}
-                  onRisksUpdate={handleRisksUpdate}
                   onTemplateUpdate={(updatedTemplate) => {
                     console.log('📥 Template dashboard received updated template:', {
                       id: updatedTemplate.id,
                       title: updatedTemplate.title,
                       status: updatedTemplate.analysis_status,
                       hasCache: !!updatedTemplate.analysis_cache,
-                      hasSummary: !!updatedTemplate.analysis_cache?.summary,
-                      hasRisks: !!updatedTemplate.analysis_cache?.risks
+                      hasSummary: !!updatedTemplate.analysis_cache?.summary
                     })
                     setSelectedTemplate(updatedTemplate)
                     setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t))
-                    
-                    // Extract risks from the updated template
-                    if (updatedTemplate.analysis_status === 'complete' && updatedTemplate.analysis_cache?.risks) {
-                      const riskAnalysis = updatedTemplate.analysis_cache.risks
-                      const cachedRisks = Array.isArray(riskAnalysis) 
-                        ? riskAnalysis
-                        : riskAnalysis.risks || []
-                      
-                      // Filter out resolved risks
-                      const resolvedRisks = updatedTemplate.resolved_risks || []
-                      const filteredRisks = cachedRisks.filter(risk => {
-                        // Check if this risk matches any resolved risk
-                        const isResolved = resolvedRisks.some(resolved => {
-                          // Match by exact ID first
-                          if (risk.id === resolved.id) return true
-                          
-                          // Match by category and similar explanation
-                          if (risk.category === resolved.category) {
-                            // Check if explanations are similar (first 50 chars or key phrases)
-                            const riskExplanation = risk.explanation?.toLowerCase() || ''
-                            const resolvedExplanation = resolved.explanation?.toLowerCase() || ''
-                            
-                            // Simple similarity check
-                            return riskExplanation.includes(resolvedExplanation.substring(0, 30)) ||
-                                   resolvedExplanation.includes(riskExplanation.substring(0, 30))
-                          }
-                          
-                          return false
-                        })
-                        
-                        return !isResolved
-                      })
-                      
-                      console.log('📥 Loading risks from updated template with filtering:', {
-                        totalRisks: cachedRisks.length,
-                        resolvedRisks: resolvedRisks.length,
-                        filteredRisks: filteredRisks.length,
-                        filtered: cachedRisks.length - filteredRisks.length,
-                        templateId: updatedTemplate.id
-                      })
-                      setTemplateRisks(filteredRisks)
-                    }
                   }}
                   onVariablesUpdate={(variables) => {
                     console.log('🔄 Variables updated from analysis component:', variables)
