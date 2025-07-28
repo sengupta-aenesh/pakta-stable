@@ -103,11 +103,13 @@ export default function LoginPage() {
             marginTop: '16px'
           }}>
             <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
-              <strong>Access by invitation only.</strong><br />
-              Contact our team to request access to the platform.
+              <strong>Invitation available after platform demo only.</strong><br />
+              Schedule a demo to get access to the platform.
             </p>
-            <Link 
-              href="/auth/signup" 
+            <a 
+              href="https://pakta.zohobookings.in/#/300016000000042052" 
+              target="_blank"
+              rel="noopener noreferrer"
               style={{ 
                 fontSize: '14px', 
                 fontWeight: '500', 
@@ -117,8 +119,8 @@ export default function LoginPage() {
                 display: 'inline-block'
               }}
             >
-              Learn more about access
-            </Link>
+              Schedule a demo
+            </a>
           </div>
         </div>
       </div>

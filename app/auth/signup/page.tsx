@@ -47,14 +47,14 @@ export default function SignUpPage() {
             textAlign: 'center',
             color: '#0F172A'
           }}>
-            Sign Up by Invitation Only
+            Schedule a Demo to Get Access
           </h1>
           
           <p className="text-secondary text-sm" style={{ 
             textAlign: 'center',
             lineHeight: '1.6'
           }}>
-            Our contract analysis platform is currently available to select organizations
+            Invitation available after platform demo only
           </p>
         </div>
         
@@ -72,18 +72,18 @@ export default function SignUpPage() {
             marginBottom: '12px',
             color: '#1E293B'
           }}>
-            Why Invitation Only?
+            What to Expect from the Demo
           </h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
-              • Personalized onboarding and dedicated support
+              • Live demonstration of all platform features
             </p>
             <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
-              • Custom security configurations for each organization
+              • Personalized onboarding and security setup
             </p>
             <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
-              • Ensuring optimal performance and user experience
+              • Custom configuration for your organization
             </p>
           </div>
         </div>
@@ -97,21 +97,21 @@ export default function SignUpPage() {
           textAlign: 'center'
         }}>
           <p className="text-sm text-secondary" style={{ lineHeight: '1.5' }}>
-            Interested in accessing our platform?<br />
-            Contact our team to request an invitation.
+            Ready to see the platform in action?<br />
+            Schedule a demo to get started.
           </p>
         </div>
         
         {/* Actions */}
         <div style={{ marginTop: '24px' }}>
           <Button 
-            onClick={() => window.open('mailto:access@contractmanager.com?subject=Access Request&body=Hello, I would like to request access to the Contract Manager platform.', '_blank')} 
+            onClick={() => window.open('https://pakta.zohobookings.in/#/300016000000042052', '_blank')} 
             variant="primary"
             size="lg"
             className="w-full"
             style={{ marginBottom: '12px' }}
           >
-            Request Access
+            Schedule Demo
           </Button>
           
           <Link href="/auth/login">
