@@ -418,6 +418,21 @@
   color: #111827;
 }
 
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6B7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.modalClose:hover {
+  color: #111827;
+}
+
 .closeButton {
   background: none;
   border: none;
@@ -512,6 +527,27 @@
   color: #6B7280;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   margin-left: 2.75rem;
+}
+
+.occurrenceIndex {
+  background: #111827;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.occurrenceContext {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #6B7280;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modalFooter {
@@ -1308,6 +1344,25 @@
 .viewOccurrencesButton:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* View occurrences button (simplified version) */
+.viewOccurrencesBtn {
+  font-size: 0.75rem;
+  color: #111827;
+  background: #F3F4F6;
+  border: 1px solid #E5E7EB;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.viewOccurrencesBtn:hover {
+  background: #E5E7EB;
+  border-color: #D1D5DB;
+  transform: translateY(-1px);
 }
 
 /* Analyze Button - Matches contract analysis styling exactly */

@@ -30,6 +30,7 @@ export default function TemplateAnalysisSimple({
   const [showOccurrencesModal, setShowOccurrencesModal] = useState(false)
   const [selectedVariable, setSelectedVariable] = useState<any>(null)
   const [variableEditMode, setVariableEditMode] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Load variables from cache on mount or template change
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function TemplateAnalysisSimple({
       setVariables(loadedVars)
       onVariablesUpdate?.(loadedVars)
     }
-  }, [template?.id, template?.analysis_cache])
+  }, [template?.id, template?.analysis_cache, refreshKey])
 
   // Simple progress animation
   useEffect(() => {
@@ -80,11 +81,20 @@ export default function TemplateAnalysisSimple({
       // Analysis complete
       setAnalysisProgress(100)
       
+      // Wait a moment for the API to save the data
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       // Refresh template data
       const refreshResponse = await fetch(`/api/template/${template.id}`)
       if (refreshResponse.ok) {
         const refreshedTemplate = await refreshResponse.json()
+        console.log('✅ Refreshed template:', {
+          hasCache: !!refreshedTemplate.analysis_cache,
+          variableCount: refreshedTemplate.analysis_cache?.complete?.missingInfo?.length || 0
+        })
         onTemplateUpdate(refreshedTemplate)
+        // Force refresh of variables
+        setRefreshKey(prev => prev + 1)
       }
       
       onToast('Template analysis completed!', 'success')
@@ -128,12 +138,108 @@ export default function TemplateAnalysisSimple({
     setShowOccurrencesModal(true)
   }
 
-  const handleOccurrenceClick = (position: number) => {
-    // Scroll to position in editor
-    if (window.scrollToTemplatePosition) {
-      window.scrollToTemplatePosition(position)
-    }
+  const handleOccurrenceClick = (occurrence: any) => {
+    if (!occurrence) return
+    
+    // Close the modal immediately for better UX
     setShowOccurrencesModal(false)
+    
+    // Find the text in the template editor and scroll to it
+    setTimeout(() => {
+      // Get the template editor content area
+      const templateEditor = document.querySelector('[data-template-editor]')
+      if (!templateEditor) {
+        onToast('Template editor not found', 'error')
+        return
+      }
+      
+      // Create a temporary highlight element for this occurrence
+      const walker = document.createTreeWalker(
+        templateEditor,
+        NodeFilter.SHOW_TEXT,
+        null
+      )
+      
+      let currentNode: Node | null
+      let currentPosition = 0
+      let targetNode: Node | null = null
+      let targetOffset = 0
+      
+      // Walk through text nodes to find the occurrence position
+      while (currentNode = walker.nextNode()) {
+        const nodeText = currentNode.textContent || ''
+        const nodeLength = nodeText.length
+        
+        // Check if our target position falls within this text node
+        if (occurrence.position >= currentPosition && 
+            occurrence.position < currentPosition + nodeLength) {
+          targetNode = currentNode
+          targetOffset = occurrence.position - currentPosition
+          break
+        }
+        
+        currentPosition += nodeLength
+      }
+      
+      if (targetNode && targetNode.parentElement) {
+        // Create a temporary highlight span
+        const range = document.createRange()
+        const endOffset = Math.min(
+          targetOffset + occurrence.length,
+          targetNode.textContent?.length || 0
+        )
+        
+        try {
+          range.setStart(targetNode, targetOffset)
+          range.setEnd(targetNode, endOffset)
+          
+          const highlight = document.createElement('span')
+          highlight.style.cssText = `
+            background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+            border-radius: 3px;
+            padding: 0 2px;
+            box-shadow: 0 0 0 2px rgba(252, 211, 77, 0.2);
+            animation: variableHighlight 2s ease-in-out;
+          `
+          
+          // Add CSS animation
+          const style = document.createElement('style')
+          style.textContent = `
+            @keyframes variableHighlight {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.8; transform: scale(1.02); }
+            }
+          `
+          document.head.appendChild(style)
+          
+          range.surroundContents(highlight)
+          
+          // Scroll to the highlighted element
+          highlight.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          
+          // Remove highlight after 4 seconds
+          setTimeout(() => {
+            const text = highlight.textContent || ''
+            const parent = highlight.parentNode
+            if (parent) {
+              parent.replaceChild(document.createTextNode(text), highlight)
+              parent.normalize()
+            }
+            style.remove()
+          }, 4000)
+          
+          onToast('Scrolled to occurrence', 'success')
+        } catch (error) {
+          console.error('Error highlighting text:', error)
+          // Fallback: just scroll to the general area
+          if (targetNode.parentElement) {
+            targetNode.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }
+      } else {
+        onToast('Could not find text position in template', 'error')
+      }
+    }, 100)
   }
 
   const hasAnalysis = !!template?.analysis_cache?.summary
@@ -231,27 +337,6 @@ export default function TemplateAnalysisSimple({
               <>
                 <div className={styles.variablesHeader}>
                   <p>Fill in the values below to create a template version:</p>
-                  {variableEditMode && (
-                    <Button
-                      onClick={() => setVariableEditMode(false)}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      Exit Edit Mode
-                    </Button>
-                  )}
-                  {!variableEditMode && (
-                    <Button
-                      onClick={() => {
-                        setVariableEditMode(true)
-                        onToast('Select text in the template to create variables', 'info')
-                      }}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      Create Variables
-                    </Button>
-                  )}
                 </div>
 
                 <div className={styles.variablesList}>
@@ -261,12 +346,14 @@ export default function TemplateAnalysisSimple({
                         <label className={styles.variableLabel}>
                           {variable.label}
                         </label>
-                        <button
-                          className={styles.occurrencesButton}
-                          onClick={() => handleViewOccurrences(variable)}
-                        >
-                          View {variable.occurrences?.length || 0} occurrences
-                        </button>
+                        {variable.occurrences && variable.occurrences.length > 0 && (
+                          <button
+                            className={styles.viewOccurrencesBtn}
+                            onClick={() => handleViewOccurrences(variable)}
+                          >
+                            View {variable.occurrences.length} occurrence{variable.occurrences.length > 1 ? 's' : ''}
+                          </button>
+                        )}
                       </div>
                       <p className={styles.variableDescription}>
                         {variable.description}
@@ -325,7 +412,7 @@ export default function TemplateAnalysisSimple({
                 <div
                   key={index}
                   className={styles.occurrenceItem}
-                  onClick={() => handleOccurrenceClick(occurrence.position)}
+                  onClick={() => handleOccurrenceClick(occurrence)}
                 >
                   <span className={styles.occurrenceIndex}>#{index + 1}</span>
                   <span className={styles.occurrenceContext}>
@@ -345,6 +432,7 @@ export default function TemplateAnalysisSimple({
 declare global {
   interface Window {
     scrollToTemplatePosition?: (position: number) => void
+    highlightTemplateText?: (position: number, length: number) => void
     addTemplateVariable?: (text: string, position: number, length: number) => void
   }
 }
