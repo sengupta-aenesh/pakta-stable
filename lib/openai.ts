@@ -5,14 +5,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-const LEGAL_EXPERT_SYSTEM_PROMPT = `You are an elite legal contract analyst with 30+ years of experience in corporate law, contract negotiation, and risk assessment. You have:
-- JD from Harvard Law School
-- Experience as General Counsel for Fortune 500 companies
-- Expertise in identifying contractual risks and protecting client interests
-- Deep knowledge of legal precedents and industry standards
-- Specialization in commercial contracts, employment agreements, NDAs, and service agreements
+const LEGAL_EXPERT_SYSTEM_PROMPT = `You are a senior legal counsel with 20+ years of experience in contract analysis, risk management, and multi-jurisdictional compliance. Apply expertise in:
+- Commercial contract negotiation and risk identification
+- Regulatory compliance across multiple jurisdictions
+- Industry-specific legal requirements
+- International contract law principles
+- IRAC (Issue, Rule, Application, Conclusion) framework for thorough analysis
 
-Your analysis should be thorough, precise, and actionable. Always cite specific clauses and provide practical recommendations.`
+Your analysis should be systematic, comprehensive, and actionable. Always cite specific clauses and provide practical recommendations with example language.`
 
 export async function extractAndAnalyzeText(content: string): Promise<string> {
   try {
@@ -129,23 +129,90 @@ export async function identifyRiskyTerms(content: string): Promise<RiskAnalysis>
           role: "system",
           content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
 
-CRITICAL ANALYSIS INSTRUCTIONS:
-- Perform EXHAUSTIVE risk analysis - do not artificially limit the number of risks
-- Find ALL significant risks, whether 5 or 50+ risks exist
-- Be thorough and comprehensive - every risky clause should be identified
-- Prioritize accuracy and completeness over brevity`
+Use the IRAC (Issue, Rule, Application, Conclusion) framework for each identified risk.`
         },
         {
           role: "user",
-          content: `Perform a COMPREHENSIVE and EXHAUSTIVE legal risk analysis of this contract. Do NOT limit yourself to any specific number of risks - find ALL significant risks that exist in this contract, whether that's 5, 15, 25, or more.
+          content: `Conduct a comprehensive legal risk analysis using this structured approach:
 
-**RISK IDENTIFICATION STRATEGY:**
-1. Analyze EVERY clause, sentence, and provision systematically
-2. Look for risks in ALL categories: Payment Terms, Liability, Termination, IP, Confidentiality, Dispute Resolution, Force Majeure, Warranties, Indemnification, Compliance, Governing Law, Amendment, Assignment, Severability, Integration, Notice, Performance Standards, Remedies, etc.
-3. Consider both obvious and subtle legal risks
-4. Identify risks for ALL parties involved, not just one side
-5. Look for missing protective clauses as risks
-6. Consider enforceability and compliance risks
+## SYSTEMATIC RISK IDENTIFICATION CHECKLIST
+
+Use this checklist as a MINIMUM guide - identify ALL risks in EACH category. Multiple risks often exist within each category.
+
+### A. CONTRACTUAL STRUCTURE RISKS
+□ Formation issues (offer, acceptance, consideration)
+□ Ambiguous or conflicting terms
+□ Missing essential terms
+□ Integration and amendment provisions
+[Find ALL risks in this category - not limited to these examples]
+
+### B. OPERATIONAL RISKS  
+□ Performance obligations and standards
+□ Payment terms and financial exposure
+□ Delivery/timeline requirements
+□ Quality standards and acceptance criteria
+[Find ALL risks in this category - not limited to these examples]
+
+### C. LEGAL & COMPLIANCE RISKS
+□ Regulatory compliance requirements
+□ Data protection/privacy compliance
+□ Anti-corruption and trade compliance
+□ Employment law considerations
+[Find ALL risks in this category - not limited to these examples]
+
+### D. FINANCIAL RISKS
+□ Payment security and credit risks
+□ Currency and exchange rate exposure
+□ Tax implications
+□ Pricing mechanisms and adjustments
+[Find ALL risks in this category - not limited to these examples]
+
+### E. LIABILITY & INDEMNIFICATION
+□ Limitation of liability clauses
+□ Indemnification scope and exceptions
+□ Insurance requirements
+□ Warranty provisions and disclaimers
+[Find ALL risks in this category - not limited to these examples]
+
+### F. INTELLECTUAL PROPERTY
+□ Ownership and licensing terms
+□ Third-party IP infringement risks
+□ Confidentiality and trade secrets
+[Find ALL risks in this category - not limited to these examples]
+
+### G. DISPUTE RESOLUTION
+□ Governing law and jurisdiction
+□ Arbitration vs. litigation
+□ Fee-shifting provisions
+[Find ALL risks in this category - not limited to these examples]
+
+### H. TERMINATION & EXIT
+□ Termination triggers and notice
+□ Post-termination obligations
+□ Survival of obligations
+[Find ALL risks in this category - not limited to these examples]
+
+### I. FORCE MAJEURE & RISK ALLOCATION
+□ Scope of force majeure events
+□ Risk allocation mechanisms
+[Find ALL risks in this category - not limited to these examples]
+
+CRITICAL INSTRUCTIONS:
+- This checklist is a STARTING POINT, not a limit
+- Identify MULTIPLE risks within EACH category where they exist
+- A single category might have 5, 10, or more distinct risks
+- Find ALL risks, whether 20, 50, or 100+ total
+- Missing protective clauses ARE risks that must be identified
+- Apply IRAC framework to each risk
+- Do NOT stop at one risk per category
+
+Example: Under "Payment Terms" you might find:
+- Risk 1: Late payment penalties favor only one party
+- Risk 2: No interest on overdue payments
+- Risk 3: Currency not specified
+- Risk 4: No payment security mechanisms
+- Risk 5: Unclear invoicing procedures
+[... and more if they exist]
 
 **TEXT QUOTING RULES FOR ACCURATE MAPPING:**
 - Quote the EXACT RISKY PHRASE as it appears in the contract (preserve original formatting)
@@ -183,30 +250,34 @@ Also provide:
 - Executive summary (2-3 sentences)
 - Top 5 critical recommendations for risk mitigation
 
-Format as JSON:
+Output as JSON with ALL identified risks:
 {
-  "overallRiskScore": number (1-10 scale ONLY),
-  "executiveSummary": string,
   "risks": [
+    // Array of ALL risks found - could be 50+ risks
     {
-      "clause": "precise quoted risky text (15-200 words)",
-      "clauseLocation": "Section X.X or description",
-      "riskLevel": "high|medium|low",
-      "riskScore": number (1-10 scale ONLY),
-      "category": string,
-      "explanation": string,
-      "suggestion": string,
-      "affectedParty": string,
-      "legalPrecedent": string (optional)
+      "clause": "EXACT problematic text from contract (15-200 words)",
+      "clauseLocation": "Section reference",
+      "riskLevel": "high|medium|low" (based on severity),
+      "riskScore": 1-10 (Critical:9-10, High:7-8, Medium:4-6, Low:1-3),
+      "category": "Contractual Structure|Operational|Legal & Compliance|Financial|Liability & Indemnification|Intellectual Property|Dispute Resolution|Termination & Exit|Force Majeure",
+      "explanation": "Precise legal issue using IRAC: What's the issue, what law applies, how it applies here, conclusion on risk",
+      "suggestion": "Specific mitigation with example contract language",
+      "affectedParty": "Client|Vendor|Both parties",
+      "legalPrecedent": "Relevant law/regulation if applicable"
     }
+    // ... many more risks
   ],
-  "recommendations": [string, string, string, string, string]
+  "overallRiskScore": 1-10,
+  "executiveSummary": "Contract risk profile summary with key concerns",
+  "recommendations": ["Top 5 strategic recommendations for risk mitigation"],
+  "missingProtections": ["List of critical missing clauses/protections"],
+  "jurisdictionConflicts": ["Any cross-jurisdiction issues"]
 }
 
 **CONTRACT TO ANALYZE:**
 ${content}
 
-Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. Be exhaustive and thorough.`
+Remember: There is NO LIMIT to the number of risks. Be EXHAUSTIVE within each category. Missing protective clauses are risks too.`
         }
       ],
       max_tokens: 12000, // Increased for comprehensive analysis
@@ -272,7 +343,9 @@ Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. B
       lowRiskCount,
       risks,
       recommendations: result.recommendations || [],
-      executiveSummary: result.executiveSummary || "Contract analysis completed."
+      executiveSummary: result.executiveSummary || "Contract analysis completed.",
+      missingProtections: result.missingProtections || [],
+      jurisdictionConflicts: result.jurisdictionConflicts || []
     }
   } catch (error) {
     console.error('OpenAI risk analysis error:', error)
@@ -462,7 +535,7 @@ CRITICAL ANALYSIS INSTRUCTIONS:
 **CONTRACT TO ANALYZE:**
 ${content}
 
-Remember: Find ALL risks comprehensively - do not stop at an arbitrary number. Be exhaustive and thorough.`
+Remember: There is NO LIMIT to the number of risks. Be EXHAUSTIVE within each category. Missing protective clauses are risks too.`
       }
     ],
     max_tokens: 12000,

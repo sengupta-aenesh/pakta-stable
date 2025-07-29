@@ -121,6 +121,8 @@ export interface RiskAnalysis {
   risks: RiskFactor[]
   recommendations: string[]
   executiveSummary: string
+  missingProtections?: string[]
+  jurisdictionConflicts?: string[]
 }
 
 export interface ChatMessage {

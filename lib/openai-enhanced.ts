@@ -149,53 +149,118 @@ export async function identifyRiskyTermsWithJurisdiction(
   context?: AnalysisContext
 ): Promise<RiskAnalysis> {
   const systemPrompt = createJurisdictionAwarePrompt(
-    `You are an elite legal contract analyst with 30+ years of experience in corporate law, contract negotiation, and risk assessment. You have:
-- JD from Harvard Law School
-- Experience as General Counsel for Fortune 500 companies
-- Expertise in identifying contractual risks and protecting client interests
-- Deep knowledge of legal precedents and industry standards
-- Specialization in commercial contracts, employment agreements, NDAs, and service agreements
+    `You are a senior legal counsel with 20+ years of experience in contract analysis, risk management, and multi-jurisdictional compliance. Apply expertise in:
+- Commercial contract negotiation and risk identification
+- Regulatory compliance across multiple jurisdictions
+- Industry-specific legal requirements
+- International contract law principles
+- IRAC (Issue, Rule, Application, Conclusion) framework for thorough analysis
 
-Your analysis should be thorough, precise, and actionable. Always cite specific clauses and provide practical recommendations.`,
+Your analysis should be systematic, comprehensive, and actionable. Always cite specific clauses and provide practical recommendations with example language.`,
     context
   )
 
-  const userPrompt = `Perform an EXHAUSTIVE legal risk analysis of this contract. You must identify EVERY SINGLE RISK, no matter how minor. 
+  const userPrompt = `Conduct a comprehensive legal risk analysis using this structured approach:
+
+## SYSTEMATIC RISK IDENTIFICATION CHECKLIST
+
+Use this checklist as a MINIMUM guide - identify ALL risks in EACH category. Multiple risks often exist within each category.
+
+### A. CONTRACTUAL STRUCTURE RISKS
+□ Formation issues (offer, acceptance, consideration)
+□ Ambiguous or conflicting terms
+□ Missing essential terms
+□ Integration and amendment provisions
+[Find ALL risks in this category - not limited to these examples]
+
+### B. OPERATIONAL RISKS  
+□ Performance obligations and standards
+□ Payment terms and financial exposure
+□ Delivery/timeline requirements
+□ Quality standards and acceptance criteria
+[Find ALL risks in this category - not limited to these examples]
+
+### C. LEGAL & COMPLIANCE RISKS
+□ Regulatory compliance requirements
+□ Data protection/privacy compliance
+□ Anti-corruption and trade compliance
+□ Employment law considerations
+[Find ALL risks in this category - not limited to these examples]
+
+### D. FINANCIAL RISKS
+□ Payment security and credit risks
+□ Currency and exchange rate exposure
+□ Tax implications
+□ Pricing mechanisms and adjustments
+[Find ALL risks in this category - not limited to these examples]
+
+### E. LIABILITY & INDEMNIFICATION
+□ Limitation of liability clauses
+□ Indemnification scope and exceptions
+□ Insurance requirements
+□ Warranty provisions and disclaimers
+[Find ALL risks in this category - not limited to these examples]
+
+### F. INTELLECTUAL PROPERTY
+□ Ownership and licensing terms
+□ Third-party IP infringement risks
+□ Confidentiality and trade secrets
+[Find ALL risks in this category - not limited to these examples]
+
+### G. DISPUTE RESOLUTION
+□ Governing law and jurisdiction
+□ Arbitration vs. litigation
+□ Fee-shifting provisions
+[Find ALL risks in this category - not limited to these examples]
+
+### H. TERMINATION & EXIT
+□ Termination triggers and notice
+□ Post-termination obligations
+□ Survival of obligations
+[Find ALL risks in this category - not limited to these examples]
+
+### I. FORCE MAJEURE & RISK ALLOCATION
+□ Scope of force majeure events
+□ Risk allocation mechanisms
+[Find ALL risks in this category - not limited to these examples]
 
 CRITICAL INSTRUCTIONS:
-1. Find ALL risks - be completely EXHAUSTIVE with no limitations
-2. Do NOT stop until you have analyzed EVERY aspect
-3. Analyze EVERY clause, term, and condition thoroughly
-4. Consider risks from ALL perspectives (both parties)
-5. Include risks of ALL severities (high, medium, low)
+- This checklist is a STARTING POINT, not a limit
+- Identify MULTIPLE risks within EACH category where they exist
+- A single category might have 5, 10, or more distinct risks
+- Find ALL risks, whether 20, 50, or 100+ total
+- Missing protective clauses ARE risks that must be identified
+- Apply IRAC framework to each risk
+- Do NOT stop at one risk per category
 
 ${context && context.jurisdictionResearch ? `
 JURISDICTION-SPECIFIC LEGAL REQUIREMENTS:
 ${context.jurisdictionResearch}
 ` : ''}
 
-Provide your analysis as a JSON object:
-
+Output as JSON with ALL identified risks:
 {
   "risks": [
+    // Array of ALL risks found - could be 50+ risks
     {
-      "clause": "EXACT quote of the problematic text from the contract",
-      "clauseLocation": "Section name or number where this appears",
-      "riskLevel": "high" | "medium" | "low",
-      "riskScore": number (1-10, where 10 is highest risk),
-      "category": "Liability" | "Payment Terms" | "Termination" | "Intellectual Property" | "Confidentiality" | "Data Protection" | "Warranties" | "Indemnification" | "Dispute Resolution" | "Force Majeure" | "Compliance" | "Performance" | "Delivery" | "Penalties" | "Insurance" | "Limitation of Liability" | "Governing Law" | "Assignment" | "Amendment" | "Notice" | "Survival" | "Severability" | "Entire Agreement" | "Counterparts" | "Electronic Signature" | "Third Party Rights" | "Audit Rights" | "Subcontracting" | "Non-Compete" | "Non-Solicitation" | "Exclusivity" | "Most Favored Nation" | "Price Protection" | "Currency Risk" | "Tax" | "Export Control" | "Anti-Corruption" | "Data Localization" | "Cross-Border Transfer" | "Regulatory Change" | "Change of Control" | "Bankruptcy" | "Material Adverse Change" | "Representation and Warranty" | "Covenant" | "Condition Precedent" | "Event of Default" | "Remedies" | "Liquidated Damages" | "Consequential Damages" | "Punitive Damages" | "Attorney Fees" | "Jurisdiction" | "Venue" | "Service of Process" | "Waiver" | "Relationship of Parties" | "Agency" | "Joint Venture" | "Partnership" | "Employment" | "Independent Contractor" | "Publicity" | "Use of Name" | "Reference" | "Benchmarking" | "Feedback" | "Improvements" | "Derivative Works" | "Open Source" | "Third Party IP" | "Background IP" | "Foreground IP" | "Escrow" | "Source Code" | "Documentation" | "Training" | "Support" | "Maintenance" | "Updates" | "Upgrades" | "Bug Fixes" | "Service Levels" | "Credits" | "Downtime" | "Availability" | "Performance Standards" | "Acceptance Criteria" | "Testing" | "Pilot" | "Proof of Concept" | "Phased Delivery" | "Milestones" | "Dependencies" | "Critical Path" | "Delay" | "Acceleration" | "Change Orders" | "Scope Creep" | "Out of Scope" | "Assumptions" | "Exclusions" | "Carve-outs" | "Caps" | "Baskets" | "Deductibles" | "Escalation" | "Step-in Rights" | "Cure Period" | "Notice and Cure" | "Immediate Termination" | "Wind-down" | "Transition Services" | "Data Return" | "Data Deletion" | "Post-Termination Obligations" | "Tail Period" | "Run-off" | "Other",
-      "explanation": "Detailed explanation of why this is a risk and potential consequences",
-      "suggestion": "Specific actionable recommendation to mitigate this risk",
-      "affectedParty": "Client" | "Vendor" | "Both parties" | "Third parties",
-      "legalPrecedent": "Any relevant legal precedent or standard practice (optional)",
+      "clause": "EXACT problematic text from contract (15-200 words)",
+      "clauseLocation": "Section reference",
+      "riskLevel": "high|medium|low" (based on severity),
+      "riskScore": 1-10 (Critical:9-10, High:7-8, Medium:4-6, Low:1-3),
+      "category": "Contractual Structure|Operational|Legal & Compliance|Financial|Liability & Indemnification|Intellectual Property|Dispute Resolution|Termination & Exit|Force Majeure",
+      "explanation": "Precise legal issue using IRAC: What's the issue, what law applies, how it applies here, conclusion on risk",
+      "suggestion": "Specific mitigation with example contract language",
+      "affectedParty": "Client|Vendor|Both parties",
+      "legalPrecedent": "Relevant law/regulation if applicable",
       "jurisdictionSpecific": "Specific concerns for the analyzed jurisdictions"
     }
+    // ... many more risks
   ],
-  "overallRiskScore": number (1-10),
-  "executiveSummary": "High-level summary of the contract's risk profile",
-  "recommendations": ["Comprehensive list of ALL strategic recommendations for improving the contract"],
-  "missingProtections": ["List ALL standard protections missing from this contract"],
-  "jurisdictionConflicts": ["Any conflicts between different jurisdictional requirements"]
+  "overallRiskScore": 1-10,
+  "executiveSummary": "Contract risk profile summary with key concerns",
+  "recommendations": ["Top 5 strategic recommendations for risk mitigation"],
+  "missingProtections": ["List of critical missing clauses/protections"],
+  "jurisdictionConflicts": ["Any cross-jurisdiction issues"]
 }
 
 ${context ? `JURISDICTION-AWARE ANALYSIS:
@@ -208,7 +273,7 @@ For EACH risk, consider:
 - Are required provisions missing for any jurisdiction?
 - Do any terms create jurisdictional conflicts?` : ''}
 
-Remember: Find ALL risks comprehensively - there is NO LIMIT to the number of risks you should identify. Be EXHAUSTIVE and THOROUGH. Every single clause, term, and condition must be scrutinized. Continue analyzing until you have identified EVERY possible risk.
+Remember: There is NO LIMIT to the number of risks. Be EXHAUSTIVE within each category. Missing protective clauses are risks too.
 
 Contract to analyze:
 ${contractText}`
