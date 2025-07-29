@@ -129,7 +129,9 @@ export async function identifyRiskyTerms(content: string): Promise<RiskAnalysis>
           role: "system",
           content: `${LEGAL_EXPERT_SYSTEM_PROMPT}
 
-Use the IRAC (Issue, Rule, Application, Conclusion) framework for each identified risk.`
+Use the IRAC (Issue, Rule, Application, Conclusion) framework for each identified risk.
+
+IMPORTANT: You are being evaluated on THOROUGHNESS. Finding only 5-10 risks means you have FAILED. A proper analysis finds 30-50+ risks minimum.`
         },
         {
           role: "user",
@@ -197,22 +199,38 @@ Use this checklist as a MINIMUM guide - identify ALL risks in EACH category. Mul
 □ Risk allocation mechanisms
 [Find ALL risks in this category - not limited to these examples]
 
-CRITICAL INSTRUCTIONS:
-- This checklist is a STARTING POINT, not a limit
-- Identify MULTIPLE risks within EACH category where they exist
-- A single category might have 5, 10, or more distinct risks
-- Find ALL risks, whether 20, 50, or 100+ total
-- Missing protective clauses ARE risks that must be identified
-- Apply IRAC framework to each risk
-- Do NOT stop at one risk per category
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE EXACTLY:
+1. **MINIMUM REQUIREMENTS**: You MUST find AT LEAST 20-30 risks for any contract over 2 pages
+2. **EXHAUSTIVE ANALYSIS**: Analyze EVERY SINGLE SENTENCE for potential risks
+3. **MULTIPLE RISKS PER CATEGORY**: Each category should have 3-10 risks minimum
+4. **NO STOPPING**: Continue analyzing until you've examined EVERY clause
+5. **MISSING CLAUSES COUNT**: Every missing protection is a separate risk
+6. **SEVERITY DOESN'T MATTER**: Include ALL risks - high, medium, AND low
+7. **BE PARANOID**: If something COULD be a risk, it IS a risk
+8. **IRAC FOR EACH**: Apply full IRAC analysis to every single risk
 
-Example: Under "Payment Terms" you might find:
-- Risk 1: Late payment penalties favor only one party
-- Risk 2: No interest on overdue payments
-- Risk 3: Currency not specified
-- Risk 4: No payment security mechanisms
-- Risk 5: Unclear invoicing procedures
-[... and more if they exist]
+MANDATORY MINIMUMS PER CATEGORY:
+- Contractual Structure: Find at least 3-5 risks
+- Operational: Find at least 4-6 risks  
+- Legal & Compliance: Find at least 3-5 risks
+- Financial: Find at least 3-5 risks
+- Liability & Indemnification: Find at least 3-5 risks
+- Other categories: At least 2-3 risks each
+
+Example for just ONE subcategory (Payment Terms):
+- Risk 1: Payment due in 30 days - too long, affects cash flow
+- Risk 2: No late payment penalties - no incentive for timely payment
+- Risk 3: No interest on overdue amounts - lost opportunity cost
+- Risk 4: Currency not specified - exchange rate risk
+- Risk 5: No payment security (deposit/guarantee) - credit risk
+- Risk 6: Invoice requirements unclear - potential disputes
+- Risk 7: No right of setoff clause - can't offset damages
+- Risk 8: No acceleration clause - can't demand full payment on breach
+- Risk 9: Payment method not specified - wire transfer fees unclear
+- Risk 10: No audit rights for invoices - can't verify charges
+[... continue finding more]
+
+DO NOT STOP until you have found EVERY POSSIBLE RISK. A typical commercial contract should have 30-50+ risks.
 
 **TEXT QUOTING RULES FOR ACCURATE MAPPING:**
 - Quote the EXACT RISKY PHRASE as it appears in the contract (preserve original formatting)
@@ -277,7 +295,15 @@ Output as JSON with ALL identified risks:
 **CONTRACT TO ANALYZE:**
 ${content}
 
-Remember: There is NO LIMIT to the number of risks. Be EXHAUSTIVE within each category. Missing protective clauses are risks too.`
+FINAL REMINDER: 
+- If you find fewer than 20 risks, you have NOT done your job properly
+- Every missing protection is a risk
+- Every ambiguous term is a risk  
+- Every one-sided clause is a risk
+- Every missing deadline is a risk
+- Every undefined term is a risk
+- KEEP SEARCHING until you've found ALL risks (should be 30-50+ for most contracts)
+- DO NOT STOP at 5, 10, or even 20 risks - BE EXHAUSTIVE!`
         }
       ],
       max_tokens: 12000, // Increased for comprehensive analysis
@@ -535,7 +561,15 @@ CRITICAL ANALYSIS INSTRUCTIONS:
 **CONTRACT TO ANALYZE:**
 ${content}
 
-Remember: There is NO LIMIT to the number of risks. Be EXHAUSTIVE within each category. Missing protective clauses are risks too.`
+FINAL REMINDER: 
+- If you find fewer than 20 risks, you have NOT done your job properly
+- Every missing protection is a risk
+- Every ambiguous term is a risk  
+- Every one-sided clause is a risk
+- Every missing deadline is a risk
+- Every undefined term is a risk
+- KEEP SEARCHING until you've found ALL risks (should be 30-50+ for most contracts)
+- DO NOT STOP at 5, 10, or even 20 risks - BE EXHAUSTIVE!`
       }
     ],
     max_tokens: 12000,
